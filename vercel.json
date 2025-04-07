@@ -1,18 +1,12 @@
 {
   "version": 2,
-  "framework": "vite",
-  "buildCommand": "npm run vercel-build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "outputDirectory": "dist",
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist",
-        "zeroConfig": true
-      }
+      "src": "dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -24,7 +18,10 @@
       "continue": true
     },
     {
-      "src": "/.*",
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
       "dest": "/index.html"
     }
   ]
