@@ -12,10 +12,15 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined
+        manualChunks: undefined,
+        format: 'es'
       }
     }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom']
   }
 }) 
