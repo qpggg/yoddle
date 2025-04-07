@@ -15,8 +15,8 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
-        format: 'es'
+        format: 'es',
+        manualChunks: undefined
       }
     }
   },
