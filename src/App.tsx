@@ -1,5 +1,5 @@
 import './styles/index.css';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
@@ -13,6 +13,17 @@ import { Testimonials } from './components/Testimonials';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 
+const HomePage = () => (
+  <Box>
+    <Hero />
+    <About />
+    <Benefits />
+    <Features />
+    <Testimonials />
+    <Contact />
+  </Box>
+);
+
 const App = () => {
   return (
     <ThemeProvider theme={theme}>
@@ -20,12 +31,9 @@ const App = () => {
       <Router>
         <Box>
           <Navbar />
-          <Hero />
-          <About />
-          <Benefits />
-          <Features />
-          <Testimonials />
-          <Contact />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+          </Routes>
           <Footer />
         </Box>
       </Router>
