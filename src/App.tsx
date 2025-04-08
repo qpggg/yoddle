@@ -12,6 +12,11 @@ import { Features } from './components/Features';
 import { Testimonials } from './components/Testimonials';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
+import AboutPage from './pages/About';
+import BenefitsPage from './pages/Benefits';
+import PricingPage from './pages/Pricing';
+import LoginPage from './pages/Login';
+import { ScrollToTop } from './components/ScrollToTop';
 
 const HomePage = () => (
   <Box>
@@ -29,10 +34,15 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <ScrollToTop />
         <Box>
           <Navbar />
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/benefits" element={<BenefitsPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/login" element={<LoginPage />} />
           </Routes>
           <Footer />
         </Box>

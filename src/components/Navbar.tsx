@@ -6,6 +6,12 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material/styles';
 
+const navItems = [
+  { title: 'О платформе', path: '/about' },
+  { title: 'Преимущества', path: '/benefits' },
+  { title: 'Тарифы', path: '/pricing' }
+];
+
 const Navbar: React.FC = () => {
   const theme = useTheme();
   const location = useLocation();
@@ -27,12 +33,6 @@ const Navbar: React.FC = () => {
   const handleMobileMenuToggle = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-
-  const navItems = [
-    { title: 'О платформе', path: '/about' },
-    { title: 'Преимущества', path: '/benefits' },
-    { title: 'Контакты', path: '/contacts' },
-  ];
 
   return (
     <motion.div

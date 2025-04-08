@@ -142,7 +142,24 @@ const Home: React.FC = () => {
           </Box>
         </Container>
               </Box>
-            </Box>
+
+      {/* CTA Section */}
+      <Box
+        id="cta"
+        component="section"
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(139, 0, 0, 0.8) 100%)',
+          py: { xs: 8, md: 12 },
+          mt: { xs: 4, md: 6 },
+          scrollMarginTop: '64px', // Точная компенсация высоты навбара
+          scrollPaddingTop: '64px', // Дополнительная поддержка для старых браузеров
+          scrollBehavior: 'smooth', // Обеспечиваем плавность на уровне элемента
+        }}
+      >
+      </Box>
+    </Box>
   );
 };
 
