@@ -105,7 +105,7 @@ const Services: React.FC = () => {
           Наши услуги
         </Typography>
 
-        {services.map((service, index) => (
+        {services.map((service) => (
           <motion.div
             key={service.title}
             variants={sectionVariants}
