@@ -9,7 +9,8 @@ import { useTheme } from '@mui/material/styles';
 const navItems = [
   { title: 'О платформе', path: '/about' },
   { title: 'Преимущества', path: '/benefits' },
-  { title: 'Тарифы', path: '/pricing' }
+  { title: 'Тарифы', path: '/pricing' },
+  { title: 'Услуги', path: '/services' }
 ];
 
 const Navbar: React.FC = () => {

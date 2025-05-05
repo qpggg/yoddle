@@ -147,9 +147,9 @@ const Home: React.FC = () => {
       <Box
         id="cta"
         component="section"
-        sx={{
-          position: 'relative',
-          overflow: 'hidden',
+              sx={{
+                position: 'relative',
+                overflow: 'hidden',
           background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(139, 0, 0, 0.8) 100%)',
           py: { xs: 8, md: 12 },
           mt: { xs: 4, md: 6 },
@@ -158,8 +158,8 @@ const Home: React.FC = () => {
           scrollBehavior: 'smooth', // Обеспечиваем плавность на уровне элемента
         }}
       >
-      </Box>
-    </Box>
+              </Box>
+            </Box>
   );
 };
 

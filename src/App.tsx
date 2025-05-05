@@ -15,6 +15,7 @@ import { Footer } from './components/Footer';
 import AboutPage from './pages/About';
 import BenefitsPage from './pages/Benefits';
 import PricingPage from './pages/Pricing';
+import ServicesPage from './pages/Services';
 import LoginPage from './pages/Login';
 import { ScrollToTop } from './components/ScrollToTop';
 
@@ -42,6 +43,7 @@ const App = () => {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/benefits" element={<BenefitsPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/services" element={<ServicesPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Routes>
           <Footer />
