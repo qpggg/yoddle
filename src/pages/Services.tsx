@@ -13,37 +13,32 @@ const Services: React.FC = () => {
     {
       title: 'Здоровье',
       icon: <FavoriteIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Забота о психологическом благополучии ваших сотрудников',
+      description: 'Комплексная поддержка физического и психологического состояния сотрудников',
       items: [
-        'Онлайн-консультации с профессиональными психологами',
-        'Программы поддержки ментального здоровья',
-        'Групповые сессии по управлению стрессом',
-        'Индивидуальные планы развития',
-        'Мониторинг эмоционального состояния'
+        'Профилактика выгорания',
+        'Режим дня и баланс работы/отдыха',
+        'Правильное питание и нутрициология',
+        'Психологическая поддержка',
+        'Мониторинг самочувствия',
+        'Здоровые привычки'
       ]
     },
     {
       title: 'Спорт',
       icon: <SportsIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Комплексные программы для физического развития',
+      description: 'Разнообразные спортивные активности для команд и индивидуально',
       items: [
-        'Корпоративные абонементы в фитнес-центры',
-        'Онлайн и офлайн тренировки с инструкторами',
-        'Групповые занятия йогой',
-        'Спортивные мероприятия и соревнования',
-        'Персональные программы тренировок'
+        'Командные виды спорта',
+        'Фитнес-программы',
+        'Тимбилдинг через спорт'
       ]
     },
     {
       title: 'Обучение',
       icon: <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Развитие профессиональных и личных навыков',
+      description: 'Развитие профессиональных и личных компетенций',
       items: [
-        'Курсы повышения квалификации',
-        'Тренинги по развитию лидерских качеств',
-        'Программы по развитию soft skills',
-        'Языковые курсы',
-        'Мастер-классы от экспертов отрасли'
+        'Soft-skills тренинги'
       ]
     }
   ];
@@ -105,103 +100,140 @@ const Services: React.FC = () => {
           Наши услуги
         </Typography>
 
-        {services.map((service) => (
+        <Box
+          sx={{
+            border: '3px solid #8B0000',
+            borderRadius: '40px',
+            p: { xs: 2, md: 6 },
+            background: '#fff',
+            mb: 8,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}
+        >
+          {/* Верхняя половина — Здоровье */}
           <motion.div
-            key={service.title}
             variants={sectionVariants}
             whileHover={{ 
               scale: 1.01,
-              transition: { 
-                duration: 0.5,
-                ease: [0.4, 0, 0.2, 1]
-              }
+              transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
             }}
             initial={{ scale: 1 }}
             animate={{ scale: 1 }}
-            transition={{
-              duration: 0.5,
-              ease: [0.4, 0, 0.2, 1]
-            }}
+            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+            style={{ width: '100%' }}
           >
             <Box
               sx={{
-                mb: 6,
-                p: 6,
-                borderRadius: '20px',
-                backgroundColor: '#fff',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
-                position: 'relative',
-                overflow: 'hidden',
-                transform: 'perspective(1000px)',
-                transformStyle: 'preserve-3d',
-                willChange: 'transform, box-shadow',
-                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '4px',
-                  background: '#8B0000',
-                  opacity: 0,
-                  transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-                },
-                '&:hover::before': {
-                  opacity: 1
-                },
-                '&:hover': {
-                  boxShadow: '0 24px 48px rgba(0, 0, 0, 0.08)',
-                  transform: 'perspective(1000px) translateY(-8px) rotateX(1deg)'
-                }
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                mb: 2
               }}
             >
-              <Grid container spacing={4} alignItems="center">
-                <Grid item xs={12} md={4}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: { xs: 'center', md: 'flex-start' },
-                    gap: 2 
-                  }}>
-                    <Box sx={{
+              <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
+                <FavoriteIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+              </Box>
+              <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
+                Здоровье
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
+                Комплексная поддержка физического и психологического состояния сотрудников
+              </Typography>
+            </Box>
+            <Grid container spacing={2} columns={12} sx={{ mb: 2 }}>
+              {[
+                'Профилактика выгорания',
+                'Режим дня и баланс работы/отдыха',
+                'Правильное питание и нутрициология',
+                'Психологическая поддержка',
+                'Мониторинг самочувствия',
+                'Здоровые привычки'
+              ].map((item, idx) => (
+                <Grid item xs={12} sm={6} md={4} key={idx}>
+                  <Box
+                    sx={{
                       p: 2,
-                      borderRadius: '16px',
-                      backgroundColor: 'rgba(139, 0, 0, 0.05)',
-                      display: 'inline-flex'
-                    }}>
-                      {service.icon}
-                    </Box>
-                    <Typography
-                      variant="h4"
-                      component="h2"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.primary.main,
-                        textAlign: { xs: 'center', md: 'left' }
-                      }}
-                    >
-                      {service.title}
-                    </Typography>
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(139, 0, 0, 0.02)',
+                      transform: 'translateZ(0)',
+                      willChange: 'transform, background-color',
+                      transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      mb: 1.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(139, 0, 0, 0.05)',
+                        transform: 'translateX(8px) translateZ(0)',
+                        boxShadow: '0 4px 12px rgba(139, 0, 0, 0.06)'
+                      }
+                    }}
+                  >
                     <Typography
                       variant="body1"
                       sx={{
-                        color: 'rgba(0, 0, 0, 0.7)',
-                        textAlign: { xs: 'center', md: 'left' },
-                        mb: { xs: 2, md: 0 }
+                        color: 'rgba(0, 0, 0, 0.8)',
+                        position: 'relative',
+                        pl: 2,
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '4px',
+                          height: '4px',
+                          borderRadius: '50%',
+                          backgroundColor: theme.palette.primary.main
+                        }
                       }}
                     >
-                      {service.description}
+                      {item}
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12} md={8}>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                    gap: 3
-                  }}>
-                    {service.items.map((item, idx) => (
+              ))}
+            </Grid>
+          </motion.div>
+
+          {/* Нижняя половина — Спорт и Обучение */}
+          <Grid container spacing={2} columns={12}>
+            {/* Спорт */}
+            <Grid item xs={12} md={6}>
+              <motion.div
+                variants={sectionVariants}
+                whileHover={{ 
+                  scale: 1.01,
+                  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+                }}
+                initial={{ scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ height: '100%' }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    height: '100%'
+                  }}
+                >
+                  <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
+                    <SportsIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+                  </Box>
+                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
+                    Спорт
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
+                    Разнообразные спортивные активности для команд и индивидуально
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                    {[
+                      'Командные виды спорта',
+                      'Фитнес-программы',
+                      'Тимбилдинг через спорт'
+                    ].map((item, idx) => (
                       <Box
                         key={idx}
                         sx={{
@@ -242,11 +274,86 @@ const Services: React.FC = () => {
                       </Box>
                     ))}
                   </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          </motion.div>
-        ))}
+                </Box>
+              </motion.div>
+            </Grid>
+            {/* Обучение */}
+            <Grid item xs={12} md={6}>
+              <motion.div
+                variants={sectionVariants}
+                whileHover={{ 
+                  scale: 1.01,
+                  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+                }}
+                initial={{ scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ height: '100%' }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    height: '100%'
+                  }}
+                >
+                  <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
+                    <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+                  </Box>
+                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
+                    Обучение
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
+                    Развитие профессиональных и личных компетенций
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                    {['Soft-skills тренинги'].map((item, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          p: 2,
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(139, 0, 0, 0.02)',
+                          transform: 'translateZ(0)',
+                          willChange: 'transform, background-color',
+                          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(139, 0, 0, 0.05)',
+                            transform: 'translateX(8px) translateZ(0)',
+                            boxShadow: '0 4px 12px rgba(139, 0, 0, 0.06)'
+                          }
+                        }}
+                      >
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            color: 'rgba(0, 0, 0, 0.8)',
+                            position: 'relative',
+                            pl: 2,
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '4px',
+                              height: '4px',
+                              borderRadius: '50%',
+                              backgroundColor: theme.palette.primary.main
+                            }
+                          }}
+                        >
+                          {item}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </Box>
       </motion.div>
     </Container>
   );
