@@ -4,9 +4,9 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "buildCommand": "",
+  "devCommand": null,
+  "installCommand": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
