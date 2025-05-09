@@ -8,6 +8,6 @@
   "devCommand": null,
   "installCommand": null,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ]
 } 
