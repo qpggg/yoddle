@@ -1,5 +1,5 @@
 import './styles/index.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
@@ -17,7 +17,6 @@ import BenefitsPage from './pages/Benefits';
 import PricingPage from './pages/Pricing';
 import ServicesPage from './pages/Services';
 import LoginPage from './pages/Login';
-import NotFound from './pages/NotFound';
 import { ScrollToTop } from './components/ScrollToTop';
 
 const HomePage = () => (
@@ -46,8 +45,6 @@ const App = () => {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
           <Footer />
         </Box>
