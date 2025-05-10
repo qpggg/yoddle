@@ -36,7 +36,7 @@ const Services: React.FC = () => {
     {
       title: 'Обучение',
       icon: <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Развитие профессиональных и личных компетенций',
+      description: 'Развитие профессиональных и личных компетенций, улучшение социальных навыков',
       items: [
         'Soft-skills тренинги'
       ]
@@ -305,7 +305,7 @@ const Services: React.FC = () => {
                     Обучение
                   </Typography>
                   <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
-                    Развитие профессиональных и личных компетенций
+                    Развитие профессиональных и личных компетенций, улучшение социальных навыков
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
                     {['Soft-skills тренинги'].map((item, idx) => (
