@@ -1,13 +1,15 @@
 import React from 'react';
-import { Container, Typography, Box, TextField, Button, Paper } from '@mui/material';
+import { Container, Typography, Box, TextField, Button, Paper, Alert, Slide } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +103,30 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                 />
-                {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
+                <Slide direction="down" in={!!error} mountOnEnter unmountOnExit>
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mb: 2,
+                      borderRadius: 2,
+                      boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
+                      background: 'linear-gradient(90deg, #fff 80%, #fbeaec 100%)',
+                      color: '#8B0000',
+                      fontWeight: 600,
+                      fontFamily: 'Montserrat, Inter, Arial, sans-serif',
+                      alignItems: 'center',
+                      fontSize: { xs: '1.08rem', sm: '1.18rem' },
+                      letterSpacing: 0.1,
+                    }}
+                    iconMapping={{ error: <span style={{fontSize:24,marginRight:8, color:'#8B0000'}}>❗</span> }}
+                  >
+                    {error === 'Database connection error' ? 'Ошибка соединения с сервером. Попробуйте позже.' :
+                     error === 'Invalid login or password' ? 'Неверный логин или пароль' :
+                     error === 'Login and password required' ? 'Введите логин и пароль' :
+                     error === 'Ошибка входа' ? 'Ошибка входа' :
+                     error}
+                  </Alert>
+                </Slide>
                 <Button
                   fullWidth
                   variant="contained"
