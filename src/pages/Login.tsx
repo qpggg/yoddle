@@ -2,14 +2,12 @@ import React from 'react';
 import { Container, Typography, Box, TextField, Button, Paper, Alert, Slide } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const navigate = useNavigate();
-  const theme = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
