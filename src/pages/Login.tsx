@@ -1,8 +1,35 @@
 import React from 'react';
 import { Container, Typography, Box, TextField, Button, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login: email, password })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Ошибка входа');
+        return;
+      }
+      // Вход успешен
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Ошибка соединения с сервером');
+    }
+  };
+
   return (
     <Box
       component="main"
@@ -46,6 +73,7 @@ const Login: React.FC = () => {
 
               <Box
                 component="form"
+                onSubmit={handleSubmit}
                 sx={{
                   width: '100%',
                   mt: 1
@@ -59,6 +87,8 @@ const Login: React.FC = () => {
                   autoComplete="email"
                   autoFocus
                   sx={{ mb: 2 }}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                 />
                 <TextField
                   margin="normal"
@@ -68,11 +98,15 @@ const Login: React.FC = () => {
                   type="password"
                   autoComplete="current-password"
                   sx={{ mb: 3 }}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                 />
+                {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
                 <Button
                   fullWidth
                   variant="contained"
                   size="large"
+                  type="submit"
                   sx={{
                     backgroundColor: '#8B0000',
                     color: '#fff',

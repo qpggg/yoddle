@@ -17,6 +17,7 @@ import BenefitsPage from './pages/Benefits';
 import PricingPage from './pages/Pricing';
 import ServicesPage from './pages/Services';
 import LoginPage from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import { ScrollToTop } from './components/ScrollToTop';
 
 const HomePage = () => (
@@ -45,6 +46,7 @@ const App = () => {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
           <Footer />
         </Box>
