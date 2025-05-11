@@ -9,40 +9,6 @@ import { useTheme } from '@mui/material/styles';
 const Services: React.FC = () => {
   const theme = useTheme();
 
-  const services = [
-    {
-      title: 'Здоровье',
-      icon: <FavoriteIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Комплексная поддержка физического и психологического состояния сотрудников',
-      items: [
-        'Профилактика выгорания',
-        'Режим дня и баланс работы/отдыха',
-        'Правильное питание и нутрициология',
-        'Психологическая поддержка',
-        'Мониторинг самочувствия',
-        'Здоровые привычки'
-      ]
-    },
-    {
-      title: 'Спорт',
-      icon: <SportsIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Разнообразные спортивные активности для команд и индивидуально',
-      items: [
-        'Командные виды спорта',
-        'Фитнес-программы',
-        'Тимбилдинг через спорт'
-      ]
-    },
-    {
-      title: 'Обучение',
-      icon: <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />,
-      description: 'Развитие профессиональных и личных компетенций, улучшение социальных навыков',
-      items: [
-        'Soft-skills тренинги'
-      ]
-    }
-  ];
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
