@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import { Client } from 'pg';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,23 +10,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Login and password required' });
   }
 
-  const connection = await mysql.createConnection({
-    host: 'trolley.proxy.rlwy.net',
-    port: 14844,
-    user: 'root',
-    password: 'gtilMfFIVILpoykuGSvRmFfTzpoFjSxq',
-    database: 'railway'
+  const client = new Client({
+    connectionString: process.env.PG_CONNECTION_STRING,
+    ssl: { rejectUnauthorized: false }
   });
 
-  const [rows] = await connection.execute(
-    'SELECT * FROM enter WHERE login = ? AND password = ?',
-    [login, password]
-  );
-  await connection.end();
+  try {
+    await client.connect();
+    const result = await client.query(
+      'SELECT * FROM enter WHERE login = $1 AND password = $2',
+      [login, password]
+    );
+    await client.end();
 
-  if (rows.length === 0) {
-    return res.status(401).json({ error: 'Invalid login or password' });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+
+    return res.status(200).json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    return res.status(500).json({ error: 'Database connection error' });
   }
-
-  return res.status(200).json({ success: true, user: rows[0] });
 } 
