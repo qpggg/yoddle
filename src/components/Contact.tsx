@@ -8,6 +8,7 @@ export const Contact = () => {
   return (
     <Box
       component="section"
+      id="contact"
       sx={{
         py: { xs: 8, md: 12 },
         backgroundColor: '#fff',

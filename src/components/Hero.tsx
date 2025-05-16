@@ -173,7 +173,12 @@ export const Hero = () => {
             <Button
               variant="contained"
               size="large"
-              onClick={() => window.location.href = 'https://app.yoddle.ru/register'}
+              onClick={() => {
+                const contactSection = document.getElementById('contact');
+                if (contactSection) {
+                  contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
               sx={{
                 py: { xs: 1.5, md: 2 },
                 px: { xs: 4, md: 6 },
