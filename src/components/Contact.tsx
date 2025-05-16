@@ -1,10 +1,45 @@
-import { Box, Container, Typography, TextField, Button } from '@mui/material';
+import { Box, Container, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import React, { useState } from 'react';
 
 export const Contact = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+    try {
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess(true);
+        setName('');
+        setEmail('');
+        setMessage('');
+      } else {
+        setError(data.error || 'Ошибка отправки');
+      }
+    } catch (err) {
+      setError('Ошибка отправки');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       component="section"
@@ -78,6 +113,7 @@ export const Contact = () => {
             >
               <Box
                 component="form"
+                onSubmit={handleSubmit}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -89,6 +125,8 @@ export const Contact = () => {
                   required
                   fullWidth
                   variant="outlined"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
@@ -108,6 +146,8 @@ export const Contact = () => {
                   fullWidth
                   type="email"
                   variant="outlined"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
@@ -128,6 +168,8 @@ export const Contact = () => {
                   multiline
                   rows={4}
                   variant="outlined"
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
@@ -141,9 +183,13 @@ export const Contact = () => {
                     },
                   }}
                 />
+                {error && <Alert severity="error">{error}</Alert>}
+                {success && <Alert severity="success">Спасибо! Ваша заявка отправлена.</Alert>}
                 <Button
                   variant="contained"
                   size="large"
+                  type="submit"
+                  disabled={loading}
                   sx={{
                     py: 2,
                     px: 4,
@@ -161,7 +207,7 @@ export const Contact = () => {
                     transition: 'all 0.3s ease',
                   }}
                 >
-                  Отправить
+                  {loading ? <CircularProgress size={24} color="inherit" /> : 'Отправить'}
                 </Button>
               </Box>
             </motion.div>
