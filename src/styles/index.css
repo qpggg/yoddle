@@ -45,4 +45,13 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+#contacts {
+  scroll-margin-top: 140px;
+}
+@media (max-width: 600px) {
+  #contacts {
+    scroll-margin-top: 180px;
+  }
 } 
