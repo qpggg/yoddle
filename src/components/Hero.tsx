@@ -1,7 +1,38 @@
 import { Box, Button, Container, Typography } from '@mui/material'
 import { motion } from 'framer-motion'
+import { useEffect } from 'react'
 
 export const Hero = () => {
+  useEffect(() => {
+    // Проверяем, есть ли хэш в URL при загрузке страницы
+    if (window.location.hash === '#contact') {
+      // Добавляем небольшую задержку для гарантии полной загрузки страницы
+      setTimeout(() => {
+        const contactSection = document.getElementById('contact');
+        if (contactSection) {
+          const offset = -70; // Тот же offset, что и в handleScroll
+          const targetPosition = contactSection.getBoundingClientRect().top + window.pageYOffset + offset;
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
+  }, []);
+
+  const handleScroll = () => {
+    const contactSection = document.getElementById('contact');
+    if (contactSection) {
+      const offset = -70; // Корректировка для точного позиционирования
+      const targetPosition = contactSection.getBoundingClientRect().top + window.pageYOffset + offset;
+      window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <Box
       component="section"
@@ -173,14 +204,7 @@ export const Hero = () => {
             <Button
               variant="contained"
               size="large"
-              onClick={() => {
-                const contactSection = document.getElementById('contact');
-                if (contactSection) {
-                  const offset = -70;
-                  const topPos = contactSection.getBoundingClientRect().top + window.pageYOffset + offset;
-                  window.scrollTo({ top: topPos, behavior: 'smooth' });
-                }
-              }}
+              onClick={handleScroll}
               sx={{
                 py: { xs: 1.5, md: 2 },
                 px: { xs: 4, md: 6 },
