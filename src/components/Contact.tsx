@@ -317,7 +317,7 @@ export const Contact = () => {
                         transition: 'color 0.2s ease',
                       }}
                     >
-                      +7 (495) 123-45-67
+                      +7 (915) 876-34-58
                     </Typography>
                   </Box>
 
@@ -336,7 +336,7 @@ export const Contact = () => {
                       <LocationOnIcon sx={{ color: '#750000' }} />
                     </Box>
                     <Typography sx={{ color: '#2C3E50' }}>
-                      Москва, ул. Тверская, д. 1
+                      Москва, Ботаническая 11
                     </Typography>
                   </Box>
                 </Box>
