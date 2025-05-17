@@ -19,8 +19,7 @@ export const Hero = () => {
     // Функция для обработки хэша в URL
     const handleHashChange = () => {
       if (window.location.hash === '#contact') {
-        // Даем время на полную загрузку страницы
-        setTimeout(scrollToContact, 500);
+        scrollToContact();
       }
     };
 
