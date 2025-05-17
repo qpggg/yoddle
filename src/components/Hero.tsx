@@ -176,7 +176,9 @@ export const Hero = () => {
               onClick={() => {
                 const contactSection = document.getElementById('contact');
                 if (contactSection) {
-                  contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  const offset = -70;
+                  const topPos = contactSection.getBoundingClientRect().top + window.pageYOffset + offset;
+                  window.scrollTo({ top: topPos, behavior: 'smooth' });
                 }
               }}
               sx={{
