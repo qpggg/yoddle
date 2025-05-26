@@ -162,10 +162,12 @@ const Dashboard: React.FC = () => {
           setUserData(data);
           setIsLoggedIn(true);
         } else {
+          const errorText = await response.text();
+          console.error('Ошибка авторизации:', response.status, errorText, 'Токен:', token);
           navigate('/login');
         }
       } catch (error) {
-        console.error('Ошибка при загрузке данных пользователя:', error);
+        console.error('Ошибка при загрузке данных пользователя:', error, 'Токен:', token);
         navigate('/login');
       }
     };
