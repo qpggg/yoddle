@@ -2,12 +2,15 @@ import React from 'react';
 import { Container, Typography, Box, TextField, Button, Paper, Alert, Slide } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../hooks/useUser';
+
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +26,8 @@ const Login: React.FC = () => {
         setError(data.error || 'Ошибка входа');
         return;
       }
-      // Вход успешен
+      const data = await res.json();
+      setUser(data.user);
       navigate('/dashboard');
     } catch (err) {
       setError('Ошибка соединения с сервером');

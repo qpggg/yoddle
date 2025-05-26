@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCircle, 
@@ -9,13 +9,16 @@ import {
   Bell
 } from 'lucide-react';
 import '../styles/Dashboard.css';
+import { useUser, User } from '../hooks/useUser';
 
 interface ProfileEditModalProps {
   open: boolean;
   onClose: () => void;
+  user: User | null;
+  setUser: (user: User | null) => void;
 }
 
-function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
+function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProps) {
   const [form, setForm] = useState<{
     name: string;
     email: string;
@@ -23,19 +26,30 @@ function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
     position: string;
     photo: string | File;
   }>({
-    name: 'Иван Иванов',
-    email: 'ivan@company.com',
+    name: user?.name || '',
+    email: user?.email || '',
     phone: '',
     position: '',
-    photo: ''
+    photo: user?.avatar || '' as string | File
   });
-  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoPreview, setPhotoPreview] = useState(user?.avatar || '');
+
+  useEffect(() => {
+    setForm({
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: '',
+      position: '',
+      photo: user?.avatar || '' as string | File
+    });
+    setPhotoPreview(user?.avatar || '');
+  }, [user, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      setForm(f => ({ ...f, photo: file }));
+      setForm(f => ({ ...f, photo: file as File }));
       setPhotoPreview(URL.createObjectURL(file));
     }
   };
@@ -48,10 +62,14 @@ function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
     formData.append('phone', form.phone);
     formData.append('position', form.position);
     if (form.photo && typeof form.photo !== 'string') formData.append('photo', form.photo);
-    await fetch('/api/profile', {
+    const res = await fetch('/api/profile', {
       method: 'PATCH',
       body: formData,
     });
+    if (res.ok) {
+      const updated = await res.json();
+      setUser(updated.user);
+    }
     onClose();
   };
 
@@ -107,6 +125,7 @@ function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
 
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const { user, setUser } = useUser();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -141,7 +160,7 @@ const Dashboard: React.FC = () => {
         transition={{ duration: 0.8, ease: 'easeInOut' }}
       >
         <div className="welcome-section">
-          <h1>Добро пожаловать, Иван!</h1>
+          <h1>Добро пожаловать, {user?.name || 'Гость'}!</h1>
           <p className="subtitle">Ваш персональный кабинет</p>
         </div>
         <div className="header-actions">
@@ -173,14 +192,14 @@ const Dashboard: React.FC = () => {
         >
           <h2>Текущие льготы</h2>
           <div className="benefits-list">
-            <div className="benefit-item">
-              <Gift size={20} />
-              <span>Спортивный зал - 20% скидка</span>
-            </div>
-            <div className="benefit-item">
-              <Gift size={20} />
-              <span>Медицинская страховка</span>
-            </div>
+            {(user?.benefits && user.benefits.length > 0) ? user.benefits.map((b, i) => (
+              <div className="benefit-item" key={i}>
+                <Gift size={20} />
+                <span>{b}</span>
+              </div>
+            )) : (
+              <div className="benefit-item"><Gift size={20} /><span>Нет льгот</span></div>
+            )}
           </div>
         </motion.div>
 
@@ -253,10 +272,14 @@ const Dashboard: React.FC = () => {
         >
           <h2>Профиль</h2>
           <div className="profile-info">
-            <UserCircle size={60} />
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.name} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <UserCircle size={60} />
+            )}
             <div className="profile-details">
-              <h3>Иван Иванов</h3>
-              <p>ivan@company.com</p>
+              <h3>{user?.name || 'Гость'}</h3>
+              <p>{user?.email || ''}</p>
             </div>
           </div>
         </motion.div>
@@ -277,7 +300,7 @@ const Dashboard: React.FC = () => {
           Связаться с поддержкой
         </motion.button>
       </motion.div>
-      <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
+      <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
     </div>
   );
 };

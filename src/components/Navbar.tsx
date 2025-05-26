@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material/styles';
+import { useUser } from '../hooks/useUser';
 
 const navItems = [
   { title: 'О платформе', path: '/about' },
@@ -18,6 +19,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -185,29 +187,43 @@ const Navbar: React.FC = () => {
                   {item.title}
                 </Button>
               ))}
-              <Button
-                variant="contained"
-                component={Link}
-                to="/login"
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#fff',
-                  padding: '0.6rem 1.5rem',
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                  letterSpacing: '0.01em',
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.dark,
-                    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-                  },
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Вход
-              </Button>
+              {user ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton component={Link} to="/dashboard" sx={{ p: 0 }}>
+                    {user.avatar ? (
+                      <Box component="img" src={user.avatar} alt={user.name} sx={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #8B0000' }} />
+                    ) : (
+                      <Box sx={{ width: 40, height: 40, borderRadius: '50%', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #8B0000' }}>
+                        <span style={{ fontSize: 24, color: '#8B0000' }}>{user.name[0]}</span>
+                      </Box>
+                    )}
+                  </IconButton>
+                </Box>
+              ) : (
+                <Button
+                  variant="contained"
+                  component={Link}
+                  to="/login"
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: '#fff',
+                    padding: '0.6rem 1.5rem',
+                    fontSize: '0.95rem',
+                    fontWeight: 500,
+                    letterSpacing: '0.01em',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Вход
+                </Button>
+              )}
             </Box>
 
             <IconButton
@@ -270,31 +286,59 @@ const Navbar: React.FC = () => {
                 </Button>
               </ListItem>
             ))}
-            <ListItem disablePadding sx={{ mt: 3 }}>
-              <Button
-                variant="contained"
-                component={Link}
-                to="/login"
-                fullWidth
-                onClick={handleMobileMenuToggle}
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#fff',
-                  py: 1.2,
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.dark,
-                    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-                  }
-                }}
-              >
-                Вход
-              </Button>
-            </ListItem>
+            {user ? (
+              <ListItem disablePadding sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  component={Link}
+                  to="/logout"
+                  fullWidth
+                  onClick={logout}
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: '#fff',
+                    py: 1.2,
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+                    }
+                  }}
+                >
+                  Выход
+                </Button>
+              </ListItem>
+            ) : (
+              <ListItem disablePadding sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  component={Link}
+                  to="/login"
+                  fullWidth
+                  onClick={handleMobileMenuToggle}
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: '#fff',
+                    py: 1.2,
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+                    }
+                  }}
+                >
+                  Вход
+                </Button>
+              </ListItem>
+            )}
           </List>
         </Box>
       </Drawer>
