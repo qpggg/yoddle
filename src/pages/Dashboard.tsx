@@ -63,8 +63,10 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData();
+    formData.append('id', user?.id || '');
     formData.append('name', form.name);
     formData.append('email', form.email);
+    formData.append('unused', '');
     formData.append('phone', form.phone);
     formData.append('position', form.position);
     if (form.photo && typeof form.photo !== 'string') formData.append('avatar', form.photo);
@@ -76,6 +78,7 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
     if (res.ok) {
       const updated = await res.json();
       setUser(updated.user);
+      window.location.reload();
     }
     onClose();
   };
