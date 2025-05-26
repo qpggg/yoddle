@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCircle, 
@@ -9,11 +9,16 @@ import {
   Bell
 } from 'lucide-react';
 import '../styles/Dashboard.css';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileEditModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+const API_URL = window.location.hostname === 'localhost'
+  ? 'https://yoddle.vercel.app'
+  : '';
 
 function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
   const [form, setForm] = useState<{
@@ -48,7 +53,7 @@ function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
     formData.append('phone', form.phone);
     formData.append('position', form.position);
     if (form.photo && typeof form.photo !== 'string') formData.append('photo', form.photo);
-    await fetch('/api/profile', {
+    await fetch(`${API_URL}/api/profile`, {
       method: 'PATCH',
       body: formData,
     });
@@ -107,6 +112,13 @@ function ProfileEditModal({ open, onClose }: ProfileEditModalProps) {
 
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const navigate = useNavigate();
+  const [userData, setUserData] = useState<{
+    name: string;
+    email: string;
+    photo: string;
+  } | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -131,6 +143,38 @@ const Dashboard: React.FC = () => {
       }
     }
   };
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      try {
+        const response = await fetch(`${API_URL}/api/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserData(data);
+          setIsLoggedIn(true);
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных пользователя:', error);
+        navigate('/login');
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <div className="dashboard-container">
@@ -253,10 +297,16 @@ const Dashboard: React.FC = () => {
         >
           <h2>Профиль</h2>
           <div className="profile-info">
-            <UserCircle size={60} />
+            <div className="profile-avatar">
+              {userData?.photo ? (
+                <img src={userData.photo} alt={userData.name} />
+              ) : (
+                <UserCircle size={64} />
+              )}
+            </div>
             <div className="profile-details">
-              <h3>Иван Иванов</h3>
-              <p>ivan@company.com</p>
+              <h3>{userData?.name || 'Имя не указано'}</h3>
+              <p>{userData?.email || 'Email не указан'}</p>
             </div>
           </div>
         </motion.div>
