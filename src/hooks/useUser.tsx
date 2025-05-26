@@ -6,6 +6,8 @@ export interface User {
   email: string;
   avatar?: string;
   benefits?: string[];
+  phone?: string;
+  position?: string;
 }
 
 interface UserContextType {

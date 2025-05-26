@@ -28,22 +28,28 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
   }>({
     name: user?.name || '',
     email: user?.email || '',
-    phone: '',
-    position: '',
+    phone: user?.phone || '',
+    position: user?.position || '',
     photo: user?.avatar || '' as string | File
   });
   const [photoPreview, setPhotoPreview] = useState(user?.avatar || '');
 
   useEffect(() => {
-    setForm({
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: '',
-      position: '',
-      photo: user?.avatar || '' as string | File
-    });
-    setPhotoPreview(user?.avatar || '');
-  }, [user, open]);
+    if (open) {
+      fetch('/api/profile')
+        .then(res => res.json())
+        .then(data => {
+          setForm({
+            name: data.user.name || '',
+            email: data.user.email || '',
+            phone: data.user.phone || '',
+            position: data.user.position || '',
+            photo: data.user.avatar || ''
+          });
+          setPhotoPreview(data.user.avatar || '');
+        });
+    }
+  }, [open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,11 +63,12 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append('email', form.email);
     formData.append('name', form.name);
+    formData.append('email', form.email);
     formData.append('phone', form.phone);
     formData.append('position', form.position);
-    if (form.photo && typeof form.photo !== 'string') formData.append('photo', form.photo);
+    if (form.photo && typeof form.photo !== 'string') formData.append('avatar', form.photo);
+    else formData.append('avatar', form.photo as string);
     const res = await fetch('/api/profile', {
       method: 'PATCH',
       body: formData,
