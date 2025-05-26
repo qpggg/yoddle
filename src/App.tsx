@@ -19,6 +19,7 @@ import ServicesPage from './pages/Services';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import { ScrollToTop } from './components/ScrollToTop';
+import Profile from './pages/Profile';
 
 const HomePage = () => (
   <Box>
@@ -47,6 +48,7 @@ const App = () => {
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
           <Footer />
         </Box>

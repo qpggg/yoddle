@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -62,18 +63,18 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('id', user?.id || '');
-    formData.append('name', form.name);
-    formData.append('email', form.email);
-    formData.append('unused', '');
-    formData.append('phone', form.phone);
-    formData.append('position', form.position);
-    if (form.photo && typeof form.photo !== 'string') formData.append('avatar', form.photo);
-    else formData.append('avatar', form.photo as string);
+    const body = {
+      id: user?.id || '',
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      position: form.position,
+      avatar: typeof form.photo === 'string' ? form.photo : null
+    };
     const res = await fetch('/api/profile', {
       method: 'PATCH',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -136,6 +137,7 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const { user, setUser } = useUser();
+  const navigate = useNavigate();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -246,9 +248,10 @@ const Dashboard: React.FC = () => {
               className="action-btn"
               whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
               whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
+              onClick={() => navigate('/profile')}
             >
-              <Gift size={24} />
-              <span>Выбрать льготы</span>
+              <UserCircle size={24} />
+              <span>Профиль</span>
             </motion.button>
             <motion.button 
               className="action-btn"
