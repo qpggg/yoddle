@@ -118,7 +118,6 @@ const Dashboard: React.FC = () => {
     email: string;
     photo: string;
   } | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -148,7 +147,7 @@ const Dashboard: React.FC = () => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
-        navigate('/login');
+        console.error('Нет токена, но редирект отключён для отладки.');
         return;
       }
       try {
@@ -160,23 +159,23 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setUserData(data);
-          setIsLoggedIn(true);
         } else {
           const errorText = await response.text();
           console.error('Ошибка авторизации:', response.status, errorText, 'Токен:', token);
-          navigate('/login');
+          // navigate('/login'); // отключено для отладки
         }
       } catch (error) {
         console.error('Ошибка при загрузке данных пользователя:', error, 'Токен:', token);
-        navigate('/login');
+        // navigate('/login'); // отключено для отладки
       }
     };
     checkAuth();
   }, [navigate]);
 
-  if (!isLoggedIn) {
-    return null;
-  }
+  // Для отладки: всегда показываем dashboard
+  // if (!isLoggedIn) {
+  //   return null;
+  // }
 
   return (
     <div className="dashboard-container">
