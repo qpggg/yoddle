@@ -2,126 +2,183 @@ import React from 'react';
 import { useUser } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Avatar, 
+  Paper, 
+  Grid, 
+  Divider,
+  useTheme
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  borderRadius: 16,
+  boxShadow: '0 4px 24px rgba(139,0,0,0.08)',
+  maxWidth: 800,
+  margin: '40px auto',
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    margin: '20px 16px',
+  }
+}));
+
+const ProfileField = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(1),
+  padding: theme.spacing(2),
+  borderRadius: 8,
+  backgroundColor: theme.palette.background.default,
+  transition: 'transform 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+  }
+}));
 
 const Profile: React.FC = () => {
   const { user, logout } = useUser();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  if (!user) return <div>Нет данных пользователя</div>;
+  if (!user) return (
+    <Box sx={{ textAlign: 'center', mt: 4 }}>
+      <Typography variant="h6" color="text.secondary">
+        Нет данных пользователя
+      </Typography>
+    </Box>
+  );
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.4 }
+    }
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      style={{
-        maxWidth: 480,
-        margin: '40px auto',
-        padding: 32,
-        background: '#fff',
-        borderRadius: 16,
-        boxShadow: '0 4px 24px rgba(139,0,0,0.08)',
-      }}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
     >
-      <motion.h2
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        style={{ marginBottom: 24, color: '#8B0000', fontSize: 24, fontWeight: 600 }}
-      >
-        Профиль пользователя
-      </motion.h2>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-        style={{ display: 'flex', flexDirection: 'column', gap: 16, margin: '24px 0' }}
-      >
-        {user.avatar && (
-          <motion.img
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            src={user.avatar}
-            alt={user.name}
-            style={{
-              width: 100,
-              height: 100,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              margin: '0 auto',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            }}
-          />
-        )}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-          style={{ padding: 12, background: '#f9f9f9', borderRadius: 8 }}
-        >
-          <strong>Имя:</strong> {user.name}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.0, duration: 0.5 }}
-          style={{ padding: 12, background: '#f9f9f9', borderRadius: 8 }}
-        >
-          <strong>Email:</strong> {user.email}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.2, duration: 0.5 }}
-          style={{ padding: 12, background: '#f9f9f9', borderRadius: 8 }}
-        >
-          <strong>Телефон:</strong> {user.phone}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.4, duration: 0.5 }}
-          style={{ padding: 12, background: '#f9f9f9', borderRadius: 8 }}
-        >
-          <strong>Должность:</strong> {user.position}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.6, duration: 0.5 }}
-          style={{ padding: 12, background: '#f9f9f9', borderRadius: 8 }}
-        >
-          <strong>Льготы:</strong> {user.benefits && user.benefits.length > 0 ? user.benefits.join(', ') : 'Нет льгот'}
-        </motion.div>
-      </motion.div>
-      <motion.button
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.8, duration: 0.5 }}
-        whileHover={{ scale: 1.05, boxShadow: '0 6px 16px rgba(139,0,0,0.2)' }}
-        whileTap={{ scale: 0.95 }}
-        onClick={handleLogout}
-        style={{
-          background: '#8B0000',
-          color: '#fff',
-          padding: '12px 32px',
-          border: 'none',
-          borderRadius: 8,
-          fontWeight: 600,
-          fontSize: 16,
-          cursor: 'pointer',
-          marginTop: 24,
-          width: '100%',
-        }}
-      >
-        Выйти
-      </motion.button>
+      <StyledPaper>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, type: "spring" }}
+          >
+            <Avatar
+              src={user.avatar}
+              alt={user.name}
+              sx={{
+                width: 120,
+                height: 120,
+                margin: '0 auto',
+                border: `4px solid ${theme.palette.primary.main}`,
+                boxShadow: '0 4px 12px rgba(139,0,0,0.15)'
+              }}
+            />
+          </motion.div>
+          <Typography variant="h4" sx={{ mt: 2, mb: 1 }}>
+            {user.name}
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {user.position}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <motion.div variants={itemVariants}>
+              <ProfileField>
+                <Typography variant="overline" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography variant="body1">
+                  {user.email}
+                </Typography>
+              </ProfileField>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <motion.div variants={itemVariants}>
+              <ProfileField>
+                <Typography variant="overline" color="text.secondary">
+                  Телефон
+                </Typography>
+                <Typography variant="body1">
+                  {user.phone}
+                </Typography>
+              </ProfileField>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12}>
+            <motion.div variants={itemVariants}>
+              <ProfileField>
+                <Typography variant="overline" color="text.secondary">
+                  Льготы
+                </Typography>
+                <Typography variant="body1">
+                  {user.benefits && user.benefits.length > 0 
+                    ? user.benefits.join(', ') 
+                    : 'Нет льгот'}
+                </Typography>
+              </ProfileField>
+            </motion.div>
+          </Grid>
+        </Grid>
+
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleLogout}
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '1.1rem'
+              }}
+            >
+              Выйти
+            </Button>
+          </motion.div>
+        </Box>
+      </StyledPaper>
     </motion.div>
   );
 };

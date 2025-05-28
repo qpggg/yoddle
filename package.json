@@ -12,10 +12,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/react": "^11.11.3",
-    "@emotion/styled": "^11.11.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.15.10",
-    "@mui/material": "^5.15.10",
+    "@mui/material": "^5.17.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.511.0",
     "mysql2": "^3.14.1",
@@ -26,7 +26,6 @@
     "react-transition-group": "4.4.5"
   },
   "devDependencies": {
-    "@types/node": "^22.15.23",
     "@types/react": "18.2.55",
     "@types/react-dom": "18.2.19",
     "@types/react-transition-group": "4.4.8",
