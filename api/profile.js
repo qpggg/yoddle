@@ -21,8 +21,8 @@ export default async function handler(req, res) {
     try {
       await client.connect();
       await client.query(
-        'UPDATE enter SET name = $2, login = $3, phone = $5, position = $6, avatar_url = $7 WHERE id = $1',
-        [id, name, email, null, phone, position, avatar]
+        'UPDATE enter SET name = $2, login = $3, phone = $4, position = $5, avatar_url = $6 WHERE id = $1',
+        [id, name, email, phone, position, avatar]
       );
       const result = await client.query(
         'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE id = $1',
@@ -32,7 +32,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ user: result.rows[0] });
     } catch (error) {
       await client.end();
-      return res.status(500).json({ error: 'Database error' });
+      console.error(error); // временно для отладки
+      return res.status(500).json({ error: error.message });
     }
   }
 
