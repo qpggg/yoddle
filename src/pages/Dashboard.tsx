@@ -37,20 +37,31 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 
   useEffect(() => {
     if (open) {
-      fetch('/api/profile')
-        .then(res => res.json())
-        .then(data => {
-          setForm({
-            name: data.user.name || '',
-            email: data.user.email || '',
-            phone: data.user.phone || '',
-            position: data.user.position || '',
-            photo: data.user.avatar || ''
-          });
-          setPhotoPreview(data.user.avatar || '');
+      if (user) {
+        setForm({
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          position: user.position || '',
+          photo: user.avatar || ''
         });
+        setPhotoPreview(user.avatar || '');
+      } else {
+        fetch('/api/profile')
+          .then(res => res.json())
+          .then(data => {
+            setForm({
+              name: data.user.name || '',
+              email: data.user.email || '',
+              phone: data.user.phone || '',
+              position: data.user.position || '',
+              photo: data.user.avatar || ''
+            });
+            setPhotoPreview(data.user.avatar || '');
+          });
+      }
     }
-  }, [open]);
+  }, [open, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +90,6 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
     if (res.ok) {
       const updated = await res.json();
       setUser(updated.user);
-      window.location.reload();
     }
     onClose();
   };
@@ -213,6 +223,25 @@ const Dashboard: React.FC = () => {
               <div className="benefit-item"><Gift size={20} /><span>Нет льгот</span></div>
             )}
           </div>
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <button
+              style={{
+                background: '#750000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 10,
+                padding: '12px 32px',
+                fontWeight: 600,
+                fontSize: 16,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
+                transition: 'background 0.2s',
+              }}
+              onClick={() => navigate('/benefits')}
+            >
+              Добавить
+            </button>
+          </div>
         </motion.div>
 
         <motion.div 
@@ -294,6 +323,40 @@ const Dashboard: React.FC = () => {
               <h3>{user?.name || 'Гость'}</h3>
               <p>{user?.email || ''}</p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Новости */}
+        <motion.div 
+          className="dashboard-card news"
+          variants={itemVariants}
+          whileHover={{ 
+            scale: 1.025, 
+            y: -6, 
+            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+            transition: { duration: 0.28, ease: 'easeInOut' }
+          }}
+        >
+          <h2>Новости</h2>
+          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
+            Следите за нашими изменениями!
+          </div>
+        </motion.div>
+
+        {/* Отзывы */}
+        <motion.div 
+          className="dashboard-card feedback"
+          variants={itemVariants}
+          whileHover={{ 
+            scale: 1.025, 
+            y: -6, 
+            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+            transition: { duration: 0.28, ease: 'easeInOut' }
+          }}
+        >
+          <h2>Отзывы</h2>
+          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
+            Нам важно ваше мнение!
           </div>
         </motion.div>
       </motion.div>
