@@ -67,8 +67,12 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      setForm(f => ({ ...f, photo: file as File }));
-      setPhotoPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(f => ({ ...f, photo: reader.result as string }));
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -236,9 +240,15 @@ const Dashboard: React.FC = () => {
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
                 transition: 'background 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 48,
+                minWidth: 180
               }}
               onClick={() => navigate('/benefits')}
             >
+              <Gift size={20} color="#1E1E1E" style={{ marginRight: 8 }} />
               Добавить
             </button>
           </div>
@@ -312,16 +322,16 @@ const Dashboard: React.FC = () => {
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
         >
-          <h2>Профиль</h2>
-          <div className="profile-info">
+          <h2>Прогресс</h2>
+          <div className="profile-info" style={{ flexDirection: 'column', alignItems: 'center', gap: 16 }}>
             {user?.avatar ? (
-              <img src={user.avatar} alt={user.name} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={user.avatar} alt={user.name} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', marginBottom: 12 }} />
             ) : (
-              <UserCircle size={60} />
+              <UserCircle size={80} color="#750000" style={{ marginBottom: 12 }} />
             )}
-            <div className="profile-details">
-              <h3>{user?.name || 'Гость'}</h3>
-              <p>{user?.email || ''}</p>
+            <div className="profile-details" style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 600, fontSize: 22, marginBottom: 4 }}>Ваш рейтинг: Новичок (0/2)</div>
+              {/* Здесь в будущем можно добавить прогрессбар, персонажа и т.д. */}
             </div>
           </div>
         </motion.div>
