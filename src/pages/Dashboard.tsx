@@ -234,7 +234,7 @@ const Dashboard: React.FC = () => {
                 color: '#fff',
                 border: 'none',
                 borderRadius: 10,
-                padding: '12px 32px',
+                padding: 12,
                 fontWeight: 600,
                 fontSize: 16,
                 cursor: 'pointer',
@@ -243,12 +243,14 @@ const Dashboard: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: 48,
-                minWidth: 180
+                height: 50,
+                minWidth: 320,
+                width: '100%',
+                maxWidth: 340
               }}
               onClick={() => navigate('/benefits')}
             >
-              <Gift size={20} color="#1E1E1E" style={{ marginRight: 8 }} />
+              <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
               Добавить
             </button>
           </div>
