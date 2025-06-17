@@ -20,6 +20,7 @@ import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import { ScrollToTop } from './components/ScrollToTop';
 import Profile from './pages/Profile';
+import MyBenefits from './pages/MyBenefits';
 
 const HomePage = () => (
   <Box>
@@ -49,6 +50,7 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/my-benefits" element={<MyBenefits />} />
           </Routes>
           <Footer />
         </Box>
