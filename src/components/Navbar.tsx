@@ -14,6 +14,12 @@ const navItems = [
   { title: 'Услуги', path: '/services' }
 ];
 
+const authNavItems = [
+  { title: 'Мои льготы', path: '/my-benefits' },
+  { title: 'Прогресс', path: '/progress' },
+  { title: 'Предпочтения', path: '/preferences' }
+];
+
 const Navbar: React.FC = () => {
   const theme = useTheme();
   const location = useLocation();
@@ -148,7 +154,7 @@ const Navbar: React.FC = () => {
             </motion.div>
 
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: '2.5rem', alignItems: 'center' }}>
-              {navItems.map((item) => (
+              {(user ? authNavItems : navItems).map((item) => (
                 <Button
                   key={item.path}
                   component={Link}
@@ -260,7 +266,7 @@ const Navbar: React.FC = () => {
       >
         <Box sx={{ p: 3 }}>
           <List>
-            {navItems.map((item) => (
+            {(user ? authNavItems : navItems).map((item) => (
               <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
                 <Button
                   component={Link}
