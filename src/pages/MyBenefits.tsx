@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, Modal, Button } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 
@@ -63,12 +63,20 @@ const modalBoxStyle = {
   minWidth: 320
 };
 
+interface Benefit {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+}
+
 const MyBenefits: React.FC = () => {
   const { user } = useUser();
-  const [allBenefits, setAllBenefits] = useState<{id: number, name: string}[]>([]);
+  const [allBenefits, setAllBenefits] = useState<Benefit[]>([]);
   const [userBenefits, setUserBenefits] = useState<number[]>([]);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [success, setSuccess] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Все');
 
   useEffect(() => {
     fetch('/api/benefits')
@@ -99,6 +107,11 @@ const MyBenefits: React.FC = () => {
     setTimeout(handleClose, 1200);
   };
 
+  const categories = ['Все', ...Array.from(new Set(allBenefits.map(b => b.category)))];
+  const filteredBenefits = selectedCategory === 'Все' 
+    ? allBenefits 
+    : allBenefits.filter(b => b.category === selectedCategory);
+
   return (
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
@@ -106,15 +119,49 @@ const MyBenefits: React.FC = () => {
           <Typography variant="h2" align="center" sx={{ fontWeight: 800, color: '#8B0000', mb: 6, fontSize: { xs: '2.2rem', md: '3rem' } }}>
             Мои льготы
           </Typography>
+          
+          {/* Фильтр по категориям */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 6, flexWrap: 'wrap', gap: 1 }}>
+            {categories.map((category) => (
+              <Chip
+                key={category}
+                label={category}
+                onClick={() => setSelectedCategory(category)}
+                sx={{
+                  background: selectedCategory === category ? '#8B0000' : '#fff',
+                  color: selectedCategory === category ? '#fff' : '#8B0000',
+                  border: '2px solid #8B0000',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    background: selectedCategory === category ? '#8B0000' : '#f5f5f5'
+                  }
+                }}
+              />
+            ))}
+          </Box>
+
           <Grid container spacing={4}>
-            {allBenefits.map((benefit, idx) => (
+            {filteredBenefits.map((benefit, idx) => (
               <Grid item xs={12} md={4} key={benefit.id}>
                 <motion.div variants={itemVariants}>
                   <Paper elevation={0} sx={{ p: 4, borderRadius: '24px', background: '#fff', boxShadow: '0 8px 32px rgba(139,0,0,0.06)', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.3s', '&:hover': { boxShadow: '0 16px 48px rgba(139,0,0,0.10)', transform: 'translateY(-6px)' } }}>
-                    <Box sx={{ mb: 2 }}>
-                      {/* Можно добавить иконки по benefit.name, если нужно */}
-                    </Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1A1A1A', mb: 1 }}>{benefit.name}</Typography>
+                    <Chip 
+                      label={benefit.category} 
+                      size="small" 
+                      sx={{ 
+                        background: '#f0f0f0', 
+                        color: '#666', 
+                        mb: 2,
+                        fontWeight: 500
+                      }} 
+                    />
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1A1A1A', mb: 2, textAlign: 'center' }}>
+                      {benefit.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#666', textAlign: 'center', mb: 3, lineHeight: 1.6 }}>
+                      {benefit.description}
+                    </Typography>
                     <button
                       style={{ ...buttonStyle, opacity: userBenefits.includes(benefit.id) ? 0.5 : 1, pointerEvents: userBenefits.includes(benefit.id) ? 'none' : 'auto' }}
                       onClick={() => handleAdd(idx)}
