@@ -6,7 +6,8 @@ import {
   ChartBar, 
   Settings, 
   MessageCircle,
-  Bell
+  Bell,
+  PlusCircle
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
@@ -148,10 +149,26 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
   );
 }
 
+const MAX_BENEFITS = 2;
+
+interface Benefit {
+  id: number;
+  name: string;
+}
+
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const { user, setUser } = useUser();
+  const [userBenefits, setUserBenefits] = useState<Benefit[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.id) {
+      fetch(`/api/user-benefits?user_id=${user.id}`)
+        .then(res => res.json())
+        .then(data => setUserBenefits(data.benefits || []));
+    }
+  }, [user]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -218,176 +235,68 @@ const Dashboard: React.FC = () => {
         >
           <h2>Текущие льготы</h2>
           <div className="benefits-list">
-            {(user?.benefits && user.benefits.length > 0) ? user.benefits.map((b, i) => (
-              <div className="benefit-item" key={i}>
+            {userBenefits.length > 0 ? userBenefits.map((b) => (
+              <div className="benefit-item" key={b.id}>
                 <Gift size={20} />
-                <span>{b}</span>
+                <span>{b.name}</span>
               </div>
             )) : (
               <div className="benefit-item"><Gift size={20} /><span>Нет льгот</span></div>
             )}
           </div>
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
-            <button
-              style={{
-                background: '#750000',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 10,
-                padding: 12,
-                fontWeight: 600,
-                fontSize: 16,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
-                transition: 'background 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: 50,
-                minWidth: 320,
-                width: '100%',
-                maxWidth: 340
-              }}
-              onClick={() => navigate('/benefits')}
-            >
-              <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
-              Добавить
-            </button>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="dashboard-card analytics"
-          variants={itemVariants}
-          whileHover={{ 
-            scale: 1.025, 
-            y: -6, 
-            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-            transition: { duration: 0.28, ease: 'easeInOut' }
-          }}
-        >
-          <h2>Аналитика использования</h2>
-          <div className="chart-placeholder">
-            <ChartBar size={40} />
-            <p>График активности</p>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="dashboard-card quick-actions"
-          variants={itemVariants}
-          whileHover={{ 
-            scale: 1.025, 
-            y: -6, 
-            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-            transition: { duration: 0.28, ease: 'easeInOut' }
-          }}
-        >
-          <h2>Быстрые действия</h2>
-          <div className="actions-grid">
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              onClick={() => navigate('/profile')}
-            >
-              <UserCircle size={24} />
-              <span>Профиль</span>
-            </motion.button>
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-            >
-              <MessageCircle size={24} />
-              <span>Поддержка</span>
-            </motion.button>
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              onClick={() => setShowProfileModal(true)}
-            >
-              <Settings size={24} />
-              <span>Изменить профиль</span>
-            </motion.button>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="dashboard-card profile"
-          variants={itemVariants}
-          whileHover={{ 
-            scale: 1.025, 
-            y: -6, 
-            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-            transition: { duration: 0.28, ease: 'easeInOut' }
-          }}
-        >
-          <h2>Прогресс</h2>
-          <div className="profile-info" style={{ flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt={user.name} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', marginBottom: 12 }} />
-            ) : (
-              <UserCircle size={80} color="#750000" style={{ marginBottom: 12 }} />
+          <div style={{ marginTop: 'auto', paddingTop: '24px', textAlign: 'center' }}>
+            {userBenefits.length < MAX_BENEFITS && (
+                <button
+                onClick={() => navigate('/my-benefits')}
+                style={{
+                    background: '#750000',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 10,
+                    padding: '12px 24px',
+                    fontWeight: 600,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
+                    transition: 'all 0.3s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                }}
+                >
+                <PlusCircle size={20} style={{ marginRight: 8 }} />
+                Добавить
+                </button>
             )}
-            <div className="profile-details" style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 600, fontSize: 22, marginBottom: 4 }}>Ваш рейтинг: Новичок (0/2)</div>
-              {/* Здесь в будущем можно добавить прогрессбар, персонажа и т.д. */}
-            </div>
           </div>
         </motion.div>
 
-        {/* Новости */}
-        <motion.div 
-          className="dashboard-card news"
-          variants={itemVariants}
-          whileHover={{ 
-            scale: 1.025, 
-            y: -6, 
-            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-            transition: { duration: 0.28, ease: 'easeInOut' }
-          }}
-        >
-          <h2>Новости</h2>
-          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
-            Следите за нашими изменениями!
-          </div>
+        <motion.div className="dashboard-card" variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.3 }}}>
+          <h2>Статистика</h2>
+          <ChartBar size={32} />
+          <p>Аналитика использования</p>
         </motion.div>
-
-        {/* Отзывы */}
-        <motion.div 
-          className="dashboard-card feedback"
-          variants={itemVariants}
-          whileHover={{ 
-            scale: 1.025, 
-            y: -6, 
-            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-            transition: { duration: 0.28, ease: 'easeInOut' }
-          }}
-        >
-          <h2>Отзывы</h2>
-          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
-            Нам важно ваше мнение!
-          </div>
+        
+        <motion.div className="dashboard-card" variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.3 }}} onClick={() => setShowProfileModal(true)}>
+          <h2>Профиль</h2>
+          <UserCircle size={32} />
+          <p>Настройки аккаунта</p>
+        </motion.div>
+        
+        <motion.div className="dashboard-card" variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.3 }}}>
+          <h2>Поддержка</h2>
+          <MessageCircle size={32} />
+          <p>Связаться с нами</p>
+        </motion.div>
+        
+        <motion.div className="dashboard-card" variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.3 }}}>
+          <h2>Настройки</h2>
+          <Settings size={32} />
+          <p>Управление</p>
         </motion.div>
       </motion.div>
-
-      <motion.div 
-        className="dashboard-footer"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.8, ease: 'easeInOut' }}
-      >
-        <p>Нужна помощь? Обратитесь в поддержку</p>
-        <motion.button 
-          className="support-btn"
-          whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-          whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-        >
-          Связаться с поддержкой
-        </motion.button>
-      </motion.div>
+      
       <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
     </div>
   );

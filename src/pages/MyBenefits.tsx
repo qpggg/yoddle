@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
 import { GiBrain } from "react-icons/gi";
 
 const containerVariants = {
@@ -70,8 +70,8 @@ interface Benefit {
   category: string;
 }
 
-const BenefitCard = ({ benefit, onAdd, isAdded, isSelectedCard }: { benefit: Benefit; onAdd: () => void; isAdded: boolean; isSelectedCard?: boolean; }) => (
-  <motion.div variants={itemVariants} whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
+const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard }: { benefit: Benefit; onAdd: () => void; isAdded: boolean; isDisabled: boolean, isSelectedCard?: boolean; }) => (
+  <motion.div variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
     <Paper elevation={0} sx={{ p: 3, borderRadius: '24px', background: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.05)', height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid #eee' }}>
       <Box sx={{ color: '#8B0000', mb: 2 }}>
         {categoryIcons[benefit.category] || categoryIcons['Default']}
@@ -85,9 +85,14 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isSelectedCard }: { benefit: Ben
       <Chip label={benefit.category} size="small" sx={{ background: '#f5f5f5', color: '#555', fontWeight: 500, alignSelf: 'flex-start', mb: 3 }} />
       {!isSelectedCard && (
         <button
-          style={{ ...buttonStyle, opacity: isAdded ? 0.7 : 1, background: isAdded ? '#555' : 'linear-gradient(45deg, #8B0000, #B22222)' }}
+          style={{ 
+            ...buttonStyle, 
+            opacity: isAdded || isDisabled ? 0.6 : 1, 
+            background: isAdded ? '#555' : 'linear-gradient(45deg, #8B0000, #B22222)',
+            cursor: isAdded || isDisabled ? 'not-allowed' : 'pointer'
+          }}
           onClick={onAdd}
-          disabled={isAdded}
+          disabled={isAdded || isDisabled}
         >
           {isAdded ? <FaCheck /> : <FaPlus />}
           {isAdded ? 'Добавлено' : 'Добавить'}
@@ -97,30 +102,47 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isSelectedCard }: { benefit: Ben
   </motion.div>
 );
 
+const MAX_BENEFITS = 2;
+
 const MyBenefits: React.FC = () => {
   const { user } = useUser();
   const [allBenefits, setAllBenefits] = useState<Benefit[]>([]);
   const [userBenefitIds, setUserBenefitIds] = useState<number[]>([]);
   const [openBenefit, setOpenBenefit] = useState<Benefit | null>(null);
+  const [modalType, setModalType] = useState<'confirm' | 'limit' | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
 
   useEffect(() => {
-    fetch('/api/benefits')
-      .then(res => res.json())
-      .then(data => setAllBenefits(data.benefits || []));
-  }, []);
+    setIsLoading(true);
+    const fetchBenefits = fetch('/api/benefits').then(res => res.json());
+    const fetchUserBenefits = user?.id ? fetch(`/api/user-benefits?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ benefits: [] });
 
-  useEffect(() => {
-    if (user?.id) {
-      fetch(`/api/user-benefits?user_id=${user.id}`)
-        .then(res => res.json())
-        .then(data => setUserBenefitIds((data.benefits || []).map((b: any) => b.id)));
-    }
+    Promise.all([fetchBenefits, fetchUserBenefits])
+      .then(([allBenefitsData, userBenefitsData]) => {
+        setAllBenefits(allBenefitsData.benefits || []);
+        setUserBenefitIds((userBenefitsData.benefits || []).map((b: any) => b.id));
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, [user]);
 
-  const handleAddClick = (benefit: Benefit) => setOpenBenefit(benefit);
-  const handleClose = () => { setOpenBenefit(null); setTimeout(() => setSuccess(false), 300); };
+  const handleAddClick = (benefit: Benefit) => {
+    if (userBenefitIds.length >= MAX_BENEFITS) {
+      setModalType('limit');
+    } else {
+      setOpenBenefit(benefit);
+      setModalType('confirm');
+    }
+  };
+
+  const handleClose = () => { 
+    setOpenBenefit(null); 
+    setModalType(null);
+    setTimeout(() => setSuccess(false), 300); 
+  };
+  
   const handleConfirm = async () => {
     if (!user || !openBenefit) return;
     await fetch('/api/user-benefits', {
@@ -140,9 +162,23 @@ const MyBenefits: React.FC = () => {
     
   const selectedBenefits = useMemo(() => allBenefits.filter(b => userBenefitIds.includes(b.id)), [allBenefits, userBenefitIds]);
 
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
+        <CircularProgress sx={{ color: '#8B0000' }} />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+          <Typography variant="h4" align="center" sx={{ fontWeight: 700, color: '#8B0000', mb: 8, lineHeight: 1.4, fontSize: { xs: '1.8rem', md: '2.2rem' } }}>
+            {user?.name}, здесь Вы можете посмотреть свои бенефиты или выбрать их!
+          </Typography>
+        </motion.div>
+
         {/* --- ВЫБРАННЫЕ ЛЬГОТЫ --- */}
         <Box sx={{ mb: 10, p: 4, background: '#fff', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)' }}>
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A1A1A', mb: 4, textAlign: 'center' }}>
@@ -153,7 +189,7 @@ const MyBenefits: React.FC = () => {
               <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
                 {selectedBenefits.map((benefit) => (
                   <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`}>
-                    <BenefitCard benefit={benefit} onAdd={() => {}} isAdded={true} isSelectedCard={true} />
+                    <BenefitCard benefit={benefit} onAdd={() => {}} isAdded={true} isDisabled={false} isSelectedCard={true} />
                   </Grid>
                 ))}
               </Grid>
@@ -175,6 +211,18 @@ const MyBenefits: React.FC = () => {
           <Typography align="center" sx={{ color: '#555', mb: 6, maxWidth: '600px', mx: 'auto' }}>
             Выберите бенефиты, которые помогут вам работать продуктивнее и чувствовать себя лучше.
           </Typography>
+          
+          {userBenefitIds.length >= MAX_BENEFITS && (
+             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+                <Paper sx={{ p: 3, mb: 6, borderRadius: '16px', background: 'linear-gradient(45deg, #8B0000, #B22222)', color: '#fff', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <FaExclamationTriangle size={30} />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Вы выбрали максимум льгот</Typography>
+                    <Typography variant="body2">Удачного использования! Вы сможете выбрать новые льготы в следующем месяце.</Typography>
+                  </Box>
+                </Paper>
+             </motion.div>
+          )}
 
           {/* Фильтр по категориям */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 6, flexWrap: 'wrap', gap: 1.5 }}>
@@ -205,17 +253,22 @@ const MyBenefits: React.FC = () => {
           <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
             {filteredBenefits.map((benefit) => (
               <Grid item xs={12} sm={6} md={4} key={benefit.id}>
-                <BenefitCard benefit={benefit} onAdd={() => handleAddClick(benefit)} isAdded={userBenefitIds.includes(benefit.id)} />
+                <BenefitCard 
+                  benefit={benefit} 
+                  onAdd={() => handleAddClick(benefit)} 
+                  isAdded={userBenefitIds.includes(benefit.id)}
+                  isDisabled={userBenefitIds.length >= MAX_BENEFITS && !userBenefitIds.includes(benefit.id)}
+                />
               </Grid>
             ))}
           </Grid>
         </motion.div>
 
-        {/* Модальное окно подтверждения */}
-        <Modal open={!!openBenefit} onClose={handleClose} sx={{ backdropFilter: 'blur(5px)'}}>
+        {/* Модальное окно */}
+        <Modal open={!!modalType} onClose={handleClose} sx={{ backdropFilter: 'blur(5px)'}}>
           <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>
             <AnimatePresence>
-            {openBenefit && (
+            {modalType === 'confirm' && openBenefit && (
               <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0, scale: 0.8}}>
                 <Box sx={modalBoxStyle}>
                   {!success ? (
@@ -223,18 +276,10 @@ const MyBenefits: React.FC = () => {
                       <Typography variant="h6" sx={{ mb: 1, color: '#1A1A1A', fontWeight: 700 }}>Подтвердите ваш выбор</Typography>
                       <Typography sx={{ color: '#555', mb: 3 }}>Вы хотите добавить льготу "{openBenefit?.name}"?</Typography>
                       <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                          variant="contained"
-                          sx={{ background: '#32CD32', color: '#fff', fontWeight: 600, px: 4, borderRadius: '50px', '&:hover': { background: '#228B22' } }}
-                          onClick={handleConfirm}
-                        >
+                        <Button variant="contained" sx={{ background: '#32CD32', color: '#fff', fontWeight: 600, px: 4, borderRadius: '50px', '&:hover': { background: '#228B22' } }} onClick={handleConfirm}>
                           <FaCheck style={{marginRight: '8px'}}/>Да
                         </Button>
-                        <Button
-                          variant="outlined"
-                          sx={{ color: '#D32F2F', borderColor: '#D32F2F', fontWeight: 600, px: 4, borderRadius: '50px', '&:hover': { background: 'rgba(211, 47, 47, 0.04)', borderColor: '#C62828' } }}
-                          onClick={handleClose}
-                        >
+                        <Button variant="outlined" sx={{ color: '#D32F2F', borderColor: '#D32F2F', fontWeight: 600, px: 4, borderRadius: '50px', '&:hover': { background: 'rgba(211, 47, 47, 0.04)', borderColor: '#C62828' } }} onClick={handleClose}>
                            <FaTimes style={{marginRight: '8px'}}/>Нет
                         </Button>
                       </Box>
@@ -245,6 +290,18 @@ const MyBenefits: React.FC = () => {
                         <Typography variant="h6" sx={{ color: '#1A1A1A', fontWeight: 700, mt: 2 }}>Льгота добавлена!</Typography>
                      </motion.div>
                   )}
+                </Box>
+              </motion.div>
+            )}
+            {modalType === 'limit' && (
+               <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0, scale: 0.8}}>
+                <Box sx={modalBoxStyle}>
+                    <FaExclamationTriangle size={40} color="#D32F2F"/>
+                    <Typography variant="h6" sx={{ color: '#1A1A1A', fontWeight: 700, mt: 2, mb: 1 }}>Достигнут лимит</Typography>
+                    <Typography sx={{ color: '#555', mb: 3 }}>Вы уже выбрали максимальное количество льгот в этом месяце (2).</Typography>
+                    <Button variant="contained" sx={{ background: '#8B0000', color: '#fff', fontWeight: 600, px: 4, borderRadius: '50px', '&:hover': { background: '#A52A2A' } }} onClick={handleClose}>
+                      Понятно
+                    </Button>
                 </Box>
               </motion.div>
             )}
