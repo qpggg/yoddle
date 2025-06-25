@@ -79,7 +79,6 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const chartHeight = 140;
   const barWidth = 8;
   const barGap = 2;
-  const chartWidth = activityData.length * (barWidth + barGap);
 
   return (
     <div className={className} style={{ padding: '16px 0' }}>

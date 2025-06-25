@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCircle, 
   Gift, 
-  ChartBar, 
   Settings, 
   MessageCircle,
   Bell
