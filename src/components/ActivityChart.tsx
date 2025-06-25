@@ -11,6 +11,13 @@ interface ActivityChartProps {
   className?: string;
 }
 
+interface TooltipState {
+  visible: boolean;
+  x: number;
+  y: number;
+  content: string;
+}
+
 const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const { user } = useUser();
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
@@ -18,6 +25,12 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const [currentMonth, setCurrentMonth] = useState('');
   const [currentYear, setCurrentYear] = useState(2024);
   const [totalActions, setTotalActions] = useState(0);
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    content: ''
+  });
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -87,6 +100,26 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const barWidth = 8;
   const barGap = 2;
 
+  // Функции для tooltip
+  const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const monthNames = [
+      'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
+      'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
+    ];
+    
+    setTooltip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10,
+      content: `${day} ${monthNames[currentYear === 2025 ? 5 : new Date().getMonth()]}: ${actions} ${actions === 1 ? 'действие' : actions < 5 ? 'действия' : 'действий'}`
+    });
+  };
+
+  const hideTooltip = () => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+  };
+
   return (
     <div className={className} style={{ padding: '16px 0' }}>
       {/* Заголовок с общей статистикой */}
@@ -144,15 +177,19 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
                   : '#E5E5E5',
                 borderRadius: '2px',
                 position: 'relative',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
               whileHover={{ 
-                transform: 'scaleY(1.1)',
-                background: dataPoint.actions > 0 
-                  ? 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)'
-                  : '#D0D0D0'
+                transform: 'scale(1.15) translateY(-3px)',
+                background: isToday 
+                  ? 'linear-gradient(180deg, #A00000 0%, #D32222 100%)'
+                  : 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)',
+                boxShadow: '0 4px 12px rgba(139, 0, 0, 0.3)',
+                zIndex: 10
               }}
-              title={`${dataPoint.day} число: ${dataPoint.actions} действий`}
+              onMouseEnter={(e) => showTooltip(e, dataPoint.day, dataPoint.actions)}
+              onMouseLeave={hideTooltip}
             >
               {/* Показываем номер дня только для каждого 5-го дня или если сегодня */}
               {(dataPoint.day % 5 === 0 || isToday) && (
@@ -201,6 +238,48 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           Активность
         </div>
       </div>
+
+      {/* Tooltip */}
+      {tooltip.visible && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.15 }}
+          style={{
+            position: 'fixed',
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translateX(-50%) translateY(-100%)',
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: 600,
+            boxShadow: '0 4px 20px rgba(139, 0, 0, 0.3)',
+            zIndex: 1000,
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {tooltip.content}
+          {/* Треугольная стрелочка */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '5px solid #8B0000'
+            }}
+          />
+        </motion.div>
+      )}
     </div>
   );
 };
