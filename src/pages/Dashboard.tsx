@@ -11,6 +11,7 @@ import {
 import { FaRocket } from 'react-icons/fa';
 import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
+import { useUserBenefits } from '../hooks/useUserBenefits';
 import { useNavigate } from 'react-router-dom';
 
 interface ProfileEditModalProps {
@@ -152,6 +153,7 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const { user, setUser } = useUser();
+  const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const navigate = useNavigate();
 
   const containerVariants = {
@@ -219,42 +221,97 @@ const Dashboard: React.FC = () => {
         >
           <h2>Текущие льготы</h2>
           <div className="benefits-list">
-            {(user?.benefits && user.benefits.length > 0) ? user.benefits.map((b, i) => (
-              <div className="benefit-item" key={i}>
+            {benefitsLoading ? (
+              <div className="benefit-item">
                 <Gift size={20} />
-                <span>{b}</span>
+                <span>Загрузка...</span>
               </div>
-            )) : (
-              <div className="benefit-item"><Gift size={20} /><span>Нет льгот</span></div>
+            ) : userBenefits.length > 0 ? (
+              userBenefits.map((benefit) => (
+                <div className="benefit-item" key={benefit.id}>
+                  <Gift size={20} />
+                  <span>{benefit.name}</span>
+                </div>
+              ))
+            ) : (
+              <div className="benefit-item">
+                <Gift size={20} />
+                <span>Нет льгот</span>
+              </div>
             )}
           </div>
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
-            <button
-              style={{
-                background: '#750000',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 10,
-                padding: 12,
-                fontWeight: 600,
-                fontSize: 16,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
-                transition: 'background 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: 50,
-                minWidth: 320,
-                width: '100%',
-                maxWidth: 340
-              }}
-              onClick={() => navigate('/benefits')}
-            >
-              <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
-              Добавить
-            </button>
-          </div>
+          {/* Показываем кнопку "Добавить" только если льгот меньше 2 */}
+          {!benefitsLoading && userBenefits.length < 2 && (
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+              <button
+                style={{
+                  background: '#750000',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: 12,
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
+                  transition: 'background 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 50,
+                  minWidth: 320,
+                  width: '100%',
+                  maxWidth: 340
+                }}
+                onClick={() => navigate('/my-benefits')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#600000';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#750000';
+                }}
+              >
+                <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
+                Добавить
+              </button>
+            </div>
+          )}
+          {/* Если льгот уже 2, показываем кнопку "Управление" */}
+          {!benefitsLoading && userBenefits.length >= 2 && (
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+              <button
+                style={{
+                  background: '#2E7D32',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: 12,
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(46,125,50,0.08)',
+                  transition: 'background 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 50,
+                  minWidth: 320,
+                  width: '100%',
+                  maxWidth: 340
+                }}
+                onClick={() => navigate('/my-benefits')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#1B5E20';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#2E7D32';
+                }}
+              >
+                <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
+                Управление
+              </button>
+            </div>
+          )}
         </motion.div>
 
         <motion.div 
