@@ -332,8 +332,37 @@ const Dashboard: React.FC = () => {
               <UserCircle size={80} color="#750000" style={{ marginBottom: 12 }} />
             )}
             <div className="profile-details" style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 600, fontSize: 22, marginBottom: 4 }}>Ваш рейтинг: Новичок (0/2)</div>
-              {/* Здесь в будущем можно добавить прогрессбар, персонажа и т.д. */}
+              <div style={{ fontWeight: 600, fontSize: 22, marginBottom: 4 }}>Ваш рейтинг: Активный (150/300 XP)</div>
+              <div style={{ 
+                background: '#f0f0f0', 
+                borderRadius: 12, 
+                height: 8, 
+                marginBottom: 16, 
+                overflow: 'hidden' 
+              }}>
+                <div style={{ 
+                  background: 'linear-gradient(90deg, #34C759 0%, #34C75980 100%)', 
+                  height: '100%', 
+                  width: '50%', 
+                  borderRadius: 12 
+                }} />
+              </div>
+              <button
+                style={{
+                  background: 'linear-gradient(45deg, #34C759, #30B455)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 20px',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                }}
+                onClick={() => navigate('/progress')}
+              >
+                Подробнее
+              </button>
             </div>
           </div>
         </motion.div>
