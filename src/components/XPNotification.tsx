@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Box, Typography, Paper } from '@mui/material';
-import { FaStar, FaTrophy, FaGem, FaHeart, FaUserShield } from 'react-icons/fa';
+import { FaStar, FaTrophy, FaHeart, FaUserShield } from 'react-icons/fa';
 
 interface XPNotificationProps {
   xp: number;

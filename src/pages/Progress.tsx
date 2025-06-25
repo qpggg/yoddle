@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress, Card, CardContent } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
+import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { 
   FaFire, 
@@ -10,13 +10,12 @@ import {
   FaEye,
   FaHeart,
   FaRocket,
-  FaLightbulb,
-  FaBullseye,
+
   FaBolt,
   FaCheckCircle,
   FaLock
 } from 'react-icons/fa';
-import { GiCrystalShine, GiTrophyCup, GiLevelUp } from 'react-icons/gi';
+import { GiCrystalShine, GiTrophyCup } from 'react-icons/gi';
 import { FaUserShield } from 'react-icons/fa6';
 
 const containerVariants = {
@@ -46,22 +45,7 @@ const cardStyle = {
   flexDirection: 'column'
 };
 
-const buttonStyle = {
-  background: 'linear-gradient(45deg, #8B0000, #B22222)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '50px',
-  padding: '12px 28px',
-  fontWeight: 600,
-  fontSize: 16,
-  cursor: 'pointer',
-  boxShadow: '0 4px 15px rgba(139,0,0,0.2)',
-  transition: 'all 0.3s ease',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px'
-};
+
 
 interface Achievement {
   id: string;
