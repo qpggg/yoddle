@@ -13,6 +13,7 @@ import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
 import { useUserBenefits } from '../hooks/useUserBenefits';
 import { useNavigate } from 'react-router-dom';
+import ActivityChart from '../components/ActivityChart';
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -325,10 +326,7 @@ const Dashboard: React.FC = () => {
           }}
         >
           <h2>Аналитика использования</h2>
-          <div className="chart-placeholder">
-            <ChartBar size={40} />
-            <p>График активности</p>
-          </div>
+          <ActivityChart />
         </motion.div>
 
         <motion.div 
