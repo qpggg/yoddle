@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
-import { useUser } from '../hooks/useUser';
 import { 
-  FaTrophy, 
   FaFire, 
   FaStar, 
   FaCrown, 
-  FaGem,
   FaUserFriends,
   FaEye,
   FaHeart,
   FaRocket,
   FaLightbulb,
   FaBullseye,
-  FaBolt,
-  FaShieldAlt
+  FaBolt
 } from 'react-icons/fa';
 import { GiCrystalShine, GiTrophyCup } from 'react-icons/gi';
 import { FaUserShield } from 'react-icons/fa6';
@@ -148,7 +144,6 @@ const getRarityColor = (rarity: string) => {
 };
 
 const Progress: React.FC = () => {
-  const { user } = useUser();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
 

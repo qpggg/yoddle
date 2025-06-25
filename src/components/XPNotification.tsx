@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Box, Typography, Paper } from '@mui/material';
 import { FaStar, FaTrophy, FaGem } from 'react-icons/fa';
