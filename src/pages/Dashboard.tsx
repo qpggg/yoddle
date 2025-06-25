@@ -281,7 +281,7 @@ const Dashboard: React.FC = () => {
             <div style={{ marginTop: 24, textAlign: 'center' }}>
               <button
                 style={{
-                  background: '#2E7D32',
+                  background: '#750000',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
@@ -289,7 +289,7 @@ const Dashboard: React.FC = () => {
                   fontWeight: 600,
                   fontSize: 16,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(46,125,50,0.08)',
+                  boxShadow: '0 2px 8px rgba(139,0,0,0.08)',
                   transition: 'background 0.2s',
                   display: 'flex',
                   alignItems: 'center',
@@ -301,10 +301,10 @@ const Dashboard: React.FC = () => {
                 }}
                 onClick={() => navigate('/my-benefits')}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#1B5E20';
+                  e.currentTarget.style.background = '#600000';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#2E7D32';
+                  e.currentTarget.style.background = '#750000';
                 }}
               >
                 <Gift size={20} color="#fff" style={{ marginRight: 8 }} />
