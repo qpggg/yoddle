@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
-import { motion } from 'framer-motion';
+import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress, Card, CardContent } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useUser } from '../hooks/useUser';
 import { 
   FaFire, 
   FaStar, 
@@ -11,10 +12,56 @@ import {
   FaRocket,
   FaLightbulb,
   FaBullseye,
-  FaBolt
+  FaBolt,
+  FaCheckCircle,
+  FaLock
 } from 'react-icons/fa';
-import { GiCrystalShine, GiTrophyCup } from 'react-icons/gi';
+import { GiCrystalShine, GiTrophyCup, GiLevelUp } from 'react-icons/gi';
 import { FaUserShield } from 'react-icons/fa6';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1, y: 0,
+    transition: { type: 'spring', stiffness: 100 }
+  }
+};
+
+const cardStyle = {
+  background: '#fff',
+  borderRadius: '24px',
+  padding: '2rem',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+  border: '1px solid #eee',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const buttonStyle = {
+  background: 'linear-gradient(45deg, #8B0000, #B22222)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '50px',
+  padding: '12px 28px',
+  fontWeight: 600,
+  fontSize: 16,
+  cursor: 'pointer',
+  boxShadow: '0 4px 15px rgba(139,0,0,0.2)',
+  transition: 'all 0.3s ease',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px'
+};
 
 interface Achievement {
   id: string;
@@ -43,11 +90,11 @@ interface UserProgress {
 }
 
 const RANKS = [
-  { name: 'Новичок', minXP: 0, maxXP: 100, color: '#8E8E93', icon: <FaUserShield /> },
-  { name: 'Активный', minXP: 101, maxXP: 300, color: '#34C759', icon: <FaRocket /> },
-  { name: 'Эксперт', minXP: 301, maxXP: 500, color: '#007AFF', icon: <FaBolt /> },
-  { name: 'Мастер', minXP: 501, maxXP: 1000, color: '#AF52DE', icon: <FaCrown /> },
-  { name: 'Легенда', minXP: 1001, maxXP: Infinity, color: '#FF9500', icon: <GiTrophyCup /> }
+  { name: 'Новичок', minXP: 0, maxXP: 100, color: '#8E8E93', icon: <FaUserShield />, gradient: 'linear-gradient(45deg, #8E8E93, #A8A8AA)' },
+  { name: 'Активный', minXP: 101, maxXP: 300, color: '#34C759', icon: <FaRocket />, gradient: 'linear-gradient(45deg, #34C759, #30D158)' },
+  { name: 'Эксперт', minXP: 301, maxXP: 500, color: '#007AFF', icon: <FaBolt />, gradient: 'linear-gradient(45deg, #007AFF, #0A84FF)' },
+  { name: 'Мастер', minXP: 501, maxXP: 1000, color: '#AF52DE', icon: <FaCrown />, gradient: 'linear-gradient(45deg, #AF52DE, #BF5AF2)' },
+  { name: 'Легенда', minXP: 1001, maxXP: Infinity, color: '#FF9500', icon: <GiTrophyCup />, gradient: 'linear-gradient(45deg, #FF9500, #FF9F0A)' }
 ];
 
 const ACHIEVEMENTS: Achievement[] = [
@@ -133,17 +180,128 @@ const ACHIEVEMENTS: Achievement[] = [
   }
 ];
 
-const getRarityColor = (rarity: string) => {
+const getRarityConfig = (rarity: string) => {
   switch (rarity) {
-    case 'common': return '#8E8E93';
-    case 'rare': return '#34C759';
-    case 'epic': return '#AF52DE';
-    case 'legendary': return '#FF9500';
-    default: return '#8E8E93';
+    case 'common': return { color: '#8E8E93', bg: '#F2F2F7', label: 'Обычное' };
+    case 'rare': return { color: '#34C759', bg: '#E8F5E8', label: 'Редкое' };
+    case 'epic': return { color: '#AF52DE', bg: '#F3E8FF', label: 'Эпическое' };
+    case 'legendary': return { color: '#FF9500', bg: '#FFF4E6', label: 'Легендарное' };
+    default: return { color: '#8E8E93', bg: '#F2F2F7', label: 'Обычное' };
   }
 };
 
+const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
+  const rarityConfig = getRarityConfig(achievement.rarity);
+  
+  return (
+    <motion.div variants={itemVariants} whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%' }}>
+      <Paper elevation={0} sx={{ 
+        ...cardStyle, 
+        position: 'relative',
+        opacity: achievement.unlocked ? 1 : 0.6,
+        background: achievement.unlocked ? '#fff' : '#f8f9fa'
+      }}>
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 16, 
+          right: 16, 
+          color: achievement.unlocked ? '#34C759' : '#8E8E93' 
+        }}>
+          {achievement.unlocked ? <FaCheckCircle size={24} /> : <FaLock size={20} />}
+        </Box>
+        
+        <Box sx={{ 
+          color: achievement.unlocked ? '#8B0000' : '#8E8E93', 
+          mb: 2, 
+          fontSize: '2rem' 
+        }}>
+          {achievement.icon}
+        </Box>
+        
+        <Typography variant="h6" sx={{ 
+          fontWeight: 700, 
+          color: achievement.unlocked ? '#1A1A1A' : '#8E8E93', 
+          mb: 1 
+        }}>
+          {achievement.title}
+        </Typography>
+        
+        <Typography variant="body2" sx={{ 
+          color: achievement.unlocked ? '#555' : '#8E8E93', 
+          mb: 3, 
+          lineHeight: 1.6, 
+          flexGrow: 1 
+        }}>
+          {achievement.description}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
+          <Chip 
+            label={rarityConfig.label} 
+            size="small" 
+            sx={{ 
+              background: rarityConfig.bg, 
+              color: rarityConfig.color, 
+              fontWeight: 600 
+            }} 
+          />
+          <Typography variant="body2" sx={{ 
+            fontWeight: 700, 
+            color: '#8B0000',
+            background: '#FFF0F0',
+            padding: '4px 8px',
+            borderRadius: '8px'
+          }}>
+            +{achievement.points} XP
+          </Typography>
+        </Box>
+      </Paper>
+    </motion.div>
+  );
+};
+
+const StatCard = ({ title, value, subtitle, icon, color }: { 
+  title: string; 
+  value: string | number; 
+  subtitle?: string; 
+  icon: React.ReactElement;
+  color: string;
+}) => (
+  <motion.div variants={itemVariants} whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }}>
+    <Paper elevation={0} sx={cardStyle}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ color, fontSize: '1.5rem', mr: 2 }}>
+          {icon}
+        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1A1A1A' }}>
+          {title}
+        </Typography>
+      </Box>
+      
+      <Typography variant="h3" sx={{ 
+        fontWeight: 800, 
+        color: '#8B0000', 
+        mb: 1,
+        textAlign: 'center'
+      }}>
+        {value}
+      </Typography>
+      
+      {subtitle && (
+        <Typography variant="body2" sx={{ 
+          color: '#555', 
+          textAlign: 'center',
+          fontWeight: 500
+        }}>
+          {subtitle}
+        </Typography>
+      )}
+    </Paper>
+  </motion.div>
+);
+
 const Progress: React.FC = () => {
+  const { user } = useUser();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -176,8 +334,8 @@ const Progress: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress sx={{ color: '#750000' }} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f9fafb' }}>
+        <CircularProgress sx={{ color: '#8B0000' }} />
       </Box>
     );
   }
@@ -185,319 +343,172 @@ const Progress: React.FC = () => {
   if (!progress) return null;
 
   const currentRank = RANKS.find(rank => rank.name === progress.rank) || RANKS[0];
-  const progressPercent = ((progress.currentXP - currentRank.minXP) / (currentRank.maxXP - currentRank.minXP)) * 100;
+  const progressPercent = Math.min(((progress.currentXP - currentRank.minXP) / (currentRank.maxXP - currentRank.minXP)) * 100, 100);
   const unlockedAchievements = progress.achievements.filter(a => a.unlocked);
+  const lockedAchievements = progress.achievements.filter(a => !a.unlocked);
 
   return (
     <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <Typography 
-            variant="h3" 
-            align="center" 
-            sx={{ 
-              fontWeight: 800, 
-              color: '#750000', 
-              mb: 8,
-              fontSize: { xs: '2rem', md: '3rem' }
-            }}
-          >
-            🚀 Ваш прогресс в Yoddle
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+          <Typography variant="h4" align="center" sx={{ 
+            fontWeight: 700, 
+            color: '#8B0000', 
+            mb: 8, 
+            lineHeight: 1.4, 
+            fontSize: { xs: '1.8rem', md: '2.2rem' } 
+          }}>
+            {user?.name}, ваш прогресс в Yoddle
           </Typography>
         </motion.div>
 
-        {/* Основная карточка прогресса */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              p: 4,
-              borderRadius: '24px',
-              background: `linear-gradient(135deg, ${currentRank.color}15 0%, ${currentRank.color}05 100%)`,
-              border: `2px solid ${currentRank.color}`,
-              mb: 4
-            }}
-          >
-            <Grid container spacing={4} alignItems="center">
-              <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 120,
-                    height: 120,
-                    borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${currentRank.color} 0%, ${currentRank.color}80 100%)`,
-                    color: '#fff',
-                    fontSize: 48,
-                    mb: 2,
-                    boxShadow: `0 0 30px ${currentRank.color}40`
-                  }}
-                >
-                  {currentRank.icon}
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: currentRank.color, mb: 1 }}>
-                  {progress.rank}
-                </Typography>
-                <Typography variant="h6" sx={{ color: '#666' }}>
-                  Уровень {progress.level}
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} md={8}>
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                      Прогресс до следующего уровня
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600, color: currentRank.color }}>
-                      {progress.currentXP} / {progress.nextLevelXP} XP
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={progressPercent}
-                    sx={{
-                      height: 12,
-                      borderRadius: 6,
-                      backgroundColor: '#f0f0f0',
-                      '& .MuiLinearProgress-bar': {
-                        background: `linear-gradient(90deg, ${currentRank.color} 0%, ${currentRank.color}80 100%)`,
-                        borderRadius: 6
-                      }
-                    }}
-                  />
-                </Box>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6} sm={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: currentRank.color }}>
-                        {progress.stats.loginStreak}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#666' }}>
-                        Дней подряд
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: currentRank.color }}>
-                        {unlockedAchievements.length}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#666' }}>
-                        Достижений
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: currentRank.color }}>
-                        {progress.stats.benefitsUsed}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#666' }}>
-                        Льгот активно
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: currentRank.color }}>
-                        {progress.stats.profileCompletion}%
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#666' }}>
-                        Профиль
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
+        {/* ОСНОВНОЙ ПРОГРЕСС */}
+        <motion.div variants={itemVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+          <Paper elevation={0} sx={{ 
+            ...cardStyle, 
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            color: 'white',
+            textAlign: 'center'
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+              <Box sx={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                borderRadius: '50%', 
+                p: 2,
+                fontSize: '3rem'
+              }}>
+                {currentRank.icon}
+              </Box>
+            </Box>
+            
+            <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+              Уровень {progress.level}
+            </Typography>
+            
+            <Typography variant="h5" sx={{ mb: 3, opacity: 0.9 }}>
+              {currentRank.name}
+            </Typography>
+            
+            <Box sx={{ mb: 3, px: { xs: 2, md: 8 } }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body1">{progress.currentXP} XP</Typography>
+                <Typography variant="body1">{currentRank.maxXP === Infinity ? '∞' : currentRank.maxXP} XP</Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={progressPercent}
+                sx={{
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: 'white',
+                    borderRadius: 6,
+                  },
+                }}
+              />
+            </Box>
+            
+            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+              {currentRank.maxXP === Infinity 
+                ? 'Вы достигли максимального ранга!' 
+                : `${currentRank.maxXP - progress.currentXP} XP до следующего уровня`
+              }
+            </Typography>
           </Paper>
         </motion.div>
 
-        {/* Достижения */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 700, 
-              color: '#1A1A1A', 
-              mb: 4,
-              textAlign: 'center'
-            }}
-          >
-            🏆 Достижения
+        {/* СТАТИСТИКА */}
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+          <Typography variant="h4" sx={{ 
+            fontWeight: 800, 
+            color: '#1A1A1A', 
+            mb: 4, 
+            textAlign: 'center' 
+          }}>
+            Статистика
           </Typography>
           
           <Grid container spacing={3}>
-            {progress.achievements.map((achievement) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={achievement.id}>
-                <motion.div
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: achievement.unlocked 
-                        ? `linear-gradient(135deg, ${getRarityColor(achievement.rarity)}15 0%, ${getRarityColor(achievement.rarity)}05 100%)`
-                        : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
-                      border: `2px solid ${achievement.unlocked ? getRarityColor(achievement.rarity) : '#ddd'}`,
-                      opacity: achievement.unlocked ? 1 : 0.6,
-                      transition: 'all 0.3s ease',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 60,
-                        height: 60,
-                        borderRadius: '50%',
-                        background: achievement.unlocked 
-                          ? `linear-gradient(135deg, ${getRarityColor(achievement.rarity)} 0%, ${getRarityColor(achievement.rarity)}80 100%)`
-                          : 'linear-gradient(135deg, #ccc 0%, #999 100%)',
-                        color: '#fff',
-                        fontSize: 24,
-                        mb: 2
-                      }}
-                    >
-                      {achievement.icon}
-                    </Box>
-                    
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 700,
-                        color: achievement.unlocked ? '#1A1A1A' : '#999',
-                        mb: 1
-                      }}
-                    >
-                      {achievement.title}
-                    </Typography>
-                    
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: achievement.unlocked ? '#666' : '#999',
-                        mb: 2
-                      }}
-                    >
-                      {achievement.description}
-                    </Typography>
-                    
-                    <Chip
-                      label={`+${achievement.points} XP`}
-                      size="small"
-                      sx={{
-                        background: achievement.unlocked ? getRarityColor(achievement.rarity) : '#ccc',
-                        color: '#fff',
-                        fontWeight: 600
-                      }}
-                    />
-                  </Paper>
-                </motion.div>
-              </Grid>
-            ))}
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Дней в приложении"
+                value={progress.stats.daysActive}
+                icon={<FaFire />}
+                color="#FF6B35"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Выбрано льгот"
+                value={progress.stats.benefitsUsed}
+                icon={<FaHeart />}
+                color="#8B0000"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Заполнение профиля"
+                value={`${progress.stats.profileCompletion}%`}
+                icon={<FaUserShield />}
+                color="#34C759"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Серия входов"
+                value={progress.stats.loginStreak}
+                subtitle="дней подряд"
+                icon={<FaBolt />}
+                color="#AF52DE"
+              />
+            </Grid>
           </Grid>
         </motion.div>
 
-        {/* Статистика активности */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          style={{ marginTop: 48 }}
-        >
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 700, 
+        {/* ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ */}
+        {unlockedAchievements.length > 0 && (
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+            <Typography variant="h4" sx={{ 
+              fontWeight: 800, 
               color: '#1A1A1A', 
-              mb: 4,
-              textAlign: 'center'
-            }}
-          >
-            📊 Статистика активности
-          </Typography>
-          
-          <Grid container spacing={3}>
-            {[
-              { label: 'Здоровье', value: 85, color: '#FF6B6B', icon: <FaHeart /> },
-              { label: 'Обучение', value: 60, color: '#4ECDC4', icon: <FaLightbulb /> },
-              { label: 'Спорт', value: 45, color: '#45B7D1', icon: <FaBullseye /> },
-              { label: 'Социальные', value: 30, color: '#96CEB4', icon: <FaUserFriends /> }
-            ].map((category, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 3,
-                    borderRadius: '20px',
-                    background: '#fff',
-                    border: '1px solid #eee',
-                    textAlign: 'center',
-                    height: '100%'
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 50,
-                      height: 50,
-                      borderRadius: '50%',
-                      background: `${category.color}20`,
-                      color: category.color,
-                      fontSize: 20,
-                      mb: 2
-                    }}
-                  >
-                    {category.icon}
-                  </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                    {category.label}
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={category.value}
-                    sx={{
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: `${category.color}20`,
-                      '& .MuiLinearProgress-bar': {
-                        backgroundColor: category.color,
-                        borderRadius: 4
-                      }
-                    }}
-                  />
-                  <Typography variant="body1" sx={{ fontWeight: 600, color: category.color, mt: 1 }}>
-                    {category.value}%
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </motion.div>
+              mb: 4, 
+              textAlign: 'center' 
+            }}>
+              Полученные достижения ({unlockedAchievements.length})
+            </Typography>
+            
+            <Grid container spacing={3}>
+              {unlockedAchievements.map((achievement) => (
+                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                  <AchievementCard achievement={achievement} />
+                </Grid>
+              ))}
+            </Grid>
+          </motion.div>
+        )}
+
+        {/* ДОСТУПНЫЕ ДОСТИЖЕНИЯ */}
+        {lockedAchievements.length > 0 && (
+          <motion.div variants={containerVariants} initial="hidden" animate="visible">
+            <Typography variant="h4" sx={{ 
+              fontWeight: 800, 
+              color: '#1A1A1A', 
+              mb: 4, 
+              textAlign: 'center' 
+            }}>
+              Доступные достижения ({lockedAchievements.length})
+            </Typography>
+            
+            <Grid container spacing={3}>
+              {lockedAchievements.map((achievement) => (
+                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                  <AchievementCard achievement={achievement} />
+                </Grid>
+              ))}
+            </Grid>
+          </motion.div>
+        )}
       </Container>
     </Box>
   );
