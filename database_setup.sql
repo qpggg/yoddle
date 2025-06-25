@@ -1,3 +1,17 @@
+-- Создание таблицы пользователей
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    phone VARCHAR(20),
+    address TEXT,
+    birth_date DATE,
+    employment_status VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Создание таблицы льгот
 CREATE TABLE IF NOT EXISTS benefits (
     id SERIAL PRIMARY KEY,

@@ -1,9 +1,4 @@
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+import { Client } from 'pg';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -16,7 +11,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'user_id is required' });
   }
 
+  const client = new Client({
+    connectionString: process.env.PG_CONNECTION_STRING,
+    ssl: { rejectUnauthorized: false }
+  });
+
   try {
+    await client.connect();
+    
     // Определяем текущий месяц и год, если не переданы
     const currentDate = new Date();
     const targetYear = year ? parseInt(year) : currentDate.getFullYear();
@@ -69,7 +71,7 @@ export default async function handler(req, res) {
       ORDER BY day;
     `;
 
-    const result = await pool.query(query, [user_id, targetYear, targetMonth]);
+    const result = await client.query(query, [user_id, targetYear, targetMonth]);
 
     console.log('Activity API: Результат запроса:', result.rows);
 
@@ -87,6 +89,8 @@ export default async function handler(req, res) {
       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
     ];
 
+    await client.end();
+
     res.status(200).json({
       success: true,
       data: dailyActivity,
@@ -97,6 +101,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Ошибка получения данных активности:', error);
+    await client.end();
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 } 
