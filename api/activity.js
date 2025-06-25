@@ -22,6 +22,8 @@ export default async function handler(req, res) {
     const targetYear = year ? parseInt(year) : currentDate.getFullYear();
     const targetMonth = month ? parseInt(month) : currentDate.getMonth() + 1;
 
+    console.log('Activity API: user_id =', user_id, 'year =', targetYear, 'month =', targetMonth);
+
     // Получаем количество дней в месяце
     const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
     
@@ -68,6 +70,8 @@ export default async function handler(req, res) {
     `;
 
     const result = await pool.query(query, [user_id, targetYear, targetMonth]);
+
+    console.log('Activity API: Результат запроса:', result.rows);
 
     // Заполняем данные активности
     result.rows.forEach(row => {

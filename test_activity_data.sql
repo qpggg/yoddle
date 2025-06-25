@@ -1,15 +1,29 @@
 -- Добавляем тестовые данные активности для текущего месяца
 -- Предполагаем, что у нас есть пользователь с ID 1
 
--- Очищаем старые тестовые данные
-DELETE FROM activity_log WHERE user_id = 1 AND created_at >= DATE_TRUNC('month', CURRENT_DATE);
+-- Сначала проверим какие пользователи есть в системе
+SELECT id, name, email FROM users LIMIT 5;
+
+-- Очищаем старые тестовые данные для всех пользователей
+DELETE FROM activity_log WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE);
 
 -- Добавляем разнообразные действия за текущий месяц
 -- Симулируем активность пользователя: входы в систему, обновления профиля и др.
 
+-- Добавляем данные для всех существующих пользователей
+INSERT INTO activity_log (user_id, action, xp_earned, description, created_at) 
+SELECT 
+  u.id as user_id,
+  'login' as action,
+  10 as xp_earned,
+  'Ежедневный вход в систему' as description,
+  DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '0 days 09:00' as created_at
+FROM users u
+LIMIT 10;
+
+-- Добавляем дополнительные данные для user_id = 1 (если существует)
 INSERT INTO activity_log (user_id, action, xp_earned, description, created_at) VALUES
--- День 1 - 2 действия
-(1, 'login', 10, 'Ежедневный вход в систему', DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '0 days 09:00'),
+-- День 1 - 2 действия  
 (1, 'profile_update', 25, 'Обновление профиля', DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '0 days 14:30'),
 
 -- День 3 - 1 действие

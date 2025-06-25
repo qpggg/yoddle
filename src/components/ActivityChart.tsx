@@ -21,19 +21,24 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   useEffect(() => {
     const fetchActivityData = async () => {
       if (!user?.id) {
+        console.log('ActivityChart: Нет user.id');
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
+        console.log('ActivityChart: Запрос данных для user_id:', user.id);
         const response = await fetch(`/api/activity?user_id=${user.id}`);
         const data = await response.json();
+        console.log('ActivityChart: Ответ API:', data);
         
         if (data.success) {
           setActivityData(data.data);
           setCurrentMonth(data.month);
           setTotalActions(data.totalActions);
+        } else {
+          console.error('ActivityChart: API вернул ошибку:', data);
         }
       } catch (error) {
         console.error('Ошибка загрузки данных активности:', error);
