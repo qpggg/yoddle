@@ -16,6 +16,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState('');
+  const [currentYear, setCurrentYear] = useState(2024);
   const [totalActions, setTotalActions] = useState(0);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         if (data.success) {
           setActivityData(data.data);
           setCurrentMonth(data.month);
+          setCurrentYear(data.year);
           setTotalActions(data.totalActions);
         } else {
           console.error('ActivityChart: API вернул ошибку:', data);
@@ -99,7 +101,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           fontWeight: 600, 
           color: '#8B0000' 
         }}>
-          {currentMonth} 2024
+          {currentMonth} {currentYear}
         </div>
         <div style={{ 
           fontSize: '12px', 
