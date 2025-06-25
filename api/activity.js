@@ -36,38 +36,16 @@ export default async function handler(req, res) {
     }));
 
     // Получаем данные активности из базы данных
-    // Считаем действия из разных таблиц:
-    // 1. user_benefits (добавление льгот)
-    // 2. activity_log (журнал всех действий пользователя)
+    // Берем данные только из activity_log (где точно есть тестовые данные)
     const query = `
-      WITH activity_data AS (
-        -- Действия с льготами
-        SELECT 
-          EXTRACT(DAY FROM created_at) as day,
-          COUNT(*) as actions
-        FROM user_benefits 
-        WHERE user_id = $1 
-          AND EXTRACT(YEAR FROM created_at) = $2 
-          AND EXTRACT(MONTH FROM created_at) = $3
-        GROUP BY EXTRACT(DAY FROM created_at)
-        
-        UNION ALL
-        
-        -- Действия из журнала активности (входы в систему, обновления профиля и т.д.)
-        SELECT 
-          EXTRACT(DAY FROM created_at) as day,
-          COUNT(*) as actions
-        FROM activity_log 
-        WHERE user_id = $1 
-          AND EXTRACT(YEAR FROM created_at) = $2 
-          AND EXTRACT(MONTH FROM created_at) = $3
-        GROUP BY EXTRACT(DAY FROM created_at)
-      )
       SELECT 
-        day,
-        SUM(actions) as total_actions
-      FROM activity_data
-      GROUP BY day
+        EXTRACT(DAY FROM created_at) as day,
+        COUNT(*) as total_actions
+      FROM activity_log 
+      WHERE user_id = $1 
+        AND EXTRACT(YEAR FROM created_at) = $2 
+        AND EXTRACT(MONTH FROM created_at) = $3
+      GROUP BY EXTRACT(DAY FROM created_at)
       ORDER BY day;
     `;
 
