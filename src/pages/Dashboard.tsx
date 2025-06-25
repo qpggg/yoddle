@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Bell
 } from 'lucide-react';
+import { FaRocket } from 'react-icons/fa';
 import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
@@ -323,46 +324,116 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            color: 'white',
+            borderRadius: '24px',
+            padding: '2rem',
+            position: 'relative',
+            overflow: 'hidden',
+            border: 'none'
+          }}
         >
-          <h2>Прогресс</h2>
-          <div className="profile-info" style={{ flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt={user.name} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', marginBottom: 12 }} />
-            ) : (
-              <UserCircle size={80} color="#750000" style={{ marginBottom: 12 }} />
-            )}
-            <div className="profile-details" style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 600, fontSize: 22, marginBottom: 4 }}>Ваш рейтинг: Активный (150/300 XP)</div>
+          {/* Декоративные элементы */}
+          <div style={{
+            position: 'absolute',
+            top: -30,
+            right: -30,
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+            zIndex: 0
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: -40,
+            left: -40,
+            width: 160,
+            height: 160,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+            zIndex: 0
+          }} />
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h2 style={{ color: 'white', marginBottom: '1.5rem', fontSize: '1.4rem', fontWeight: 700 }}>Прогресс</h2>
+            <div className="profile-info" style={{ flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+              {/* Иконка ранга вместо аватара */}
               <div style={{ 
-                background: '#f0f0f0', 
-                borderRadius: 12, 
-                height: 8, 
-                marginBottom: 16, 
-                overflow: 'hidden' 
+                background: 'rgba(255,255,255,0.15)', 
+                borderRadius: '20px', 
+                padding: '1rem',
+                fontSize: '2.5rem',
+                color: 'white',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: '1rem'
               }}>
-                <div style={{ 
-                  background: 'linear-gradient(90deg, #34C759 0%, #34C75980 100%)', 
-                  height: '100%', 
-                  width: '50%', 
-                  borderRadius: 12 
-                }} />
+                <FaRocket />
               </div>
-              <button
-                style={{
-                  background: 'linear-gradient(45deg, #34C759, #30B455)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 20px',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                }}
-                onClick={() => navigate('/progress')}
-              >
-                Подробнее
-              </button>
+              
+              <div className="profile-details" style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  fontWeight: 700, 
+                  fontSize: '1.2rem', 
+                  marginBottom: '0.5rem',
+                  color: 'white'
+                }}>
+                  Ваш рейтинг: Активный
+                </div>
+                <div style={{ 
+                  fontWeight: 500, 
+                  fontSize: '1rem', 
+                  marginBottom: '1rem',
+                  opacity: 0.9
+                }}>
+                  (150/300 XP)
+                </div>
+                
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  borderRadius: '12px', 
+                  height: '12px', 
+                  marginBottom: '1.5rem', 
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  <div style={{ 
+                    background: 'white', 
+                    height: '100%', 
+                    width: '50%', 
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(255,255,255,0.3)'
+                  }} />
+                </div>
+                
+                <button
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: '16px',
+                    padding: '12px 24px',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  onClick={() => navigate('/progress')}
+                >
+                  Подробнее
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
