@@ -74,11 +74,11 @@ interface UserProgress {
 }
 
 const RANKS = [
-  { name: 'Новичок', minXP: 0, maxXP: 100, color: '#8E8E93', icon: <FaUserShield />, gradient: 'linear-gradient(45deg, #8E8E93, #A8A8AA)' },
-  { name: 'Активный', minXP: 101, maxXP: 300, color: '#34C759', icon: <FaRocket />, gradient: 'linear-gradient(45deg, #34C759, #30D158)' },
-  { name: 'Эксперт', minXP: 301, maxXP: 500, color: '#007AFF', icon: <FaBolt />, gradient: 'linear-gradient(45deg, #007AFF, #0A84FF)' },
-  { name: 'Мастер', minXP: 501, maxXP: 1000, color: '#AF52DE', icon: <FaCrown />, gradient: 'linear-gradient(45deg, #AF52DE, #BF5AF2)' },
-  { name: 'Легенда', minXP: 1001, maxXP: Infinity, color: '#FF9500', icon: <GiTrophyCup />, gradient: 'linear-gradient(45deg, #FF9500, #FF9F0A)' }
+  { name: 'Новичок', minXP: 0, maxXP: 100, color: '#8E8E93', icon: <FaUserShield />, gradient: 'linear-gradient(135deg, #8E8E93 0%, #A8A8AA 100%)' },
+  { name: 'Активный', minXP: 101, maxXP: 300, color: '#34C759', icon: <FaRocket />, gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)' },
+  { name: 'Эксперт', minXP: 301, maxXP: 500, color: '#007AFF', icon: <FaBolt />, gradient: 'linear-gradient(135deg, #007AFF 0%, #0A84FF 100%)' },
+  { name: 'Мастер', minXP: 501, maxXP: 1000, color: '#AF52DE', icon: <FaCrown />, gradient: 'linear-gradient(135deg, #AF52DE 0%, #BF5AF2 100%)' },
+  { name: 'Легенда', minXP: 1001, maxXP: Infinity, color: '#FF9500', icon: <GiTrophyCup />, gradient: 'linear-gradient(135deg, #FF9500 0%, #FF9F0A 100%)' }
 ];
 
 const ACHIEVEMENTS: Achievement[] = [
@@ -178,12 +178,26 @@ const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
   const rarityConfig = getRarityConfig(achievement.rarity);
   
   return (
-    <motion.div variants={itemVariants} whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%' }}>
+    <motion.div 
+      variants={itemVariants} 
+      whileHover={{ 
+        y: -8, 
+        boxShadow: '0 20px 40px rgba(139,0,0,0.15)',
+        transition: { duration: 0.2 }
+      }} 
+      style={{ 
+        height: '100%',
+        borderRadius: '24px',
+        overflow: 'hidden'
+      }}
+    >
       <Paper elevation={0} sx={{ 
         ...cardStyle, 
         position: 'relative',
         opacity: achievement.unlocked ? 1 : 0.6,
-        background: achievement.unlocked ? '#fff' : '#f8f9fa'
+        background: achievement.unlocked ? '#fff' : '#f8f9fa',
+        borderRadius: '24px',
+        overflow: 'hidden'
       }}>
         <Box sx={{ 
           position: 'absolute', 
@@ -244,29 +258,63 @@ const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
   );
 };
 
-const StatCard = ({ title, value, subtitle, icon, color }: { 
+const StatCard = ({ title, value, subtitle, icon }: { 
   title: string; 
   value: string | number; 
   subtitle?: string; 
   icon: React.ReactElement;
-  color: string;
 }) => (
-  <motion.div variants={itemVariants} whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }}>
-    <Paper elevation={0} sx={cardStyle}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ color, fontSize: '1.5rem', mr: 2 }}>
+  <motion.div 
+    variants={itemVariants} 
+    whileHover={{ 
+      y: -8, 
+      boxShadow: '0 20px 40px rgba(139,0,0,0.15)',
+      transition: { duration: 0.2 }
+    }}
+    style={{ 
+      height: '100%',
+      borderRadius: '24px',
+      overflow: 'hidden'
+    }}
+  >
+    <Paper elevation={0} sx={{
+      ...cardStyle,
+      borderRadius: '24px',
+      minHeight: '200px',
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center',
+      overflow: 'hidden'
+    }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+        <Box sx={{ 
+          color: '#8B0000', 
+          fontSize: '2rem', 
+          background: '#8B000015',
+          borderRadius: '16px',
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
           {icon}
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1A1A1A' }}>
-          {title}
-        </Typography>
       </Box>
       
-      <Typography variant="h3" sx={{ 
+      <Typography variant="h6" sx={{ 
+        fontWeight: 700, 
+        color: '#1A1A1A',
+        mb: 2,
+        fontSize: '1rem'
+      }}>
+        {title}
+      </Typography>
+      
+      <Typography variant="h2" sx={{ 
         fontWeight: 800, 
         color: '#8B0000', 
         mb: 1,
-        textAlign: 'center'
+        fontSize: '2.5rem'
       }}>
         {value}
       </Typography>
@@ -274,7 +322,6 @@ const StatCard = ({ title, value, subtitle, icon, color }: {
       {subtitle && (
         <Typography variant="body2" sx={{ 
           color: '#555', 
-          textAlign: 'center',
           fontWeight: 500
         }}>
           {subtitle}
@@ -346,64 +393,147 @@ const Progress: React.FC = () => {
           </Typography>
         </motion.div>
 
-        {/* ОСНОВНОЙ ПРОГРЕСС */}
-        <motion.div variants={itemVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+        {/* ОСНОВНОЙ ПРОГРЕСС - УЛУЧШЕННЫЙ ДИЗАЙН */}
+        <motion.div 
+          variants={itemVariants} 
+          initial="hidden" 
+          animate="visible" 
+          style={{ marginBottom: '4rem' }}
+        >
           <Paper elevation={0} sx={{ 
-            ...cardStyle, 
             background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
             color: 'white',
-            textAlign: 'center'
+            textAlign: 'center',
+            borderRadius: '32px',
+            padding: '3rem 2rem',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(139,0,0,0.3)'
           }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-              <Box sx={{ 
-                background: 'rgba(255,255,255,0.2)', 
-                borderRadius: '50%', 
-                p: 2,
-                fontSize: '3rem'
-              }}>
-                {currentRank.icon}
+            {/* Декоративные элементы */}
+            <Box sx={{
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.05)',
+              zIndex: 0
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -80,
+              left: -80,
+              width: 300,
+              height: 300,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.03)',
+              zIndex: 0
+            }} />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  mb: 3 
+                }}>
+                  <Box sx={{ 
+                    background: 'rgba(255,255,255,0.15)', 
+                    borderRadius: '24px', 
+                    p: 3,
+                    fontSize: '3.5rem',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    {currentRank.icon}
+                  </Box>
+                </Box>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Typography variant="h2" sx={{ 
+                  fontWeight: 900, 
+                  mb: 1,
+                  fontSize: { xs: '2rem', md: '3rem' },
+                  textShadow: '0 2px 10px rgba(0,0,0,0.2)'
+                }}>
+                  Уровень {progress.level}
+                </Typography>
+                
+                <Typography variant="h4" sx={{ 
+                  mb: 4, 
+                  opacity: 0.95,
+                  fontWeight: 600,
+                  fontSize: { xs: '1.2rem', md: '1.5rem' }
+                }}>
+                  {currentRank.name}
+                </Typography>
+              </motion.div>
+              
+              <Box sx={{ mb: 4, px: { xs: 2, md: 8 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {progress.currentXP} XP
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {currentRank.maxXP === Infinity ? '∞' : currentRank.maxXP} XP
+                  </Typography>
+                </Box>
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.7, duration: 1.5, ease: 'easeOut' }}
+                  style={{ transformOrigin: 'left' }}
+                >
+                  <LinearProgress
+                    variant="determinate"
+                    value={progressPercent}
+                    sx={{
+                      height: 16,
+                      borderRadius: 8,
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      '& .MuiLinearProgress-bar': {
+                        backgroundColor: 'white',
+                        borderRadius: 8,
+                        boxShadow: '0 2px 10px rgba(255,255,255,0.3)'
+                      },
+                    }}
+                  />
+                </motion.div>
               </Box>
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+              >
+                <Typography variant="h6" sx={{ 
+                  opacity: 0.9,
+                  fontWeight: 500,
+                  fontSize: { xs: '1rem', md: '1.1rem' }
+                }}>
+                  {currentRank.maxXP === Infinity 
+                    ? '🎉 Вы достигли максимального ранга!' 
+                    : `${currentRank.maxXP - progress.currentXP} XP до следующего уровня`
+                  }
+                </Typography>
+              </motion.div>
             </Box>
-            
-            <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-              Уровень {progress.level}
-            </Typography>
-            
-            <Typography variant="h5" sx={{ mb: 3, opacity: 0.9 }}>
-              {currentRank.name}
-            </Typography>
-            
-            <Box sx={{ mb: 3, px: { xs: 2, md: 8 } }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">{progress.currentXP} XP</Typography>
-                <Typography variant="body1">{currentRank.maxXP === Infinity ? '∞' : currentRank.maxXP} XP</Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={progressPercent}
-                sx={{
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: 'white',
-                    borderRadius: 6,
-                  },
-                }}
-              />
-            </Box>
-            
-            <Typography variant="body1" sx={{ opacity: 0.9 }}>
-              {currentRank.maxXP === Infinity 
-                ? 'Вы достигли максимального ранга!' 
-                : `${currentRank.maxXP - progress.currentXP} XP до следующего уровня`
-              }
-            </Typography>
           </Paper>
         </motion.div>
 
-        {/* СТАТИСТИКА */}
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+        {/* СТАТИСТИКА - ОДИНАКОВЫЕ РАЗМЕРЫ */}
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
           <Typography variant="h4" sx={{ 
             fontWeight: 800, 
             color: '#1A1A1A', 
@@ -419,7 +549,6 @@ const Progress: React.FC = () => {
                 title="Дней в приложении"
                 value={progress.stats.daysActive}
                 icon={<FaFire />}
-                color="#FF6B35"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -427,7 +556,6 @@ const Progress: React.FC = () => {
                 title="Выбрано льгот"
                 value={progress.stats.benefitsUsed}
                 icon={<FaHeart />}
-                color="#8B0000"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -435,7 +563,6 @@ const Progress: React.FC = () => {
                 title="Заполнение профиля"
                 value={`${progress.stats.profileCompletion}%`}
                 icon={<FaUserShield />}
-                color="#34C759"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -444,7 +571,6 @@ const Progress: React.FC = () => {
                 value={progress.stats.loginStreak}
                 subtitle="дней подряд"
                 icon={<FaBolt />}
-                color="#AF52DE"
               />
             </Grid>
           </Grid>
@@ -452,7 +578,7 @@ const Progress: React.FC = () => {
 
         {/* ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ */}
         {unlockedAchievements.length > 0 && (
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '3rem' }}>
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
             <Typography variant="h4" sx={{ 
               fontWeight: 800, 
               color: '#1A1A1A', 
