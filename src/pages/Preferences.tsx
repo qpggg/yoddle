@@ -22,7 +22,7 @@ const itemVariants = {
 
 const cardStyle = {
   background: '#fff',
-  borderRadius: '24px',
+  borderRadius: '16px',
   padding: '2rem',
   boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
   border: '1px solid #eee',
@@ -205,7 +205,7 @@ const Preferences: React.FC = () => {
                 sx={{
                   width: '80px',
                   height: '80px',
-                  borderRadius: '20px',
+                  borderRadius: '16px',
                   backgroundColor: 'rgba(139, 0, 0, 0.08)',
                   display: 'flex',
                   alignItems: 'center',
@@ -224,6 +224,7 @@ const Preferences: React.FC = () => {
               <Typography
                 variant="h3"
                 sx={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   fontWeight: 800,
                   color: '#1A1A1A',
                   mb: 2,
@@ -235,6 +236,7 @@ const Preferences: React.FC = () => {
               <Typography
                 variant="h6"
                 sx={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   color: '#666',
                   maxWidth: '600px',
                   mx: 'auto',
@@ -250,106 +252,120 @@ const Preferences: React.FC = () => {
               initial="hidden"
               animate="visible"
             >
-              <Grid container spacing={4} sx={{ mb: 6 }}>
-                {recommendations.map((rec) => (
-                  <Grid item xs={12} md={4} key={rec.category}>
-                    <motion.div
-                      variants={itemVariants}
-                      whileHover={{ 
-                        y: -8, 
-                        boxShadow: '0 20px 40px rgba(139,0,0,0.15)' 
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 3,
+                justifyContent: 'center',
+                mb: 6
+              }}>
+                {recommendations.map((rec, index) => (
+                  <motion.div
+                    key={rec.category}
+                    variants={itemVariants}
+                    whileHover={{ 
+                      y: -8, 
+                      boxShadow: '0 20px 40px rgba(139,0,0,0.15)' 
+                    }}
+                    style={{ 
+                      flex: '1 1 300px',
+                      maxWidth: '360px',
+                      minWidth: '300px'
+                    }}
+                  >
+                    <Paper 
+                      elevation={0} 
+                      sx={{ 
+                        ...cardStyle,
+                        border: '1px solid rgba(0, 0, 0, 0.08)',
+                        overflow: 'hidden'
                       }}
-                      style={{ height: '100%' }}
                     >
-                      <Paper 
-                        elevation={0} 
-                        sx={{ 
-                          ...cardStyle,
-                          border: '1px solid rgba(0, 0, 0, 0.08)',
-                          overflow: 'hidden'
+                      <Box
+                        sx={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '16px',
+                          backgroundColor: 'rgba(139, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 3,
+                          '& svg': {
+                            fontSize: '28px',
+                            color: '#8B0000'
+                          }
                         }}
                       >
-                        <Box
-                          sx={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '16px',
-                            backgroundColor: 'rgba(139, 0, 0, 0.08)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mb: 3,
-                            '& svg': {
-                              fontSize: '28px',
-                              color: '#8B0000'
-                            }
-                          }}
-                        >
-                          {rec.icon}
-                        </Box>
-                        
+                        {rec.icon}
+                      </Box>
+                      
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 700,
+                          color: '#1A1A1A',
+                          mb: 2
+                        }}
+                      >
+                        {rec.title}
+                      </Typography>
+                      
+                      <Typography
+                        sx={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          color: '#666',
+                          mb: 3,
+                          lineHeight: 1.6
+                        }}
+                      >
+                        {rec.description}
+                      </Typography>
+                      
+                      <Box sx={{ mb: 3 }}>
                         <Typography
-                          variant="h5"
+                          variant="subtitle2"
                           sx={{
-                            fontWeight: 700,
-                            color: '#1A1A1A',
-                            mb: 2
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                            color: '#8B0000',
+                            fontWeight: 600,
+                            mb: 1
                           }}
                         >
-                          {rec.title}
+                          Примеры льгот:
                         </Typography>
-                        
-                        <Typography
-                          sx={{
-                            color: '#666',
-                            mb: 3,
-                            lineHeight: 1.6
-                          }}
-                        >
-                          {rec.description}
-                        </Typography>
-                        
-                        <Box sx={{ mb: 3 }}>
+                        {rec.examples.map((example, idx) => (
                           <Typography
-                            variant="subtitle2"
+                            key={idx}
+                            variant="body2"
                             sx={{
-                              color: '#8B0000',
-                              fontWeight: 600,
-                              mb: 1
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                              color: '#555',
+                              fontSize: '0.9rem',
+                              mb: 0.5,
+                              '&::before': {
+                                content: '"•"',
+                                color: '#8B0000',
+                                marginRight: '8px'
+                              }
                             }}
                           >
-                            Примеры льгот:
+                            {example}
                           </Typography>
-                          {rec.examples.map((example, idx) => (
-                            <Typography
-                              key={idx}
-                              variant="body2"
-                              sx={{
-                                color: '#555',
-                                fontSize: '0.9rem',
-                                mb: 0.5,
-                                '&::before': {
-                                  content: '"•"',
-                                  color: '#8B0000',
-                                  marginRight: '8px'
-                                }
-                              }}
-                            >
-                              {example}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Paper>
-                    </motion.div>
-                  </Grid>
+                        ))}
+                      </Box>
+                    </Paper>
+                  </motion.div>
                 ))}
-              </Grid>
+              </Box>
             </motion.div>
 
             <Box sx={{ textAlign: 'center' }}>
               <Button
                 onClick={resetTest}
                 sx={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   background: 'linear-gradient(45deg, #8B0000, #B22222)',
                   color: '#fff',
                   borderRadius: '50px',
@@ -388,7 +404,7 @@ const Preferences: React.FC = () => {
               sx={{
                 width: '80px',
                 height: '80px',
-                borderRadius: '20px',
+                borderRadius: '16px',
                 backgroundColor: 'rgba(139, 0, 0, 0.08)',
                 display: 'flex',
                 alignItems: 'center',
@@ -407,6 +423,7 @@ const Preferences: React.FC = () => {
             <Typography
               variant="h3"
               sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: 800,
                 color: '#1A1A1A',
                 mb: 2,
@@ -418,6 +435,7 @@ const Preferences: React.FC = () => {
             <Typography
               variant="h6"
               sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
                 color: '#666',
                 maxWidth: '500px',
                 mx: 'auto',
@@ -445,6 +463,7 @@ const Preferences: React.FC = () => {
               <Typography
                 variant="body2"
                 sx={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   color: '#8B0000',
                   fontWeight: 600,
                   mt: 1
@@ -487,6 +506,7 @@ const Preferences: React.FC = () => {
                 <Typography
                   variant="h5"
                   sx={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
                     fontWeight: 700,
                     color: '#1A1A1A',
                     mb: 4,
@@ -506,6 +526,7 @@ const Preferences: React.FC = () => {
                         <Button
                           onClick={() => handleAnswer(option.value)}
                           sx={{
+                            fontFamily: 'Inter, system-ui, sans-serif',
                             width: '100%',
                             minHeight: '80px',
                             padding: '20px 16px',
@@ -535,7 +556,11 @@ const Preferences: React.FC = () => {
                           >
                             {option.icon}
                           </Box>
-                          <Typography sx={{ fontSize: '1rem', textAlign: 'left' }}>
+                          <Typography sx={{ 
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                            fontSize: '1rem', 
+                            textAlign: 'left' 
+                          }}>
                             {option.text}
                           </Typography>
                         </Button>
