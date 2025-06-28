@@ -537,7 +537,7 @@ const Preferences: React.FC = () => {
                           sx={{
                             fontFamily: 'Inter, system-ui, sans-serif',
                             width: '100%',
-                            minHeight: '80px',
+                            height: '100px',
                             padding: '20px 16px',
                             borderRadius: '16px',
                             border: '1px solid #E5E5E5',
