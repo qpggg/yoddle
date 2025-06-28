@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Typography, Box, Grid, Paper, Button, LinearProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaBus, FaArrowRight, FaRedo } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaBus, FaRedo } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
 
 const containerVariants = {
@@ -238,7 +238,7 @@ const Preferences: React.FC = () => {
               animate="visible"
             >
               <Grid container spacing={4}>
-                {recommendations.map((rec, index) => (
+                {recommendations.map((rec) => (
                   <Grid item xs={12} md={4} key={rec.category}>
                     <motion.div
                       variants={itemVariants}
