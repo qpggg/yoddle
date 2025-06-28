@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Container, Typography, Card, CardContent, Button, Radio, RadioGroup, FormControlLabel, FormControl, LinearProgress } from '@mui/material';
+import { Box, Container, Typography, Card, Button, Radio, RadioGroup, FormControlLabel, FormControl, LinearProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 
 interface Question {
