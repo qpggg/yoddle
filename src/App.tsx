@@ -22,6 +22,7 @@ import { ScrollToTop } from './components/ScrollToTop';
 import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
+import Preferences from './pages/Preferences';
 
 const HomePage = () => (
   <Box>
@@ -53,6 +54,7 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/my-benefits" element={<MyBenefits />} />
             <Route path="/progress" element={<Progress />} />
+            <Route path="/preferences" element={<Preferences />} />
           </Routes>
           <Footer />
         </Box>

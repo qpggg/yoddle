@@ -102,7 +102,13 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
 
   // Функции для tooltip
   const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const target = event.currentTarget as HTMLElement;
+    const container = target.closest('[data-chart-container]') as HTMLElement;
+    if (!container) return;
+    
+    const targetRect = target.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
     const monthNames = [
       'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
       'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
@@ -110,8 +116,8 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
     
     setTooltip({
       visible: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
+      x: targetRect.left - containerRect.left + targetRect.width / 2,
+      y: targetRect.top - containerRect.top - 10,
       content: `${day} ${monthNames[currentYear === 2025 ? 5 : new Date().getMonth()]}: ${actions} ${actions === 1 ? 'действие' : actions < 5 ? 'действия' : 'действий'}`
     });
   };
@@ -121,7 +127,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   };
 
   return (
-    <div className={className} style={{ padding: '16px 0' }}>
+    <div className={className} data-chart-container style={{ padding: '16px 0', position: 'relative' }}>
       {/* Заголовок с общей статистикой */}
       <div style={{ 
         display: 'flex', 
@@ -248,7 +254,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ duration: 0.15 }}
           style={{
-            position: 'fixed',
+            position: 'absolute',
             left: tooltip.x,
             top: tooltip.y,
             transform: 'translateX(-50%) translateY(-100%)',
