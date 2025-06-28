@@ -25,7 +25,7 @@ const cardStyle = {
   borderRadius: '16px',
   padding: '2rem',
   boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
-  border: '1px solid #eee',
+  border: '1px solid #E5E5E5',
   height: '100%',
   display: 'flex',
   flexDirection: 'column'
@@ -221,28 +221,29 @@ const Preferences: React.FC = () => {
                 <FaBullseye />
               </Box>
               
-              <Typography
-                variant="h3"
-                sx={{
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  fontWeight: 800,
-                  color: '#1A1A1A',
-                  mb: 2,
-                  fontSize: { xs: '2rem', md: '3rem' }
-                }}
-              >
-                Ваши рекомендации готовы!
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  color: '#666',
-                  maxWidth: '600px',
-                  mx: 'auto',
-                  lineHeight: 1.6
-                }}
-              >
+                          <Typography
+              variant="h3"
+              sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 900,
+                color: '#1A1A1A',
+                mb: 2,
+                fontSize: { xs: '2rem', md: '3rem' }
+              }}
+            >
+              Ваши рекомендации готовы!
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 500,
+                color: '#666',
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6
+              }}
+            >
                 Основываясь на ваших ответах, мы подобрали льготы, которые лучше всего подходят именно вам
               </Typography>
             </Box>
@@ -265,19 +266,20 @@ const Preferences: React.FC = () => {
                     variants={itemVariants}
                     whileHover={{ 
                       y: -8, 
+                      borderRadius: '16px',
                       boxShadow: '0 20px 40px rgba(139,0,0,0.15)' 
                     }}
                     style={{ 
                       flex: '1 1 300px',
                       maxWidth: '360px',
-                      minWidth: '300px'
+                      minWidth: '300px',
+                      borderRadius: '16px'
                     }}
                   >
                     <Paper 
                       elevation={0} 
                       sx={{ 
                         ...cardStyle,
-                        border: '1px solid rgba(0, 0, 0, 0.08)',
                         overflow: 'hidden'
                       }}
                     >
@@ -304,7 +306,7 @@ const Preferences: React.FC = () => {
                         variant="h5"
                         sx={{
                           fontFamily: 'Inter, system-ui, sans-serif',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           color: '#1A1A1A',
                           mb: 2
                         }}
@@ -315,6 +317,7 @@ const Preferences: React.FC = () => {
                       <Typography
                         sx={{
                           fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 500,
                           color: '#666',
                           mb: 3,
                           lineHeight: 1.6
@@ -329,7 +332,7 @@ const Preferences: React.FC = () => {
                           sx={{
                             fontFamily: 'Inter, system-ui, sans-serif',
                             color: '#8B0000',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             mb: 1
                           }}
                         >
@@ -341,6 +344,7 @@ const Preferences: React.FC = () => {
                             variant="body2"
                             sx={{
                               fontFamily: 'Inter, system-ui, sans-serif',
+                              fontWeight: 500,
                               color: '#555',
                               fontSize: '0.9rem',
                               mb: 0.5,
@@ -370,7 +374,7 @@ const Preferences: React.FC = () => {
                   color: '#fff',
                   borderRadius: '50px',
                   padding: '12px 36px',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   fontSize: '1.1rem',
                   textTransform: 'none',
                   boxShadow: '0 4px 15px rgba(139,0,0,0.2)',
@@ -424,7 +428,7 @@ const Preferences: React.FC = () => {
               variant="h3"
               sx={{
                 fontFamily: 'Inter, system-ui, sans-serif',
-                fontWeight: 800,
+                fontWeight: 900,
                 color: '#1A1A1A',
                 mb: 2,
                 fontSize: { xs: '2rem', md: '3rem' }
@@ -436,6 +440,7 @@ const Preferences: React.FC = () => {
               variant="h6"
               sx={{
                 fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 500,
                 color: '#666',
                 maxWidth: '500px',
                 mx: 'auto',
@@ -465,7 +470,7 @@ const Preferences: React.FC = () => {
                 sx={{
                   fontFamily: 'Inter, system-ui, sans-serif',
                   color: '#8B0000',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   mt: 1
                 }}
               >
@@ -507,7 +512,7 @@ const Preferences: React.FC = () => {
                   variant="h5"
                   sx={{
                     fontFamily: 'Inter, system-ui, sans-serif',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     color: '#1A1A1A',
                     mb: 4,
                     lineHeight: 1.4
@@ -520,8 +525,12 @@ const Preferences: React.FC = () => {
                   {questions[currentQuestion].options.map((option, index) => (
                     <Grid item xs={12} sm={6} key={index}>
                       <motion.div
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ 
+                          scale: 1.02,
+                          borderRadius: '16px'
+                        }}
                         whileTap={{ scale: 0.98 }}
+                        style={{ borderRadius: '16px' }}
                       >
                         <Button
                           onClick={() => handleAnswer(option.value)}
@@ -531,20 +540,21 @@ const Preferences: React.FC = () => {
                             minHeight: '80px',
                             padding: '20px 16px',
                             borderRadius: '16px',
-                            border: '2px solid #E5E5E5',
+                            border: '1px solid #E5E5E5',
                             backgroundColor: '#fff',
                             color: '#1A1A1A',
                             textTransform: 'none',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'flex-start',
                             gap: 2,
+                            transition: 'none',
                             '&:hover': {
                               backgroundColor: 'rgba(139, 0, 0, 0.05)',
                               borderColor: '#8B0000',
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 4px 15px rgba(139,0,0,0.1)'
+                              boxShadow: '0 4px 15px rgba(139,0,0,0.1)',
+                              transform: 'none'
                             }
                           }}
                         >
@@ -558,6 +568,7 @@ const Preferences: React.FC = () => {
                           </Box>
                           <Typography sx={{ 
                             fontFamily: 'Inter, system-ui, sans-serif',
+                            fontWeight: 700,
                             fontSize: '1rem', 
                             textAlign: 'left' 
                           }}>
