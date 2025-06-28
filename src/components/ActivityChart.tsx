@@ -177,16 +177,17 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
                   : '#E5E5E5',
                 borderRadius: '2px',
                 position: 'relative',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                cursor: 'pointer'
               }}
               whileHover={{ 
-                transform: 'scale(1.15) translateY(-3px)',
+                scale: 1.15,
+                y: -3,
                 background: isToday 
                   ? 'linear-gradient(180deg, #A00000 0%, #D32222 100%)'
                   : 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)',
                 boxShadow: '0 4px 12px rgba(139, 0, 0, 0.3)',
-                zIndex: 10
+                zIndex: 10,
+                transition: { type: "spring", stiffness: 400, damping: 25 }
               }}
               onMouseEnter={(e) => showTooltip(e, dataPoint.day, dataPoint.actions)}
               onMouseLeave={hideTooltip}

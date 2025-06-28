@@ -91,7 +91,7 @@ export const Hero = () => {
                 fontWeight: 700,
               }}
             >
-              Yoddle — ТЕСТ ИЗМЕНЕНИЙ ✅
+              Yoddle —
             </Typography>
           </motion.div>
           
