@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Typography, Box, Grid, Paper, Button, LinearProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaBus, FaRedo } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
 
 const containerVariants = {
@@ -34,7 +34,7 @@ const cardStyle = {
 interface Question {
   id: number;
   text: string;
-  emoji: string;
+  icon: React.ReactElement;
   options: {
     text: string;
     value: string;
@@ -54,7 +54,7 @@ const questions: Question[] = [
   {
     id: 1,
     text: 'Что для вас важнее всего в работе?',
-    emoji: '💼',
+    icon: <FaLightbulb />,
     options: [
       { text: 'Забота о здоровье', value: 'health', icon: <FaHeartbeat /> },
       { text: 'Развитие навыков', value: 'education', icon: <FaGraduationCap /> },
@@ -65,7 +65,7 @@ const questions: Question[] = [
   {
     id: 2,
     text: 'Как вы предпочитаете проводить свободное время?',
-    emoji: '⏰',
+    icon: <FaClock />,
     options: [
       { text: 'Активный отдых и спорт', value: 'sports', icon: <FaFutbol /> },
       { text: 'Обучение и развитие', value: 'education', icon: <FaGraduationCap /> },
@@ -76,18 +76,18 @@ const questions: Question[] = [
   {
     id: 3,
     text: 'Что вас больше всего беспокоит в рабочем процессе?',
-    emoji: '😰',
+    icon: <FaShieldAlt />,
     options: [
       { text: 'Стресс и усталость', value: 'psychology', icon: <GiBrain /> },
       { text: 'Недостаток времени на обучение', value: 'education', icon: <FaGraduationCap /> },
       { text: 'Проблемы со здоровьем', value: 'health', icon: <FaHeartbeat /> },
-      { text: 'Транспортные расходы', value: 'transport', icon: <FaBus /> }
+      { text: 'Отсутствие мотивации', value: 'wellness', icon: <FaLeaf /> }
     ]
   },
   {
     id: 4,
     text: 'Какая поддержка от компании была бы для вас наиболее ценной?',
-    emoji: '🎯',
+    icon: <FaBullseye />,
     options: [
       { text: 'Медицинское страхование', value: 'health', icon: <FaHeartbeat /> },
       { text: 'Психологическая поддержка', value: 'psychology', icon: <GiBrain /> },
@@ -139,13 +139,6 @@ const benefitCategories: { [key: string]: BenefitRecommendation } = {
     title: 'Отдых и восстановление',
     description: 'Программы для релаксации и восстановления сил',
     examples: ['Спа-процедуры', 'Массаж', 'Отпускные программы', 'Санаторно-курортное лечение']
-  },
-  transport: {
-    category: 'Транспорт',
-    icon: <FaBus />,
-    title: 'Транспортные решения',
-    description: 'Помощь с транспортными расходами и мобильностью',
-    examples: ['Компенсация проезда', 'Корпоративный транспорт', 'Парковка', 'Велосипедные программы']
   }
 };
 
@@ -208,6 +201,26 @@ const Preferences: React.FC = () => {
             transition={{ duration: 0.6 }}
           >
             <Box sx={{ textAlign: 'center', mb: 6 }}>
+              <Box
+                sx={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '20px',
+                  backgroundColor: 'rgba(139, 0, 0, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3,
+                  '& svg': {
+                    fontSize: '36px',
+                    color: '#8B0000'
+                  }
+                }}
+              >
+                <FaBullseye />
+              </Box>
+              
               <Typography
                 variant="h3"
                 sx={{
@@ -217,7 +230,7 @@ const Preferences: React.FC = () => {
                   fontSize: { xs: '2rem', md: '3rem' }
                 }}
               >
-                🎉 Ваши рекомендации готовы!
+                Ваши рекомендации готовы!
               </Typography>
               <Typography
                 variant="h6"
@@ -237,7 +250,7 @@ const Preferences: React.FC = () => {
               initial="hidden"
               animate="visible"
             >
-              <Grid container spacing={4}>
+              <Grid container spacing={4} sx={{ mb: 6 }}>
                 {recommendations.map((rec) => (
                   <Grid item xs={12} md={4} key={rec.category}>
                     <motion.div
@@ -248,7 +261,14 @@ const Preferences: React.FC = () => {
                       }}
                       style={{ height: '100%' }}
                     >
-                      <Paper elevation={0} sx={{ ...cardStyle }}>
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          ...cardStyle,
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          overflow: 'hidden'
+                        }}
+                      >
                         <Box
                           sx={{
                             width: '60px',
@@ -326,7 +346,7 @@ const Preferences: React.FC = () => {
               </Grid>
             </motion.div>
 
-            <Box sx={{ textAlign: 'center', mt: 6 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Button
                 onClick={resetTest}
                 sx={{
@@ -364,6 +384,26 @@ const Preferences: React.FC = () => {
           transition={{ duration: 0.6 }}
         >
           <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Box
+              sx={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '20px',
+                backgroundColor: 'rgba(139, 0, 0, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+                '& svg': {
+                  fontSize: '36px',
+                  color: '#8B0000'
+                }
+              }}
+            >
+              <FaBullseye />
+            </Box>
+            
             <Typography
               variant="h3"
               sx={{
@@ -373,7 +413,7 @@ const Preferences: React.FC = () => {
                 fontSize: { xs: '2rem', md: '3rem' }
               }}
             >
-              🎯 Тест на льготы
+              Тест на льготы
             </Typography>
             <Typography
               variant="h6"
@@ -423,16 +463,26 @@ const Preferences: React.FC = () => {
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3 }}
             >
-              <Paper elevation={0} sx={{ ...cardStyle, textAlign: 'center', maxWidth: '600px', mx: 'auto' }}>
-                <Typography
-                  variant="h4"
+              <Paper elevation={0} sx={{ ...cardStyle, textAlign: 'center', maxWidth: '700px', mx: 'auto' }}>
+                <Box
                   sx={{
-                    fontSize: '3rem',
-                    mb: 2
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '16px',
+                    backgroundColor: 'rgba(139, 0, 0, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3,
+                    '& svg': {
+                      fontSize: '28px',
+                      color: '#8B0000'
+                    }
                   }}
                 >
-                  {questions[currentQuestion].emoji}
-                </Typography>
+                  {questions[currentQuestion].icon}
+                </Box>
                 
                 <Typography
                   variant="h5"
@@ -446,7 +496,7 @@ const Preferences: React.FC = () => {
                   {questions[currentQuestion].text}
                 </Typography>
 
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   {questions[currentQuestion].options.map((option, index) => (
                     <Grid item xs={12} sm={6} key={index}>
                       <motion.div
@@ -457,7 +507,8 @@ const Preferences: React.FC = () => {
                           onClick={() => handleAnswer(option.value)}
                           sx={{
                             width: '100%',
-                            padding: '16px',
+                            minHeight: '80px',
+                            padding: '20px 16px',
                             borderRadius: '16px',
                             border: '2px solid #E5E5E5',
                             backgroundColor: '#fff',
@@ -484,7 +535,9 @@ const Preferences: React.FC = () => {
                           >
                             {option.icon}
                           </Box>
-                          {option.text}
+                          <Typography sx={{ fontSize: '1rem', textAlign: 'left' }}>
+                            {option.text}
+                          </Typography>
                         </Button>
                       </motion.div>
                     </Grid>
