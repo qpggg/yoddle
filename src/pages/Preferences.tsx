@@ -259,7 +259,7 @@ const Preferences: React.FC = () => {
                 justifyContent: 'center',
                 mb: 6
               }}>
-                {recommendations.map((rec, index) => (
+                {recommendations.map((rec) => (
                   <motion.div
                     key={rec.category}
                     variants={itemVariants}
