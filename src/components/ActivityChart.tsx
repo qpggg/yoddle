@@ -103,21 +103,25 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   // Функции для tooltip
   const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
     const target = event.currentTarget as HTMLElement;
-    const container = target.closest('[data-chart-container]') as HTMLElement;
-    if (!container) return;
-    
     const targetRect = target.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
+    const chartContainer = document.querySelector('[data-chart-container]') as HTMLElement;
+    if (!chartContainer) return;
+    
+    const containerRect = chartContainer.getBoundingClientRect();
     
     const monthNames = [
       'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
       'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
     ];
     
+    // Позиционируем tooltip относительно chart container
+    const x = targetRect.left - containerRect.left + (targetRect.width / 2);
+    const y = targetRect.top - containerRect.top - 50; // Выше столбца
+    
     setTooltip({
       visible: true,
-      x: targetRect.left - containerRect.left + targetRect.width / 2,
-      y: targetRect.top - containerRect.top - 10,
+      x: x,
+      y: y,
       content: `${day} ${monthNames[currentYear === 2025 ? 5 : new Date().getMonth()]}: ${actions} ${actions === 1 ? 'действие' : actions < 5 ? 'действия' : 'действий'}`
     });
   };
