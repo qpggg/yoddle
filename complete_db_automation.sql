@@ -85,12 +85,13 @@ END $$;
 -- ========================================
 
 -- СНАЧАЛА СОЗДАЕМ ФУНКЦИЮ ДЛЯ РАСЧЕТА СТРИКА ЛОГИНОВ
-CREATE OR REPLACE FUNCTION get_login_streak(p_user_id INTEGER)
+DROP FUNCTION IF EXISTS get_login_streak(INTEGER) CASCADE;
+CREATE FUNCTION get_login_streak(p_user_id INTEGER)
 RETURNS INTEGER
 LANGUAGE plpgsql AS $$
 DECLARE
-    current_streak INTEGER := 0;
-    current_date DATE;
+    streak_count INTEGER := 0;
+    curr_date DATE;
     prev_date DATE := NULL;
     rec RECORD;
 BEGIN
@@ -101,27 +102,28 @@ BEGIN
         WHERE user_id = p_user_id AND action = 'login'
         ORDER BY DATE(created_at) DESC
     LOOP
-        current_date := rec.login_date;
+        curr_date := rec.login_date;
         
         IF prev_date IS NULL THEN
             -- Первая итерация
-            current_streak := 1;
-            prev_date := current_date;
-        ELSIF prev_date - current_date = 1 THEN
+            streak_count := 1;
+            prev_date := curr_date;
+        ELSIF prev_date - curr_date = 1 THEN
             -- Следующий день подряд
-            current_streak := current_streak + 1;
-            prev_date := current_date;
+            streak_count := streak_count + 1;
+            prev_date := curr_date;
         ELSE
             -- Прерван стрик
             EXIT;
         END IF;
     END LOOP;
     
-    RETURN current_streak;
+    RETURN streak_count;
 END $$;
 
 -- ТЕПЕРЬ СОЗДАЕМ VIEW ДЛЯ АВТОМАТИЧЕСКОГО РАСЧЕТА ПРОГРЕССА
-CREATE OR REPLACE VIEW user_progress_calculated AS
+DROP VIEW IF EXISTS user_progress_calculated CASCADE;
+CREATE VIEW user_progress_calculated AS
 WITH user_stats AS (
     SELECT 
         e.id as user_id,
@@ -184,7 +186,8 @@ SELECT
 FROM user_stats;
 
 -- ФУНКЦИЯ ОБНОВЛЕНИЯ РЕАЛЬНОЙ ТАБЛИЦЫ USER_PROGRESS
-CREATE OR REPLACE FUNCTION update_user_progress()
+DROP FUNCTION IF EXISTS update_user_progress() CASCADE;
+CREATE FUNCTION update_user_progress()
 RETURNS VOID
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -200,7 +203,8 @@ BEGIN
 END $$;
 
 -- ТРИГГЕР ДЛЯ АВТОМАТИЧЕСКОГО ОБНОВЛЕНИЯ ПРИ ИЗМЕНЕНИИ ACTIVITY_LOG
-CREATE OR REPLACE FUNCTION trigger_update_user_progress()
+DROP FUNCTION IF EXISTS trigger_update_user_progress() CASCADE;
+CREATE FUNCTION trigger_update_user_progress()
 RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -260,7 +264,8 @@ CREATE INDEX IF NOT EXISTS idx_benefit_recommendations_benefit_id ON benefit_rec
 -- ========================================
 
 -- VIEW: Достижения пользователей с деталями
-CREATE OR REPLACE VIEW user_achievements_detailed AS
+DROP VIEW IF EXISTS user_achievements_detailed CASCADE;
+CREATE VIEW user_achievements_detailed AS
 SELECT 
     ua.id,
     ua.user_id,
@@ -277,7 +282,8 @@ JOIN enter e ON ua.user_id = e.id
 JOIN achievements a ON ua.achievement_id = a.code;
 
 -- VIEW: Активность с деталями типов
-CREATE OR REPLACE VIEW activity_log_detailed AS
+DROP VIEW IF EXISTS activity_log_detailed CASCADE;
+CREATE VIEW activity_log_detailed AS
 SELECT 
     al.id,
     al.user_id,
@@ -295,7 +301,8 @@ JOIN enter e ON al.user_id = e.id
 LEFT JOIN activity_types at ON al.activity_type_id = at.id;
 
 -- VIEW: Рекомендации льгот с деталями  
-CREATE OR REPLACE VIEW benefit_recommendations_detailed AS
+DROP VIEW IF EXISTS benefit_recommendations_detailed CASCADE;
+CREATE VIEW benefit_recommendations_detailed AS
 SELECT 
     br.id,
     br.user_id,
@@ -316,7 +323,8 @@ JOIN benefits b ON br.benefit_id = b.id;
 -- ========================================
 
 -- ФУНКЦИЯ ПРОВЕРКИ ЦЕЛОСТНОСТИ ДАННЫХ
-CREATE OR REPLACE FUNCTION check_data_integrity() 
+DROP FUNCTION IF EXISTS check_data_integrity() CASCADE;
+CREATE FUNCTION check_data_integrity() 
 RETURNS TABLE(table_name TEXT, issue_count BIGINT, issue_description TEXT) 
 LANGUAGE plpgsql AS $$
 BEGIN

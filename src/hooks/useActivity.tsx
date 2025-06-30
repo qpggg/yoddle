@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useUser } from './useUser';
 
-interface ActivityEntry {
+export interface ActivityEntry {
   id?: number;
   user_id: number;
   action: string;

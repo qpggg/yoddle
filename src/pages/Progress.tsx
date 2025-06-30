@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
+import { useActivity } from '../hooks/useActivity';
 import { 
   FaFire, 
   FaStar, 
@@ -335,6 +336,14 @@ const Progress: React.FC = () => {
   const { user } = useUser();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logCustomActivity } = useActivity();
+
+  // 🎉 АВТОЛОГИРОВАНИЕ ПОСЕЩЕНИЯ СТРАНИЦЫ ПРОГРЕССА
+  useEffect(() => {
+    if (user?.id) {
+      logCustomActivity('progress_view', 5, 'Пользователь посмотрел страницу прогресса');
+    }
+  }, [user?.id, logCustomActivity]);
 
   useEffect(() => {
     setTimeout(() => {

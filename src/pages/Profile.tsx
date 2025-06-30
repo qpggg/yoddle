@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUser } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
+import { useActivity } from '../hooks/useActivity';
 import { motion } from 'framer-motion';
 import { 
   Box, 
@@ -43,8 +44,12 @@ const Profile: React.FC = () => {
   const { user, logout } = useUser();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { logCustomActivity } = useActivity();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 🎉 АВТОЛОГИРОВАНИЕ ВЫХОДА
+    await logCustomActivity('logout', 5, `Пользователь ${user?.name || user?.email} вышел из системы`);
+    
     logout();
     navigate('/');
   };

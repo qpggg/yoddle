@@ -12,6 +12,7 @@ import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
 import { useUserBenefits } from '../hooks/useUserBenefits';
 import { useNavigate } from 'react-router-dom';
+import { useActivity } from '../hooks/useActivity';
 import ActivityChart from '../components/ActivityChart';
 
 interface ProfileEditModalProps {
@@ -22,6 +23,7 @@ interface ProfileEditModalProps {
 }
 
 function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProps) {
+  const { logProfileUpdate } = useActivity();
   const [form, setForm] = useState<{
     name: string;
     email: string;
@@ -96,6 +98,9 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
     if (res.ok) {
       const updated = await res.json();
       setUser(updated.user);
+      
+      // 🎉 АВТОЛОГИРОВАНИЕ ОБНОВЛЕНИЯ ПРОФИЛЯ
+      await logProfileUpdate(`Профиль обновлен: ${form.name}, ${form.position}`);
     }
     onClose();
   };
@@ -155,6 +160,14 @@ const Dashboard: React.FC = () => {
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const navigate = useNavigate();
+  const { logCustomActivity } = useActivity();
+
+  // 🎉 АВТОЛОГИРОВАНИЕ ПОСЕЩЕНИЯ ДАШБОРДА
+  useEffect(() => {
+    if (user?.id) {
+      logCustomActivity('dashboard_visit', 5, 'Пользователь зашел на дашборд');
+    }
+  }, [user?.id, logCustomActivity]);
 
   const containerVariants = {
     hidden: { opacity: 0 },

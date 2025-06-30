@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
+import { useActivity } from '../hooks/useActivity';
 import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
 import { GiBrain } from "react-icons/gi";
 
@@ -182,6 +183,7 @@ const MAX_BENEFITS = 2;
 
 const MyBenefits: React.FC = () => {
   const { user } = useUser();
+  const { logBenefitAdded } = useActivity();
   const [allBenefits, setAllBenefits] = useState<Benefit[]>([]);
   const [userBenefitIds, setUserBenefitIds] = useState<number[]>([]);
   const [openBenefit, setOpenBenefit] = useState<Benefit | null>(null);
@@ -229,11 +231,17 @@ const MyBenefits: React.FC = () => {
   
   const handleConfirm = async () => {
     if (!user || !openBenefit) return;
+    
+    // Добавляем льготу в БД
     await fetch('/api/user-benefits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: user.id, benefit_id: openBenefit.id })
     });
+    
+    // 🎉 АВТОЛОГИРОВАНИЕ ДОБАВЛЕНИЯ ЛЬГОТЫ
+    await logBenefitAdded(openBenefit.name);
+    
     setSuccess(true);
     setUserBenefitIds(prev => [...prev, openBenefit.id]);
     setTimeout(handleClose, 1200);
