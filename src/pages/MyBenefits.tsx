@@ -111,7 +111,7 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
             position: 'absolute',
             top: -8,
             right: 16,
-            background: 'linear-gradient(135deg, #556B2F 0%, #6B8E23 50%, #808000 100%)',
+            background: 'linear-gradient(135deg, #A0761C 0%, #B8860B 50%, #DAA520 100%)',
             color: '#fff',
             fontWeight: 600,
             fontSize: '0.7rem',
@@ -120,8 +120,8 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
             zIndex: 2,
             height: '22px',
             borderRadius: '11px',
-            border: '1px solid rgba(255,255,255,0.15)',
-            boxShadow: '0 3px 12px rgba(85,107,47,0.3), 0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 3px 12px rgba(160,118,28,0.4), 0 1px 3px rgba(0,0,0,0.15)',
             backdropFilter: 'blur(10px)',
             '& .MuiChip-label': {
               display: 'flex',
@@ -129,10 +129,10 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
               gap: '3px',
               padding: '0 8px',
               '&::before': {
-                content: '"◆"',
+                content: '"✦"',
                 fontSize: '0.6rem',
-                color: '#E8F5E8',
-                textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                color: '#FFF8DC',
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)'
               }
             },
             '&::after': {
@@ -142,7 +142,7 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(255,248,220,0.1) 100%)',
               borderRadius: '11px',
               pointerEvents: 'none'
             }
