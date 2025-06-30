@@ -157,9 +157,27 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [userProgress, setUserProgress] = useState<any>(null);
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const navigate = useNavigate();
+
+  // Загрузка прогресса пользователя
+  useEffect(() => {
+    const loadProgress = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const response = await fetch(`/api/progress?user_id=${user.id}`);
+        const data = await response.json();
+        setUserProgress(data.progress);
+      } catch (error) {
+        console.error('Error loading progress:', error);
+      }
+    };
+
+    loadProgress();
+  }, [user?.id]);
 
 
 
@@ -440,7 +458,12 @@ const Dashboard: React.FC = () => {
                     marginBottom: '0.25rem',
                     color: 'white'
                   }}>
-                    Ваш рейтинг: Активный
+                    Ваш рейтинг: {userProgress ? (
+                      userProgress.xp >= 1001 ? 'Легенда' :
+                      userProgress.xp >= 501 ? 'Мастер' :
+                      userProgress.xp >= 301 ? 'Эксперт' :
+                      userProgress.xp >= 101 ? 'Активный' : 'Новичок'
+                    ) : 'Загрузка...'}
                   </div>
                   <div style={{ 
                     fontWeight: 400, 
@@ -448,7 +471,12 @@ const Dashboard: React.FC = () => {
                     marginBottom: '0.75rem',
                     opacity: 0.9
                   }}>
-                    (150/300 XP)
+                    {userProgress ? `(${userProgress.xp}/${
+                      userProgress.xp >= 1001 ? '∞' :
+                      userProgress.xp >= 501 ? '1001' :
+                      userProgress.xp >= 301 ? '501' :
+                      userProgress.xp >= 101 ? '301' : '101'
+                    } XP)` : '(Загрузка...)'}
                   </div>
                   
                   <div style={{ 
@@ -462,7 +490,13 @@ const Dashboard: React.FC = () => {
                     <div style={{ 
                       background: 'white', 
                       height: '100%', 
-                      width: '50%', 
+                      width: userProgress ? `${Math.min(
+                        userProgress.xp >= 1001 ? 100 :
+                        userProgress.xp >= 501 ? ((userProgress.xp - 501) / 500) * 100 :
+                        userProgress.xp >= 301 ? ((userProgress.xp - 301) / 200) * 100 :
+                        userProgress.xp >= 101 ? ((userProgress.xp - 101) / 200) * 100 :
+                        (userProgress.xp / 101) * 100
+                      , 100)}%` : '0%', 
                       borderRadius: '12px',
                       boxShadow: '0 1px 4px rgba(255,255,255,0.3)'
                     }} />

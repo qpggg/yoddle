@@ -3,7 +3,6 @@ import { Container, Typography, Box, TextField, Button, Paper, Alert, Slide } fr
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../hooks/useUser';
-import { useActivity } from '../hooks/useActivity';
 
 
 const Login: React.FC = () => {
@@ -12,7 +11,6 @@ const Login: React.FC = () => {
   const [error, setError] = React.useState('');
   const navigate = useNavigate();
   const { setUser } = useUser();
-  const { logLogin } = useActivity();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +27,30 @@ const Login: React.FC = () => {
         return;
       }
       const data = await res.json();
+      
+      // 🎉 АВТОЛОГИРОВАНИЕ ВХОДА (СНАЧАЛА ЛОГИРУЕМ, ПОТОМ ПЕРЕХОДИМ)
+      try {
+        const loginResponse = await fetch('/api/activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: Number(data.user.id),
+            action: 'login',
+            xp_earned: 10,
+            description: `Пользователь ${data.user.name || data.user.email} вошел в систему`
+          })
+        });
+        
+        if (loginResponse.ok) {
+          console.log('✅ Логирование входа успешно');
+        } else {
+          console.error('❌ Ошибка логирования входа');
+        }
+      } catch (loginError) {
+        console.error('❌ Ошибка при логировании входа:', loginError);
+      }
+      
       setUser(data.user);
-      
-      // 🎉 АВТОЛОГИРОВАНИЕ ВХОДА
-      await logLogin(`Пользователь ${data.user.name || data.user.email} вошел в систему`);
-      
       navigate('/dashboard');
     } catch (err) {
       setError('Ошибка соединения с сервером');
