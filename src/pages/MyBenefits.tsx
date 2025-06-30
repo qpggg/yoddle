@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress, Badge } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
@@ -70,9 +70,59 @@ interface Benefit {
   category: string;
 }
 
-const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard }: { benefit: Benefit; onAdd: () => void; isAdded: boolean; isDisabled: boolean, isSelectedCard?: boolean; }) => (
+// Функция проверки рекомендации
+const checkIfRecommended = (benefit: Benefit, userRecommendations: string[]): boolean => {
+  const categoryMapping: { [key: string]: string } = {
+    'Здоровье': 'health',
+    'Обучение': 'education',
+    'Спорт': 'sports',
+    'Психология': 'psychology',
+    'Социальная поддержка': 'social',
+    'Отдых': 'wellness'
+  };
+  
+  const benefitCategory = categoryMapping[benefit.category];
+  return benefitCategory ? userRecommendations.includes(benefitCategory) : false;
+};
+
+const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended }: { 
+  benefit: Benefit; 
+  onAdd: () => void; 
+  isAdded: boolean; 
+  isDisabled: boolean;
+  isSelectedCard?: boolean;
+  isRecommended?: boolean;
+}) => (
   <motion.div variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
-    <Paper elevation={0} sx={{ p: 3, borderRadius: '24px', background: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.05)', height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid #eee' }}>
+    <Paper elevation={0} sx={{ 
+      p: 3, 
+      borderRadius: '24px', 
+      background: '#fff', 
+      boxShadow: '0 8px 32px rgba(0,0,0,0.05)', 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      border: recommended ? '2px solid #FFD700' : '1px solid #eee',
+      position: 'relative',
+      overflow: 'visible'
+    }}>
+      {recommended && (
+        <Chip 
+          label="⭐ Рекомендовано" 
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: -10,
+            right: 12,
+            background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.75rem',
+            zIndex: 2,
+            boxShadow: '0 2px 8px rgba(255,215,0,0.3)'
+          }}
+        />
+      )}
       <Box sx={{ color: '#8B0000', mb: 2 }}>
         {categoryIcons[benefit.category] || categoryIcons['Default']}
       </Box>
@@ -113,16 +163,22 @@ const MyBenefits: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
+  const [userRecommendations, setUserRecommendations] = useState<string[]>([]);
 
   useEffect(() => {
     setIsLoading(true);
     const fetchBenefits = fetch('/api/benefits').then(res => res.json());
     const fetchUserBenefits = user?.id ? fetch(`/api/user-benefits?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ benefits: [] });
+    const fetchUserRecommendations = user?.id ? fetch(`/api/user-recommendations?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ recommendations: [] });
 
-    Promise.all([fetchBenefits, fetchUserBenefits])
-      .then(([allBenefitsData, userBenefitsData]) => {
+    Promise.all([fetchBenefits, fetchUserBenefits, fetchUserRecommendations])
+      .then(([allBenefitsData, userBenefitsData, userRecommendationsData]) => {
         setAllBenefits(allBenefitsData.benefits || []);
         setUserBenefitIds((userBenefitsData.benefits || []).map((b: any) => b.id));
+        
+        // Загружаем категории рекомендаций
+        const recommendedCategories = (userRecommendationsData.recommendations || []).map((rec: any) => rec.category);
+        setUserRecommendations(recommendedCategories);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -189,7 +245,14 @@ const MyBenefits: React.FC = () => {
               <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
                 {selectedBenefits.map((benefit) => (
                   <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`}>
-                    <BenefitCard benefit={benefit} onAdd={() => {}} isAdded={true} isDisabled={false} isSelectedCard={true} />
+                    <BenefitCard 
+                      benefit={benefit} 
+                      onAdd={() => {}} 
+                      isAdded={true} 
+                      isDisabled={false} 
+                      isSelectedCard={true}
+                      isRecommended={checkIfRecommended(benefit, userRecommendations)}
+                    />
                   </Grid>
                 ))}
               </Grid>
@@ -258,6 +321,7 @@ const MyBenefits: React.FC = () => {
                   onAdd={() => handleAddClick(benefit)} 
                   isAdded={userBenefitIds.includes(benefit.id)}
                   isDisabled={userBenefitIds.length >= MAX_BENEFITS && !userBenefitIds.includes(benefit.id)}
+                  isRecommended={checkIfRecommended(benefit, userRecommendations)}
                 />
               </Grid>
             ))}

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Container, Typography, Box, Grid, Paper, Button, LinearProgress } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
+import { useUser } from '../hooks/useUser';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -103,21 +104,21 @@ const benefitCategories: { [key: string]: BenefitRecommendation } = {
     icon: <FaHeartbeat />,
     title: 'Забота о здоровье',
     description: 'Медицинские программы и услуги для поддержания вашего здоровья',
-    examples: ['Медицинское страхование', 'Стоматологические услуги', 'Профилактические осмотры', 'Льготы на лекарства']
+    examples: ['Здоровые привычки', 'Массаж', 'Профилактика выгорания', 'Психологическая поддержка']
   },
   sports: {
     category: 'Спорт',
     icon: <FaFutbol />,
     title: 'Активный образ жизни',
     description: 'Спортивные программы и фитнес для поддержания формы',
-    examples: ['Абонементы в спортзал', 'Корпоративные турниры', 'Занятия йогой', 'Спортивное оборудование']
+    examples: ['Абонементы в спортзал', 'Корпоративные турниры', 'Занятия йогой', 'Командые виды спорта']
   },
   education: {
     category: 'Обучение',
     icon: <FaGraduationCap />,
     title: 'Профессиональное развитие',
     description: 'Образовательные программы и курсы для роста компетенций',
-    examples: ['Онлайн курсы', 'Профессиональные тренинги', 'Языковые программы', 'Сертификации']
+    examples: ['Soft-skills', 'Профессиональные тренинги', 'Режим дня и баланс работы', 'Специальный Коуч']
   },
   psychology: {
     category: 'Психология',
@@ -126,26 +127,71 @@ const benefitCategories: { [key: string]: BenefitRecommendation } = {
     description: 'Психологическая поддержка и программы против стресса',
     examples: ['Консультации психолога', 'Программы снижения стресса', 'Медитация', 'Work-life balance']
   },
-  social: {
+ /* social: {
     category: 'Социальная поддержка',
     icon: <FaHandHoldingHeart />,
     title: 'Социальные программы',
     description: 'Поддержка семьи и социальные инициативы',
     examples: ['Помощь семьям', 'Детские программы', 'Волонтерство', 'Корпоративные события']
-  },
+  },*/
   wellness: {
     category: 'Отдых',
     icon: <FaLeaf />,
     title: 'Отдых и восстановление',
     description: 'Программы для релаксации и восстановления сил',
-    examples: ['Спа-процедуры', 'Массаж', 'Отпускные программы', 'Санаторно-курортное лечение']
+    examples: ['Спа-процедуры', 'Массаж']
   }
 };
 
 const Preferences: React.FC = () => {
+  const { user } = useUser();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [savedRecommendations, setSavedRecommendations] = useState<BenefitRecommendation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasExistingResults, setHasExistingResults] = useState(false);
+
+  // Загрузка существующих рекомендаций при загрузке компонента
+  useEffect(() => {
+    const loadExistingRecommendations = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/user-recommendations?user_id=${user.id}`);
+        const data = await response.json();
+
+        if (data.hasRecommendations && data.recommendations.length > 0) {
+          // Конвертируем данные из БД обратно в формат компонента
+          const categoryMapping: { [key: string]: BenefitRecommendation } = {
+            'health': benefitCategories.health,
+            'education': benefitCategories.education,
+            'sports': benefitCategories.sports,
+            'psychology': benefitCategories.psychology,
+            'social': benefitCategories.social,
+            'wellness': benefitCategories.wellness
+          };
+
+          const loadedRecommendations = data.recommendations.map((rec: any) => 
+            categoryMapping[rec.category] || benefitCategories.health
+          );
+
+          setSavedRecommendations(loadedRecommendations);
+          setHasExistingResults(true);
+          setShowResults(true);
+        }
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingRecommendations();
+  }, [user?.id]);
 
   const handleAnswer = (value: string) => {
     const newAnswers = [...answers, value];
@@ -154,7 +200,51 @@ const Preferences: React.FC = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
+      // Тест завершен - показываем результаты и сохраняем в БД
       setShowResults(true);
+      saveRecommendationsToDb(newAnswers);
+    }
+  };
+
+  // Сохранение рекомендаций в БД
+  const saveRecommendationsToDb = async (testAnswers: string[]) => {
+    if (!user?.id) return;
+
+    try {
+      // Вычисляем рекомендации на основе ответов
+      const scores: { [key: string]: number } = {};
+      testAnswers.forEach(answer => {
+        scores[answer] = (scores[answer] || 0) + 1;
+      });
+
+      const sortedCategories = Object.entries(scores)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+        .map(([category]) => benefitCategories[category])
+        .filter(Boolean);
+
+      const fallbackCategories = ['health', 'education', 'wellness'];
+      const additionalCategories = fallbackCategories
+        .filter(cat => !sortedCategories.find(rec => rec.category === benefitCategories[cat].category))
+        .map(cat => benefitCategories[cat])
+        .slice(0, 3 - sortedCategories.length);
+
+      const finalRecommendations = [...sortedCategories, ...additionalCategories];
+
+      // Отправляем в БД
+      await fetch('/api/user-recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          recommendations: finalRecommendations,
+          answers: testAnswers
+        })
+      });
+
+      setHasExistingResults(true);
+    } catch (error) {
+      console.error('Error saving recommendations:', error);
     }
   };
 
@@ -185,12 +275,32 @@ const Preferences: React.FC = () => {
     setCurrentQuestion(0);
     setAnswers([]);
     setShowResults(false);
+    setHasExistingResults(false);
+    setSavedRecommendations([]);
   };
 
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
+  // Показываем загрузку пока данные загружаются
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh', 
+        background: '#f9fafb' 
+      }}>
+        <CircularProgress sx={{ color: '#8B0000' }} />
+      </Box>
+    );
+  }
+
   if (showResults) {
-    const recommendations = getRecommendations();
+    // Используем сохраненные рекомендации если есть, иначе вычисляем новые
+    const recommendations = hasExistingResults && savedRecommendations.length > 0 
+      ? savedRecommendations 
+      : getRecommendations();
     
     return (
       <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
