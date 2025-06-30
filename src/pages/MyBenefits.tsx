@@ -105,26 +105,46 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
     }}>
       {recommended && (
         <Chip 
-          label="★ Рекомендовано" 
+          label="Рекомендуем" 
           size="small"
           sx={{
             position: 'absolute',
-            top: -10,
-            right: 12,
-            background: 'linear-gradient(45deg, #B8860B, #DAA520)',
+            top: -8,
+            right: 16,
+            background: 'linear-gradient(135deg, #556B2F 0%, #6B8E23 50%, #808000 100%)',
             color: '#fff',
-            fontWeight: 700,
-            fontSize: '0.75rem',
+            fontWeight: 600,
+            fontSize: '0.7rem',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
             zIndex: 2,
-            boxShadow: '0 2px 8px rgba(184,134,11,0.4)',
+            height: '22px',
+            borderRadius: '11px',
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 3px 12px rgba(85,107,47,0.3), 0 1px 3px rgba(0,0,0,0.1)',
+            backdropFilter: 'blur(10px)',
             '& .MuiChip-label': {
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '3px',
+              padding: '0 8px',
               '&::before': {
-                content: '"✨"',
-                fontSize: '0.7rem'
+                content: '"◆"',
+                fontSize: '0.6rem',
+                color: '#E8F5E8',
+                textShadow: '0 1px 2px rgba(0,0,0,0.2)'
               }
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+              borderRadius: '11px',
+              pointerEvents: 'none'
             }
           }}
         />
