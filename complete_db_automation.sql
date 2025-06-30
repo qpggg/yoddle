@@ -84,7 +84,43 @@ END $$;
 -- ЧАСТЬ 2: АВТОМАТИЗАЦИЯ USER_PROGRESS
 -- ========================================
 
--- СОЗДАНИЕ VIEW ДЛЯ АВТОМАТИЧЕСКОГО РАСЧЕТА ПРОГРЕССА
+-- СНАЧАЛА СОЗДАЕМ ФУНКЦИЮ ДЛЯ РАСЧЕТА СТРИКА ЛОГИНОВ
+CREATE OR REPLACE FUNCTION get_login_streak(p_user_id INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql AS $$
+DECLARE
+    current_streak INTEGER := 0;
+    current_date DATE;
+    prev_date DATE := NULL;
+    rec RECORD;
+BEGIN
+    -- Получаем все даты входа пользователя в обратном порядке
+    FOR rec IN 
+        SELECT DISTINCT DATE(created_at) as login_date 
+        FROM activity_log 
+        WHERE user_id = p_user_id AND action = 'login'
+        ORDER BY DATE(created_at) DESC
+    LOOP
+        current_date := rec.login_date;
+        
+        IF prev_date IS NULL THEN
+            -- Первая итерация
+            current_streak := 1;
+            prev_date := current_date;
+        ELSIF prev_date - current_date = 1 THEN
+            -- Следующий день подряд
+            current_streak := current_streak + 1;
+            prev_date := current_date;
+        ELSE
+            -- Прерван стрик
+            EXIT;
+        END IF;
+    END LOOP;
+    
+    RETURN current_streak;
+END $$;
+
+-- ТЕПЕРЬ СОЗДАЕМ VIEW ДЛЯ АВТОМАТИЧЕСКОГО РАСЧЕТА ПРОГРЕССА
 CREATE OR REPLACE VIEW user_progress_calculated AS
 WITH user_stats AS (
     SELECT 
@@ -146,42 +182,6 @@ SELECT
     created_at,
     updated_at
 FROM user_stats;
-
--- ФУНКЦИЯ ДЛЯ РАСЧЕТА СТРИКА ЛОГИНОВ
-CREATE OR REPLACE FUNCTION get_login_streak(p_user_id INTEGER)
-RETURNS INTEGER
-LANGUAGE plpgsql AS $$
-DECLARE
-    current_streak INTEGER := 0;
-    current_date DATE;
-    prev_date DATE := NULL;
-    rec RECORD;
-BEGIN
-    -- Получаем все даты входа пользователя в обратном порядке
-    FOR rec IN 
-        SELECT DISTINCT DATE(created_at) as login_date 
-        FROM activity_log 
-        WHERE user_id = p_user_id AND action = 'login'
-        ORDER BY DATE(created_at) DESC
-    LOOP
-        current_date := rec.login_date;
-        
-        IF prev_date IS NULL THEN
-            -- Первая итерация
-            current_streak := 1;
-            prev_date := current_date;
-        ELSIF prev_date - current_date = 1 THEN
-            -- Следующий день подряд
-            current_streak := current_streak + 1;
-            prev_date := current_date;
-        ELSE
-            -- Прерван стрик
-            EXIT;
-        END IF;
-    END LOOP;
-    
-    RETURN current_streak;
-END $$;
 
 -- ФУНКЦИЯ ОБНОВЛЕНИЯ РЕАЛЬНОЙ ТАБЛИЦЫ USER_PROGRESS
 CREATE OR REPLACE FUNCTION update_user_progress()
