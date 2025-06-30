@@ -11,14 +11,7 @@ interface ActivityChartProps {
   className?: string;
 }
 
-interface TooltipState {
-  visible: boolean;
-  x: number;
-  y: number;
-  content: string;
-  day: number;
-  actions: number;
-}
+
 
 const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const { user } = useUser();
@@ -27,14 +20,6 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const [currentMonth, setCurrentMonth] = useState('');
   const [currentYear, setCurrentYear] = useState(2024);
   const [totalActions, setTotalActions] = useState(0);
-  const [tooltip, setTooltip] = useState<TooltipState>({
-    visible: false,
-    x: 0,
-    y: 0,
-    content: '',
-    day: 0,
-    actions: 0
-  });
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -151,23 +136,15 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const activeDays = activityData.filter(d => d.actions > 0).length;
   const currentDay = new Date().getDate();
 
-  // Простые и надежные tooltip'ы
-  const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    
-    // Простое позиционирование относительно viewport
-    setTooltip({
-      visible: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 50, // Прямо над столбцом
-      content: `${day} ${currentMonth}`,
-      day,
-      actions
-    });
+  // Состояние для активного tooltip'а
+  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
+
+  const showTooltip = (day: number) => {
+    setActiveTooltip(day);
   };
 
   const hideTooltip = () => {
-    setTooltip(prev => ({ ...prev, visible: false }));
+    setActiveTooltip(null);
   };
 
   return (
@@ -282,9 +259,75 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
                   : `0 6px 20px rgba(139, 0, 0, ${intensity * 0.3})`,
                 transition: { type: "spring", stiffness: 400, damping: 25 }
               }}
-              onMouseEnter={(e) => showTooltip(e, dataPoint.day, dataPoint.actions)}
+              onMouseEnter={() => showTooltip(dataPoint.day)}
               onMouseLeave={hideTooltip}
-            >
+                          >
+              {/* Tooltip прямо внутри столбца */}
+              {activeTooltip === dataPoint.day && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '8px',
+                  background: 'rgba(26, 26, 26, 0.95)',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                  zIndex: 1000,
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '2px',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 600,
+                      color: '#8B0000'
+                    }}>
+                      {dataPoint.day} {currentMonth}
+                    </div>
+                    <div style={{ 
+                      fontSize: '13px', 
+                      fontWeight: 700 
+                    }}>
+                      {dataPoint.actions} {dataPoint.actions === 1 ? 'действие' : dataPoint.actions < 5 ? 'действия' : 'действий'}
+                    </div>
+                    {dataPoint.day === currentDay && (
+                      <div style={{ 
+                        fontSize: '9px', 
+                        color: '#8B0000',
+                        fontWeight: 600 
+                      }}>
+                        СЕГОДНЯ
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Стрелочка */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderTop: '4px solid rgba(26, 26, 26, 0.95)'
+                  }} />
+                </div>
+              )}
+
               {/* Подсветка для сегодняшнего дня */}
               {isToday && (
                 <div style={{
@@ -348,74 +391,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         </div>
       </div>
 
-      {/* Исправленный Tooltip */}
-      {tooltip.visible && (
-        <div
-          style={{
-            position: 'fixed',
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: 'translateX(-50%)',
-            background: 'rgba(26, 26, 26, 0.95)',
-            color: '#fff',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            fontSize: '12px',
-            fontWeight: 500,
-            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)',
-            zIndex: 1000,
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}
-        >
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '3px',
-            alignItems: 'center'
-          }}>
-            <div style={{ 
-              fontSize: '13px', 
-              fontWeight: 600,
-              color: '#8B0000'
-            }}>
-              {tooltip.content}
-            </div>
-            <div style={{ 
-              fontSize: '14px', 
-              fontWeight: 700 
-            }}>
-              {tooltip.actions} {tooltip.actions === 1 ? 'действие' : tooltip.actions < 5 ? 'действия' : 'действий'}
-            </div>
-            {tooltip.day === currentDay && (
-              <div style={{ 
-                fontSize: '10px', 
-                color: '#8B0000',
-                fontWeight: 600 
-              }}>
-                СЕГОДНЯ
-              </div>
-            )}
-          </div>
-          
-          {/* Стрелочка */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '5px solid transparent',
-              borderRight: '5px solid transparent',
-              borderTop: '5px solid rgba(26, 26, 26, 0.95)'
-            }}
-          />
-        </div>
-      )}
+
 
       {/* CSS для анимации загрузки */}
       <style>{`
