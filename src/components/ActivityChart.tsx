@@ -222,56 +222,46 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           const intensity = dataPoint.actions / maxActions;
           
           return (
-                        <div
+            <motion.div
               key={dataPoint.day}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: barHeight, opacity: 1 }}
+              transition={{ 
+                delay: index * 0.01, 
+                duration: 0.5, 
+                ease: [0.25, 0.1, 0.25, 1] 
+              }}
               style={{
-                // Контейнер с расширенной областью hover
-                width: barWidth + 4, // +4px для лучшего hover
-                minHeight: chartHeight,
+                width: barWidth,
+                minHeight: dataPoint.actions > 0 ? 3 : 1,
+                background: dataPoint.actions > 0 
+                  ? (isToday 
+                    ? 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)'
+                    : `linear-gradient(180deg, 
+                        rgba(139, 0, 0, ${0.3 + intensity * 0.7}) 0%, 
+                        rgba(117, 0, 0, ${0.4 + intensity * 0.6}) 100%)`
+                    )
+                  : 'rgba(0, 0, 0, 0.05)',
+                borderRadius: '3px',
                 position: 'relative',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'center'
+                boxShadow: dataPoint.actions > 0 
+                  ? `0 2px 6px rgba(139, 0, 0, ${intensity * 0.2})`
+                  : 'none',
+                // Активный столбец всегда сверху
+                zIndex: activeTooltip === dataPoint.day ? 1000 : 1
+              }}
+              whileHover={{ 
+                scale: 1.05,
+                y: -1,
+                boxShadow: isToday 
+                  ? '0 6px 20px rgba(139, 0, 0, 0.3)'
+                  : `0 6px 20px rgba(139, 0, 0, ${intensity * 0.3})`,
+                transition: { type: "spring", stiffness: 400, damping: 25 }
               }}
               onMouseEnter={() => showTooltip(dataPoint.day)}
               onMouseLeave={hideTooltip}
-              >
-                             {/* Сам столбец с анимациями */}
-               <motion.div 
-                 initial={{ height: 0, opacity: 0 }}
-                 animate={{ height: barHeight, opacity: 1 }}
-                 transition={{ 
-                   delay: index * 0.01, 
-                   duration: 0.5, 
-                   ease: [0.25, 0.1, 0.25, 1] 
-                 }}
-                 whileHover={{ 
-                   scale: 1.05,
-                   y: -1,
-                   boxShadow: isToday 
-                     ? '0 6px 20px rgba(139, 0, 0, 0.3)'
-                     : `0 6px 20px rgba(139, 0, 0, ${intensity * 0.3})`,
-                   transition: { type: "spring", stiffness: 400, damping: 25 }
-                 }}
-                 style={{
-                   width: barWidth,
-                   minHeight: dataPoint.actions > 0 ? 8 : 6,
-                   background: dataPoint.actions > 0 
-                     ? (isToday 
-                       ? 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)'
-                       : `linear-gradient(180deg, 
-                           rgba(139, 0, 0, ${0.3 + intensity * 0.7}) 0%, 
-                           rgba(117, 0, 0, ${0.4 + intensity * 0.6}) 100%)`
-                       )
-                     : 'rgba(0, 0, 0, 0.1)',
-                   borderRadius: '3px',
-                   boxShadow: dataPoint.actions > 0 
-                     ? `0 2px 6px rgba(139, 0, 0, ${intensity * 0.2})`
-                     : 'none'
-                 }}
-               />
-
+                          >
               {/* Tooltip прямо внутри столбца */}
               {activeTooltip === dataPoint.day && (
                 <div style={{
@@ -367,7 +357,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
                   {dataPoint.day}
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
