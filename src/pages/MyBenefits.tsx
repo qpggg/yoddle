@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress, Badge } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
