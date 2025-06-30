@@ -71,22 +71,12 @@ interface Benefit {
 }
 
 // Функция проверки рекомендации
-const checkIfRecommended = (benefit: Benefit, userRecommendations: string[]): boolean => {
-  const categoryMapping: { [key: string]: string } = {
-    'Здоровье': 'health',
-    'Обучение': 'education',
-    'Спорт': 'sports',
-    'Психология': 'psychology',
-    'Социальная поддержка': 'social',
-    'Отдых': 'wellness'
-  };
-  
-  const benefitCategory = categoryMapping[benefit.category];
-  const isRecommended = benefitCategory ? userRecommendations.includes(benefitCategory) : false;
+const checkIfRecommended = (benefit: Benefit, userRecommendedBenefitIds: number[]): boolean => {
+  const isRecommended = userRecommendedBenefitIds.includes(benefit.id);
   
   // Отладка для первых нескольких вызовов
   if (Math.random() < 0.1) { // 10% вероятность логирования
-    console.log(`Checking benefit: ${benefit.name}, category: ${benefit.category}, mapped: ${benefitCategory}, userRecs: [${userRecommendations.join(', ')}], result: ${isRecommended}`);
+    console.log(`Checking benefit: ${benefit.name} (ID: ${benefit.id}), recommendedIds: [${userRecommendedBenefitIds.join(', ')}], result: ${isRecommended}`);
   }
   
   return isRecommended;
@@ -170,7 +160,7 @@ const MyBenefits: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
-  const [userRecommendations, setUserRecommendations] = useState<string[]>([]);
+  const [userRecommendedBenefitIds, setUserRecommendedBenefitIds] = useState<number[]>([]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -183,11 +173,11 @@ const MyBenefits: React.FC = () => {
         setAllBenefits(allBenefitsData.benefits || []);
         setUserBenefitIds((userBenefitsData.benefits || []).map((b: any) => b.id));
         
-        // Загружаем категории рекомендаций
-        const recommendedCategories = (userRecommendationsData.recommendations || []).map((rec: any) => rec.category);
+        // Загружаем ID рекомендованных льгот
+        const recommendedBenefitIds = (userRecommendationsData.recommendations || []).map((rec: any) => rec.benefit_id);
         console.log('Loaded recommendations:', userRecommendationsData.recommendations);
-        console.log('Recommended categories:', recommendedCategories);
-        setUserRecommendations(recommendedCategories);
+        console.log('Recommended benefit IDs:', recommendedBenefitIds);
+        setUserRecommendedBenefitIds(recommendedBenefitIds);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -260,7 +250,7 @@ const MyBenefits: React.FC = () => {
                       isAdded={true} 
                       isDisabled={false} 
                       isSelectedCard={true}
-                      isRecommended={checkIfRecommended(benefit, userRecommendations)}
+                      isRecommended={checkIfRecommended(benefit, userRecommendedBenefitIds)}
                     />
                   </Grid>
                 ))}
@@ -330,7 +320,7 @@ const MyBenefits: React.FC = () => {
                   onAdd={() => handleAddClick(benefit)} 
                   isAdded={userBenefitIds.includes(benefit.id)}
                   isDisabled={userBenefitIds.length >= MAX_BENEFITS && !userBenefitIds.includes(benefit.id)}
-                  isRecommended={checkIfRecommended(benefit, userRecommendations)}
+                  isRecommended={checkIfRecommended(benefit, userRecommendedBenefitIds)}
                 />
               </Grid>
             ))}

@@ -98,6 +98,16 @@ const questions: Question[] = [
   }
 ];
 
+// Маппинг ответов теста на конкретные ID льгот
+const answerToBenefitMapping: { [key: string]: number[] } = {
+  'health': [1, 3, 4, 6], // Профилактика выгорания, Правильное питание, Психологическая поддержка, Здоровые привычки
+  'education': [10, 2], // Soft-skills тренинги, Режим дня и баланс работы
+  'wellness': [5, 2], // Массаж, Режим дня и баланс работы
+  'social': [7, 9], // Командные виды спорта, Тимбилдинг через спорт
+  'sports': [7, 8, 9], // Командные виды спорта, Фитнес-программы, Тимбилдинг через спорт
+  'psychology': [1, 4] // Профилактика выгорания, Психологическая поддержка
+};
+
 const benefitCategories: { [key: string]: BenefitRecommendation } = {
   health: {
     category: 'Здоровье',
@@ -165,19 +175,27 @@ const Preferences: React.FC = () => {
         const data = await response.json();
 
         if (data.hasRecommendations && data.recommendations.length > 0) {
-          // Конвертируем данные из БД обратно в формат компонента
+          // Конвертируем данные из БД (benefit_id + category) обратно в формат компонента
           const categoryMapping: { [key: string]: BenefitRecommendation } = {
-            'health': benefitCategories.health,
-            'education': benefitCategories.education,
-            'sports': benefitCategories.sports,
-            'psychology': benefitCategories.psychology,
-            'social': benefitCategories.social,
-            'wellness': benefitCategories.wellness
+            'Здоровье': benefitCategories.health,
+            'Обучение': benefitCategories.education,
+            'Спорт': benefitCategories.sports,
+            'Психология': benefitCategories.psychology,
+            'Социальная поддержка': benefitCategories.social,
+            'Отдых': benefitCategories.wellness
           };
 
-          const loadedRecommendations = data.recommendations.map((rec: any) => 
-            categoryMapping[rec.category] || benefitCategories.health
+          // Группируем по категориям для отображения результатов
+          const categoriesFromRecommendations = Array.from(
+            new Set(data.recommendations.map((rec: any) => rec.category))
           );
+          
+          const loadedRecommendations = categoriesFromRecommendations.map((category) => 
+            categoryMapping[category as string] || benefitCategories.health
+          ).filter(Boolean);
+
+          console.log('Categories from recommendations:', categoriesFromRecommendations);
+          console.log('Loaded recommendations for display:', loadedRecommendations);
 
           setSavedRecommendations(loadedRecommendations);
           setHasExistingResults(true);
@@ -211,38 +229,32 @@ const Preferences: React.FC = () => {
     if (!user?.id) return;
 
     try {
-      // Вычисляем рекомендации на основе ответов
-      const scores: { [key: string]: number } = {};
+      // Подсчитываем "очки" для каждой льготы на основе ответов
+      const benefitScores: { [key: number]: number } = {};
+      
       testAnswers.forEach(answer => {
-        scores[answer] = (scores[answer] || 0) + 1;
+        const benefitIds = answerToBenefitMapping[answer] || [];
+        benefitIds.forEach(benefitId => {
+          benefitScores[benefitId] = (benefitScores[benefitId] || 0) + 1;
+        });
       });
 
-      const sortedCategories = Object.entries(scores)
+      // Сортируем льготы по очкам и берем топ-3
+      const recommendedBenefitIds = Object.entries(benefitScores)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 3)
-        .map(([category]) => benefitCategories[category])
-        .filter(Boolean);
+        .map(([benefitId]) => parseInt(benefitId));
 
-      const fallbackCategories = ['health', 'education', 'wellness'];
-      const additionalCategories = fallbackCategories
-        .filter(cat => !sortedCategories.find(rec => rec.category === benefitCategories[cat].category))
-        .map(cat => benefitCategories[cat])
-        .slice(0, 3 - sortedCategories.length);
+      console.log('Answer scores by benefit:', benefitScores);
+      console.log('Top 3 recommended benefit IDs:', recommendedBenefitIds);
 
-      const finalRecommendations = [...sortedCategories, ...additionalCategories];
-
-      console.log('Scores:', scores);
-      console.log('Sorted categories:', sortedCategories);
-      console.log('Additional categories:', additionalCategories);
-      console.log('Final recommendations to save:', finalRecommendations);
-
-      // Отправляем в БД
+      // Отправляем в БД конкретные ID льгот
       const response = await fetch('/api/user-recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.id,
-          recommendations: finalRecommendations,
+          benefit_ids: recommendedBenefitIds,
           answers: testAnswers
         })
       });

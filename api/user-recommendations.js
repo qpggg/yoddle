@@ -32,18 +32,20 @@ export default async (req, res) => {
       client = createDbClient();
       await client.connect();
       
-      const result = await client.query(
-        'SELECT * FROM user_recommendations WHERE user_id = $1 ORDER BY test_date DESC, priority ASC',
-        [user_id]
-      );
+      // Получаем рекомендованные льготы с их данными
+      const result = await client.query(`
+        SELECT br.benefit_id, br.priority, b.name, b.description, b.category
+        FROM benefit_recommendations br
+        JOIN benefits b ON br.benefit_id = b.id
+        WHERE br.user_id = $1
+        ORDER BY br.priority ASC
+      `, [user_id]);
 
-      // Группируем по test_date чтобы взять самые последние результаты
-      const latestResults = result.rows.length > 0 ? 
-        result.rows.filter(row => row.test_date === result.rows[0].test_date) : [];
+      console.log('Loaded recommendations for user', user_id, ':', result.rows);
 
       res.status(200).json({ 
-        recommendations: latestResults,
-        hasRecommendations: latestResults.length > 0 
+        recommendations: result.rows,
+        hasRecommendations: result.rows.length > 0 
       });
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -63,10 +65,10 @@ export default async (req, res) => {
     // Сохранить новые рекомендации
     let client;
     try {
-      const { user_id, recommendations, answers } = req.body;
+      const { user_id, benefit_ids, answers } = req.body;
       
-      if (!user_id || !recommendations || !Array.isArray(recommendations)) {
-        return res.status(400).json({ error: 'Invalid data format' });
+      if (!user_id || !benefit_ids || !Array.isArray(benefit_ids)) {
+        return res.status(400).json({ error: 'Invalid data format. Expected user_id and benefit_ids array.' });
       }
 
       client = createDbClient();
@@ -74,42 +76,30 @@ export default async (req, res) => {
 
       // Удаляем старые рекомендации пользователя
       await client.query(
-        'DELETE FROM user_recommendations WHERE user_id = $1',
+        'DELETE FROM benefit_recommendations WHERE user_id = $1',
         [user_id]
       );
 
-      // Mapping категорий из фронтенда в БД
-      const categoryMapping = {
-        'Здоровье': 'health',
-        'Обучение': 'education',
-        'Спорт': 'sports', 
-        'Психология': 'psychology',
-        'Социальная поддержка': 'social',
-        'Отдых': 'wellness'
-      };
-
       // Сохраняем новые рекомендации
-      console.log('Saving recommendations for user:', user_id);
-      console.log('Recommendations array length:', recommendations.length);
-      console.log('Recommendations:', recommendations);
+      console.log('Saving benefit recommendations for user:', user_id);
+      console.log('Benefit IDs array:', benefit_ids);
       
-      for (let i = 0; i < recommendations.length; i++) {
-        const rec = recommendations[i];
-        const category = categoryMapping[rec.category] || rec.category.toLowerCase();
+      for (let i = 0; i < benefit_ids.length; i++) {
+        const benefitId = benefit_ids[i];
         
-        console.log(`Saving recommendation ${i + 1}: category=${rec.category} -> ${category}`);
+        console.log(`Saving recommendation ${i + 1}: benefit_id=${benefitId}, priority=${i + 1}`);
         
         await client.query(
-          'INSERT INTO user_recommendations (user_id, category, priority, answers) VALUES ($1, $2, $3, $4)',
-          [user_id, category, i + 1, JSON.stringify(answers)]
+          'INSERT INTO benefit_recommendations (user_id, benefit_id, priority, answers) VALUES ($1, $2, $3, $4)',
+          [user_id, benefitId, i + 1, JSON.stringify(answers)]
         );
       }
       
-      console.log('All recommendations saved successfully');
+      console.log('All benefit recommendations saved successfully');
 
       res.status(200).json({ success: true });
     } catch (error) {
-      console.error('Error saving recommendations:', error);
+      console.error('Error saving benefit recommendations:', error);
       res.status(500).json({ error: 'Database error: ' + error.message });
     } finally {
       if (client) {
@@ -135,13 +125,13 @@ export default async (req, res) => {
       client = createDbClient();
       await client.connect();
       await client.query(
-        'DELETE FROM user_recommendations WHERE user_id = $1',
+        'DELETE FROM benefit_recommendations WHERE user_id = $1',
         [user_id]
       );
 
       res.status(200).json({ success: true });
     } catch (error) {
-      console.error('Error deleting recommendations:', error);
+      console.error('Error deleting benefit recommendations:', error);
       res.status(500).json({ error: 'Database error: ' + error.message });
     } finally {
       if (client) {
