@@ -111,7 +111,7 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
             position: 'absolute',
             top: -8,
             right: 16,
-            background: 'linear-gradient(135deg, #A0761C 0%, #B8860B 50%, #DAA520 100%)',
+            background: 'linear-gradient(135deg, #E6C200 0%, #FFD800 50%, #FFDC33 100%)',
             color: '#fff',
             fontWeight: 600,
             fontSize: '0.7rem',

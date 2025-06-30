@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye, FaBook } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
 import { useUser } from '../hooks/useUser';
+
+// Маппинг категорий на иконки
+const categoryIcons: { [key: string]: React.ReactElement } = {
+  'Здоровье': <FaHeartbeat />,
+  'Спорт': <FaFutbol />,
+  'Обучение': <FaGraduationCap />,
+  'Психология': <GiBrain />,
+  'Социальная поддержка': <FaHandHoldingHeart />,
+  'Отдых': <FaLeaf />
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -175,27 +185,16 @@ const Preferences: React.FC = () => {
         const data = await response.json();
 
         if (data.hasRecommendations && data.recommendations.length > 0) {
-          // Конвертируем данные из БД (benefit_id + category) обратно в формат компонента
-          const categoryMapping: { [key: string]: BenefitRecommendation } = {
-            'Здоровье': benefitCategories.health,
-            'Обучение': benefitCategories.education,
-            'Спорт': benefitCategories.sports,
-            'Психология': benefitCategories.psychology,
-            'Социальная поддержка': benefitCategories.social,
-            'Отдых': benefitCategories.wellness
-          };
+          // Конвертируем конкретные льготы в формат для отображения
+          const loadedRecommendations = data.recommendations.map((rec: any) => ({
+            category: rec.name,
+            icon: categoryIcons[rec.category] || <FaBook />,
+            title: rec.name,
+            description: rec.description,
+            examples: [rec.category] // Показываем категорию как пример
+          }));
 
-          // Группируем по категориям для отображения результатов
-          const categoriesFromRecommendations = Array.from(
-            new Set(data.recommendations.map((rec: any) => rec.category))
-          );
-          
-          const loadedRecommendations = categoriesFromRecommendations.map((category) => 
-            categoryMapping[category as string] || benefitCategories.health
-          ).filter(Boolean);
-
-          console.log('Categories from recommendations:', categoriesFromRecommendations);
-          console.log('Loaded recommendations for display:', loadedRecommendations);
+          console.log('Loaded specific benefits for display:', loadedRecommendations);
 
           setSavedRecommendations(loadedRecommendations);
           setHasExistingResults(true);
@@ -269,26 +268,47 @@ const Preferences: React.FC = () => {
   };
 
   const getRecommendations = (): BenefitRecommendation[] => {
-    const scores: { [key: string]: number } = {};
+    // Используем ту же логику, что и в saveRecommendationsToDb
+    const benefitScores: { [key: number]: number } = {};
     
     answers.forEach(answer => {
-      scores[answer] = (scores[answer] || 0) + 1;
+      const benefitIds = answerToBenefitMapping[answer] || [];
+      benefitIds.forEach(benefitId => {
+        benefitScores[benefitId] = (benefitScores[benefitId] || 0) + 1;
+      });
     });
 
-    const sortedCategories = Object.entries(scores)
+    // Сортируем льготы по очкам и берем топ-3
+    const recommendedBenefitIds = Object.entries(benefitScores)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 3)
-      .map(([category]) => benefitCategories[category])
-      .filter(Boolean);
+      .map(([benefitId]) => parseInt(benefitId));
 
-    // Добавляем популярные категории если недостаточно
-    const fallbackCategories = ['health', 'education', 'wellness'];
-    const additionalCategories = fallbackCategories
-      .filter(cat => !sortedCategories.find(rec => rec.category === benefitCategories[cat].category))
-      .map(cat => benefitCategories[cat])
-      .slice(0, 3 - sortedCategories.length);
+    // Создаем заглушки рекомендаций на основе benefit_id
+    // В реальном случае здесь должен быть запрос к БД для получения названий
+    const mockBenefitNames: { [key: number]: { name: string; description: string; category: string } } = {
+      1: { name: 'Профилактика выгорания', description: 'Программы по предотвращению эмоционального выгорания', category: 'Здоровье' },
+      2: { name: 'Режим дня и баланс работы', description: 'Помощь в организации рабочего времени', category: 'Обучение' },
+      3: { name: 'Правильное питание', description: 'Консультации по здоровому питанию', category: 'Здоровье' },
+      4: { name: 'Психологическая поддержка', description: 'Индивидуальные консультации психолога', category: 'Психология' },
+      5: { name: 'Массаж', description: 'Релаксационные массажные процедуры', category: 'Отдых' },
+      6: { name: 'Здоровые привычки', description: 'Программы формирования здорового образа жизни', category: 'Здоровье' },
+      7: { name: 'Командные виды спорта', description: 'Корпоративные спортивные мероприятия', category: 'Спорт' },
+      8: { name: 'Фитнес-программы', description: 'Абонементы в спортивные залы', category: 'Спорт' },
+      9: { name: 'Тимбилдинг через спорт', description: 'Командообразующие спортивные активности', category: 'Спорт' },
+      10: { name: 'Soft-skills тренинги', description: 'Развитие личностных навыков', category: 'Обучение' }
+    };
 
-    return [...sortedCategories, ...additionalCategories];
+    return recommendedBenefitIds.map(benefitId => {
+      const benefit = mockBenefitNames[benefitId] || { name: 'Неизвестная льгота', description: '', category: 'Здоровье' };
+      return {
+        category: benefit.name,
+        icon: categoryIcons[benefit.category] || <FaBook />,
+        title: benefit.name,
+        description: benefit.description,
+        examples: [benefit.category]
+      };
+    });
   };
 
   const resetTest = () => {
