@@ -127,13 +127,13 @@ const benefitCategories: { [key: string]: BenefitRecommendation } = {
     description: 'Психологическая поддержка и программы против стресса',
     examples: ['Консультации психолога', 'Программы снижения стресса', 'Медитация', 'Work-life balance']
   },
- /* social: {
+  social: {
     category: 'Социальная поддержка',
     icon: <FaHandHoldingHeart />,
     title: 'Социальные программы',
     description: 'Поддержка семьи и социальные инициативы',
     examples: ['Помощь семьям', 'Детские программы', 'Волонтерство', 'Корпоративные события']
-  },*/
+  },
   wellness: {
     category: 'Отдых',
     icon: <FaLeaf />,
@@ -231,8 +231,13 @@ const Preferences: React.FC = () => {
 
       const finalRecommendations = [...sortedCategories, ...additionalCategories];
 
+      console.log('Scores:', scores);
+      console.log('Sorted categories:', sortedCategories);
+      console.log('Additional categories:', additionalCategories);
+      console.log('Final recommendations to save:', finalRecommendations);
+
       // Отправляем в БД
-      await fetch('/api/user-recommendations', {
+      const response = await fetch('/api/user-recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -241,6 +246,9 @@ const Preferences: React.FC = () => {
           answers: testAnswers
         })
       });
+
+      const result = await response.json();
+      console.log('Save result:', result);
 
       setHasExistingResults(true);
     } catch (error) {

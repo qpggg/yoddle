@@ -89,15 +89,23 @@ export default async (req, res) => {
       };
 
       // Сохраняем новые рекомендации
+      console.log('Saving recommendations for user:', user_id);
+      console.log('Recommendations array length:', recommendations.length);
+      console.log('Recommendations:', recommendations);
+      
       for (let i = 0; i < recommendations.length; i++) {
         const rec = recommendations[i];
         const category = categoryMapping[rec.category] || rec.category.toLowerCase();
+        
+        console.log(`Saving recommendation ${i + 1}: category=${rec.category} -> ${category}`);
         
         await client.query(
           'INSERT INTO user_recommendations (user_id, category, priority, answers) VALUES ($1, $2, $3, $4)',
           [user_id, category, i + 1, JSON.stringify(answers)]
         );
       }
+      
+      console.log('All recommendations saved successfully');
 
       res.status(200).json({ success: true });
     } catch (error) {

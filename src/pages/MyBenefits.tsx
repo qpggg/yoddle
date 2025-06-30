@@ -82,7 +82,14 @@ const checkIfRecommended = (benefit: Benefit, userRecommendations: string[]): bo
   };
   
   const benefitCategory = categoryMapping[benefit.category];
-  return benefitCategory ? userRecommendations.includes(benefitCategory) : false;
+  const isRecommended = benefitCategory ? userRecommendations.includes(benefitCategory) : false;
+  
+  // Отладка для первых нескольких вызовов
+  if (Math.random() < 0.1) { // 10% вероятность логирования
+    console.log(`Checking benefit: ${benefit.name}, category: ${benefit.category}, mapped: ${benefitCategory}, userRecs: [${userRecommendations.join(', ')}], result: ${isRecommended}`);
+  }
+  
+  return isRecommended;
 };
 
 const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended }: { 
@@ -178,6 +185,8 @@ const MyBenefits: React.FC = () => {
         
         // Загружаем категории рекомендаций
         const recommendedCategories = (userRecommendationsData.recommendations || []).map((rec: any) => rec.category);
+        console.log('Loaded recommendations:', userRecommendationsData.recommendations);
+        console.log('Recommended categories:', recommendedCategories);
         setUserRecommendations(recommendedCategories);
       })
       .catch(console.error)
