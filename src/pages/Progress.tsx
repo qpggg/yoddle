@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress, Button } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { useActivity } from '../hooks/useActivity';
@@ -346,32 +346,56 @@ const Progress: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]); // Убираем logCustomActivity из зависимостей
 
-  useEffect(() => {
-    setTimeout(() => {
-      const currentRank = RANKS.find(rank => 
-        150 >= rank.minXP && 150 <= rank.maxXP
-      ) || RANKS[0];
+  // Функция для загрузки реальных данных из API
+  const loadRealProgress = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/progress?user_id=${user.id}`);
+      const data = await response.json();
       
-      setProgress({
-        level: 2,
-        currentXP: 150,
-        nextLevelXP: 300,
-        totalXP: 150,
-        rank: currentRank.name,
-        achievements: ACHIEVEMENTS.map(achievement => ({
-          ...achievement,
-          unlocked: achievement.id === 'first_login' || achievement.id === 'first_benefit'
-        })),
-        stats: {
-          loginStreak: 5,
-          benefitsUsed: 2,
-          profileCompletion: 75,
-          daysActive: 12
-        }
-      });
+      if (data.progress) {
+        const userXP = data.progress.xp || 0;
+        const currentRank = RANKS.find(rank => 
+          userXP >= rank.minXP && userXP <= rank.maxXP
+        ) || RANKS[0];
+        
+        // Вычисляем уровень на основе XP
+        let level = 1;
+        if (userXP >= 1001) level = 5;
+        else if (userXP >= 501) level = 4;
+        else if (userXP >= 301) level = 3;
+        else if (userXP >= 101) level = 2;
+        
+        setProgress({
+          level: level,
+          currentXP: userXP,
+          nextLevelXP: currentRank.maxXP === Infinity ? Infinity : currentRank.maxXP,
+          totalXP: userXP,
+          rank: currentRank.name,
+          achievements: ACHIEVEMENTS.map(achievement => ({
+            ...achievement,
+            unlocked: achievement.id === 'first_login' || achievement.id === 'first_benefit'
+          })),
+          stats: {
+            loginStreak: data.progress.login_streak || 0,
+            benefitsUsed: data.progress.benefits_used || 0,
+            profileCompletion: data.progress.profile_completion || 0,
+            daysActive: data.progress.days_active || 0
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
+
+  useEffect(() => {
+    loadRealProgress();
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -392,15 +416,38 @@ const Progress: React.FC = () => {
     <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-          <Typography variant="h4" align="center" sx={{ 
-            fontWeight: 700, 
-            color: '#8B0000', 
-            mb: 8, 
-            lineHeight: 1.4, 
-            fontSize: { xs: '1.8rem', md: '2.2rem' } 
-          }}>
-            {user?.name}, ваш прогресс в Yoddle
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 8, gap: 2 }}>
+            <Typography variant="h4" align="center" sx={{ 
+              fontWeight: 700, 
+              color: '#8B0000', 
+              lineHeight: 1.4, 
+              fontSize: { xs: '1.8rem', md: '2.2rem' } 
+            }}>
+              {user?.name}, ваш прогресс в Yoddle
+            </Typography>
+            
+            {/* Кнопка обновления */}
+            <motion.button
+              onClick={loadRealProgress}
+              disabled={loading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: loading ? '#ccc' : '#8B0000',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 12px rgba(139,0,0,0.2)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {loading ? '🔄 Обновляем...' : '🔄 Обновить'}
+            </motion.button>
+          </Box>
         </motion.div>
 
         {/* ОСНОВНОЙ ПРОГРЕСС - УЛУЧШЕННЫЙ ДИЗАЙН */}
