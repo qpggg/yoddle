@@ -162,7 +162,7 @@ const Navbar: React.FC = () => {
                   sx={{
                     color: location.pathname === item.path ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.87)',
                     fontSize: '0.95rem',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     letterSpacing: '0.01em',
                     position: 'relative',
                     padding: '0.5rem 0.25rem',
