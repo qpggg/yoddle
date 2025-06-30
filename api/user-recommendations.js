@@ -10,9 +10,18 @@ function createDbClient() {
 }
 
 module.exports = async (req, res) => {
+  // Добавляем CORS заголовки
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method === 'GET') {
     // Получить рекомендации пользователя
-    const client = createDbClient();
+    let client;
     try {
       const { user_id } = req.query;
       
@@ -20,7 +29,9 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'user_id is required' });
       }
 
+      client = createDbClient();
       await client.connect();
+      
       const result = await client.query(
         'SELECT * FROM user_recommendations WHERE user_id = $1 ORDER BY test_date DESC, priority ASC',
         [user_id]
@@ -30,21 +41,27 @@ module.exports = async (req, res) => {
       const latestResults = result.rows.length > 0 ? 
         result.rows.filter(row => row.test_date === result.rows[0].test_date) : [];
 
-      await client.end();
-      res.json({ 
+      res.status(200).json({ 
         recommendations: latestResults,
         hasRecommendations: latestResults.length > 0 
       });
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-      await client.end();
       res.status(500).json({ error: 'Database error: ' + error.message });
+    } finally {
+      if (client) {
+        try {
+          await client.end();
+        } catch (e) {
+          console.error('Error closing client:', e);
+        }
+      }
     }
   }
 
   else if (req.method === 'POST') {
     // Сохранить новые рекомендации
-    const client = createDbClient();
+    let client;
     try {
       const { user_id, recommendations, answers } = req.body;
       
@@ -52,6 +69,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Invalid data format' });
       }
 
+      client = createDbClient();
       await client.connect();
 
       // Удаляем старые рекомендации пользователя
@@ -81,18 +99,24 @@ module.exports = async (req, res) => {
         );
       }
 
-      await client.end();
-      res.json({ success: true });
+      res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error saving recommendations:', error);
-      await client.end();
       res.status(500).json({ error: 'Database error: ' + error.message });
+    } finally {
+      if (client) {
+        try {
+          await client.end();
+        } catch (e) {
+          console.error('Error closing client:', e);
+        }
+      }
     }
   }
 
   else if (req.method === 'DELETE') {
     // Удалить рекомендации пользователя
-    const client = createDbClient();
+    let client;
     try {
       const { user_id } = req.body;
       
@@ -100,23 +124,30 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'user_id is required' });
       }
 
+      client = createDbClient();
       await client.connect();
       await client.query(
         'DELETE FROM user_recommendations WHERE user_id = $1',
         [user_id]
       );
 
-      await client.end();
-      res.json({ success: true });
+      res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error deleting recommendations:', error);
-      await client.end();
       res.status(500).json({ error: 'Database error: ' + error.message });
+    } finally {
+      if (client) {
+        try {
+          await client.end();
+        } catch (e) {
+          console.error('Error closing client:', e);
+        }
+      }
     }
   }
 
   else {
-    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE', 'OPTIONS']);
+    res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 }; 
