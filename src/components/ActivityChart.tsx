@@ -154,15 +154,21 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   // Улучшенные функции для tooltip
   const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
     const rect = event.currentTarget.getBoundingClientRect();
+    const containerRect = event.currentTarget.parentElement?.getBoundingClientRect();
     
-    setTooltip({
-      visible: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
-      content: `${day} ${currentMonth}`,
-      day,
-      actions
-    });
+    if (containerRect) {
+      const relativeX = rect.left - containerRect.left + rect.width / 2;
+      const relativeY = -40; // Фиксированная позиция над столбцом
+      
+      setTooltip({
+        visible: true,
+        x: relativeX,
+        y: relativeY,
+        content: `${day} ${currentMonth}`,
+        day,
+        actions
+      });
+    }
   };
 
   const hideTooltip = () => {
@@ -351,10 +357,10 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
       {tooltip.visible && (
         <div
           style={{
-            position: 'fixed',
+            position: 'absolute',
             left: tooltip.x,
             top: tooltip.y,
-            transform: 'translateX(-50%) translateY(-100%)',
+            transform: 'translateX(-50%)',
             background: 'rgba(26, 26, 26, 0.95)',
             color: '#fff',
             padding: '10px 14px',
