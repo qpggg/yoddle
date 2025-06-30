@@ -157,8 +157,8 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
     const containerRect = event.currentTarget.parentElement?.getBoundingClientRect();
     
     if (containerRect) {
-      const relativeX = rect.left - containerRect.left + rect.width / 2;
-      const relativeY = -40; // Фиксированная позиция над столбцом
+      const relativeX = rect.left - containerRect.left + rect.width / 2 + 10; // +10px правее
+      const relativeY = -10; // -40 + 30 = -10 (30px ниже)
       
       setTooltip({
         visible: true,
