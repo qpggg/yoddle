@@ -87,12 +87,13 @@ export default async function handler(req, res) {
         });
       }
 
-      // Валидация типов данных
-      if (typeof user_id !== 'number' || typeof action !== 'string') {
+      // Валидация типов данных и конвертация user_id
+      const userIdNumber = Number(user_id);
+      if (isNaN(userIdNumber) || typeof action !== 'string') {
         await client.end();
         return res.status(400).json({ 
           success: false, 
-          error: 'Неверный формат данных' 
+          error: 'Неверный формат данных: user_id должен быть числом' 
         });
       }
 
@@ -106,7 +107,7 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log('Activity API POST: Добавление активности для user_id:', user_id, 'action:', action);
+      console.log('Activity API POST: Добавление активности для user_id:', userIdNumber, 'action:', action);
 
       // Вставляем новую запись активности
       const insertQuery = `
@@ -116,7 +117,7 @@ export default async function handler(req, res) {
       `;
 
       const insertResult = await client.query(insertQuery, [
-        user_id, 
+        userIdNumber, 
         action, 
         xpValue, 
         description || null
@@ -135,7 +136,7 @@ export default async function handler(req, res) {
           WHERE user_id = $1;
         `;
         
-        await client.query(updateProgressQuery, [user_id, xpValue]);
+        await client.query(updateProgressQuery, [userIdNumber, xpValue]);
         console.log('Activity API POST: Прогресс пользователя обновлен');
       } catch (progressError) {
         console.log('Activity API POST: Таблица user_progress не найдена или ошибка обновления:', progressError.message);
@@ -149,7 +150,7 @@ export default async function handler(req, res) {
         message: 'Активность успешно добавлена',
         data: {
           id: insertResult.rows[0].id,
-          user_id: user_id,
+          user_id: userIdNumber,
           action: action,
           xp_earned: xpValue,
           description: description,

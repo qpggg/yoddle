@@ -160,14 +160,8 @@ const Dashboard: React.FC = () => {
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const navigate = useNavigate();
-  const { logCustomActivity } = useActivity();
 
-  // 🎉 АВТОЛОГИРОВАНИЕ ПОСЕЩЕНИЯ ДАШБОРДА
-  useEffect(() => {
-    if (user?.id) {
-      logCustomActivity('dashboard_visit', 5, 'Пользователь зашел на дашборд');
-    }
-  }, [user?.id, logCustomActivity]);
+
 
   const containerVariants = {
     hidden: { opacity: 0 },

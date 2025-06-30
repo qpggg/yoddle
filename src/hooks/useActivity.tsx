@@ -20,6 +20,7 @@ export const useActivity = () => {
   const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recentActions, setRecentActions] = useState<Set<string>>(new Set());
 
   // Добавление новой активности
   const addActivity = async (activityData: AddActivityData): Promise<boolean> => {
@@ -27,6 +28,26 @@ export const useActivity = () => {
       setError('Пользователь не авторизован');
       return false;
     }
+
+    // 🛡️ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ (дедупликация по ключу)
+    const recentKey = `${user.id}-${activityData.action}`;
+    
+    if (recentActions.has(recentKey)) {
+      console.log('useActivity: Пропускаем дублированное действие:', activityData.action);
+      return true; // Возвращаем true чтобы не показывать ошибку
+    }
+
+    // Добавляем в список недавних действий
+    setRecentActions(prev => new Set([...prev, recentKey]));
+    
+    // Удаляем из списка через 1 секунду (защита от спама)
+    setTimeout(() => {
+      setRecentActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(recentKey);
+        return newSet;
+      });
+    }, 1000);
 
     setIsLoading(true);
     setError(null);
@@ -38,7 +59,7 @@ export const useActivity = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user.id,
+          user_id: Number(user.id), // ✅ КОНВЕРТИРУЕМ В NUMBER
           ...activityData
         }),
       });
@@ -46,7 +67,7 @@ export const useActivity = () => {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Ошибка добавления активности');
+        throw new Error(result.error || `Ошибка сервера: ${response.status}`);
       }
 
       console.log('useActivity: Активность добавлена:', result.data);
@@ -55,7 +76,9 @@ export const useActivity = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
       setError(errorMessage);
-      console.error('useActivity: Ошибка добавления активности:', errorMessage);
+      console.error('useActivity: Ошибка добавления активности:', errorMessage, err);
+      
+      // 🚨 НЕ БЛОКИРУЕМ UI ИЗ-ЗА ОШИБОК API
       return false;
     } finally {
       setIsLoading(false);

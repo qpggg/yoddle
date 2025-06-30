@@ -338,12 +338,13 @@ const Progress: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { logCustomActivity } = useActivity();
 
-  // 🎉 АВТОЛОГИРОВАНИЕ ПОСЕЩЕНИЯ СТРАНИЦЫ ПРОГРЕССА
+  // 🎉 АВТОЛОГИРОВАНИЕ ПОСЕЩЕНИЯ СТРАНИЦЫ ПРОГРЕССА (ТОЛЬКО ОДИН РАЗ)
   useEffect(() => {
     if (user?.id) {
       logCustomActivity('progress_view', 5, 'Пользователь посмотрел страницу прогресса');
     }
-  }, [user?.id, logCustomActivity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Убираем logCustomActivity из зависимостей
 
   useEffect(() => {
     setTimeout(() => {
