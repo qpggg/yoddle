@@ -154,13 +154,11 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   // Улучшенные функции для tooltip
   const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     
     setTooltip({
       visible: true,
-      x: rect.left + scrollLeft + rect.width / 2,
-      y: rect.top + scrollTop - 10,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10,
       content: `${day} ${currentMonth}`,
       day,
       actions
@@ -353,7 +351,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
       {tooltip.visible && (
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             left: tooltip.x,
             top: tooltip.y,
             transform: 'translateX(-50%) translateY(-100%)',
