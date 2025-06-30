@@ -105,18 +105,27 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
     }}>
       {recommended && (
         <Chip 
-          label="⭐ Рекомендовано" 
+          label="★ Рекомендовано" 
           size="small"
           sx={{
             position: 'absolute',
             top: -10,
             right: 12,
-            background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+            background: 'linear-gradient(45deg, #B8860B, #DAA520)',
             color: '#fff',
             fontWeight: 700,
             fontSize: '0.75rem',
             zIndex: 2,
-            boxShadow: '0 2px 8px rgba(255,215,0,0.3)'
+            boxShadow: '0 2px 8px rgba(184,134,11,0.4)',
+            '& .MuiChip-label': {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              '&::before': {
+                content: '"✨"',
+                fontSize: '0.7rem'
+              }
+            }
           }}
         />
       )}
