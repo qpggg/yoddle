@@ -118,50 +118,7 @@ const answerToBenefitMapping: { [key: string]: number[] } = {
   'psychology': [1, 4] // Профилактика выгорания, Психологическая поддержка
 };
 
-const benefitCategories: { [key: string]: BenefitRecommendation } = {
-  health: {
-    category: 'Здоровье',
-    icon: <FaHeartbeat />,
-    title: 'Забота о здоровье',
-    description: 'Медицинские программы и услуги для поддержания вашего здоровья',
-    examples: ['Здоровые привычки', 'Массаж', 'Профилактика выгорания', 'Психологическая поддержка']
-  },
-  sports: {
-    category: 'Спорт',
-    icon: <FaFutbol />,
-    title: 'Активный образ жизни',
-    description: 'Спортивные программы и фитнес для поддержания формы',
-    examples: ['Абонементы в спортзал', 'Корпоративные турниры', 'Занятия йогой', 'Командые виды спорта']
-  },
-  education: {
-    category: 'Обучение',
-    icon: <FaGraduationCap />,
-    title: 'Профессиональное развитие',
-    description: 'Образовательные программы и курсы для роста компетенций',
-    examples: ['Soft-skills', 'Профессиональные тренинги', 'Режим дня и баланс работы', 'Специальный Коуч']
-  },
-  psychology: {
-    category: 'Психология',
-    icon: <GiBrain />,
-    title: 'Ментальное здоровье',
-    description: 'Психологическая поддержка и программы против стресса',
-    examples: ['Консультации психолога', 'Программы снижения стресса', 'Медитация', 'Work-life balance']
-  },
-  social: {
-    category: 'Социальная поддержка',
-    icon: <FaHandHoldingHeart />,
-    title: 'Социальные программы',
-    description: 'Поддержка семьи и социальные инициативы',
-    examples: ['Помощь семьям', 'Детские программы', 'Волонтерство', 'Корпоративные события']
-  },
-  wellness: {
-    category: 'Отдых',
-    icon: <FaLeaf />,
-    title: 'Отдых и восстановление',
-    description: 'Программы для релаксации и восстановления сил',
-    examples: ['Спа-процедуры', 'Массаж']
-  }
-};
+
 
 const Preferences: React.FC = () => {
   const { user } = useUser();
