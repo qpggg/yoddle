@@ -75,10 +75,10 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        height: '280px',
+        height: '200px',
         background: 'linear-gradient(135deg, #fff 0%, #f8fafe 100%)',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 217, 0, 0.1)'
+        border: '1px solid rgba(139, 0, 0, 0.1)'
       }}>
         <div style={{ 
           display: 'flex', 
@@ -87,10 +87,10 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           gap: '12px' 
         }}>
           <div style={{
-            width: '40px',
-            height: '40px',
+            width: '32px',
+            height: '32px',
             border: '3px solid #f3f3f3',
-            borderTop: '3px solid rgb(255, 217, 0)',
+            borderTop: '3px solid #8B0000',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
           }} />
@@ -113,15 +113,15 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center', 
-        height: '280px',
+        height: '200px',
         background: 'linear-gradient(135deg, #fff 0%, #f8fafe 100%)',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 217, 0, 0.1)',
+        border: '1px solid rgba(139, 0, 0, 0.1)',
         color: '#666'
       }}>
         <div style={{ 
-          fontSize: '48px', 
-          marginBottom: '16px',
+          fontSize: '32px', 
+          marginBottom: '12px',
           opacity: 0.6 
         }}>📊</div>
         <div style={{ 
@@ -142,24 +142,25 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   }
 
   const maxActions = Math.max(...activityData.map(d => d.actions), 1);
-  const chartHeight = 160;
-  const barWidth = 12;
-  const barGap = 3;
+  const chartHeight = 120;
+  const barWidth = 10;
+  const barGap = 2;
 
   // Статистика
   const avgActions = Math.round(totalActions / activityData.length * 10) / 10;
   const activeDays = activityData.filter(d => d.actions > 0).length;
-  const bestDay = activityData.reduce((best, day) => day.actions > best.actions ? day : best, activityData[0]);
   const currentDay = new Date().getDate();
 
   // Улучшенные функции для tooltip
   const showTooltip = (event: React.MouseEvent, day: number, actions: number) => {
     const rect = event.currentTarget.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     
     setTooltip({
       visible: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10,
+      x: rect.left + scrollLeft + rect.width / 2,
+      y: rect.top + scrollTop - 10,
       content: `${day} ${currentMonth}`,
       day,
       actions
@@ -172,73 +173,61 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
 
   return (
     <div className={className} style={{ 
-      padding: '24px', 
+      padding: '20px', 
       position: 'relative',
       background: 'linear-gradient(135deg, #fff 0%, #f8fafe 100%)',
-      borderRadius: '20px',
-      border: '1px solid rgba(255, 217, 0, 0.1)',
-      boxShadow: '0 8px 32px rgba(255, 217, 0, 0.1)'
+      borderRadius: '16px',
+      border: '1px solid rgba(139, 0, 0, 0.1)',
+      boxShadow: '0 4px 20px rgba(139, 0, 0, 0.08)'
     }}>
-      {/* Заголовок с расширенной статистикой */}
+      {/* Компактный заголовок с статистикой */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        marginBottom: '32px'
+        alignItems: 'center',
+        marginBottom: '20px'
       }}>
         <div>
           <div style={{ 
-            fontSize: '18px', 
+            fontSize: '16px', 
             fontWeight: 700, 
             color: '#1a1a1a',
-            marginBottom: '8px'
+            marginBottom: '4px'
           }}>
             Активность за {currentMonth.toLowerCase()} {currentYear}
           </div>
           <div style={{ 
             display: 'flex', 
-            gap: '24px', 
-            fontSize: '14px' 
+            gap: '16px', 
+            fontSize: '13px' 
           }}>
             <div style={{ color: '#666' }}>
-              <span style={{ fontWeight: 600, color: 'rgb(255, 217, 0)' }}>{totalActions}</span> действий
+              <span style={{ fontWeight: 600, color: '#8B0000' }}>{totalActions}</span> действий
             </div>
             <div style={{ color: '#666' }}>
-              <span style={{ fontWeight: 600, color: '#22c55e' }}>{activeDays}</span> активных дней
+              <span style={{ fontWeight: 600, color: '#555' }}>{activeDays}</span> активных дней
             </div>
             <div style={{ color: '#666' }}>
-              <span style={{ fontWeight: 600, color: '#3b82f6' }}>{avgActions}</span> в среднем
+              <span style={{ fontWeight: 600, color: '#777' }}>{avgActions}</span> в среднем
             </div>
           </div>
         </div>
-        
-        <div style={{
-          background: 'linear-gradient(135deg, rgb(255, 217, 0) 0%, rgb(255, 193, 7) 100%)',
-          color: '#000',
-          padding: '8px 16px',
-          borderRadius: '12px',
-          fontSize: '13px',
-          fontWeight: 600,
-          boxShadow: '0 4px 16px rgba(255, 217, 0, 0.3)'
-        }}>
-          🏆 Лучший день: {bestDay.day} ({bestDay.actions})
-        </div>
       </div>
 
-      {/* График */}
+      {/* Компактный график */}
       <div style={{ 
         height: chartHeight,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
         gap: `${barGap}px`,
-        padding: '0 20px',
-        background: 'linear-gradient(180deg, rgba(255, 217, 0, 0.03) 0%, transparent 100%)',
+        padding: '0 16px',
+        background: 'linear-gradient(180deg, rgba(139, 0, 0, 0.02) 0%, transparent 100%)',
         borderRadius: '12px',
-        marginBottom: '24px',
+        marginBottom: '16px',
         position: 'relative'
       }}>
-        {/* Сетка фона */}
+        {/* Легкая сетка фона */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -246,13 +235,9 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           right: 0,
           bottom: 0,
           background: `linear-gradient(to top, 
-            rgba(255, 217, 0, 0.1) 0px, transparent 1px,
-            transparent 1px, transparent ${chartHeight / 4}px,
-            rgba(255, 217, 0, 0.05) ${chartHeight / 4}px, transparent ${chartHeight / 4 + 1}px,
-            transparent ${chartHeight / 4 + 1}px, transparent ${chartHeight / 2}px,
-            rgba(255, 217, 0, 0.05) ${chartHeight / 2}px, transparent ${chartHeight / 2 + 1}px,
-            transparent ${chartHeight / 2 + 1}px, transparent ${chartHeight * 3/4}px,
-            rgba(255, 217, 0, 0.05) ${chartHeight * 3/4}px, transparent ${chartHeight * 3/4 + 1}px
+            rgba(139, 0, 0, 0.05) 0px, transparent 1px,
+            transparent 1px, transparent ${chartHeight / 2}px,
+            rgba(139, 0, 0, 0.03) ${chartHeight / 2}px, transparent ${chartHeight / 2 + 1}px
           )`,
           pointerEvents: 'none'
         }} />
@@ -260,7 +245,6 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         {activityData.map((dataPoint, index) => {
           const barHeight = maxActions > 0 ? (dataPoint.actions / maxActions) * chartHeight : 0;
           const isToday = dataPoint.day === currentDay;
-          const isBestDay = dataPoint.day === bestDay.day;
           const intensity = dataPoint.actions / maxActions;
           
           return (
@@ -269,38 +253,34 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: barHeight, opacity: 1 }}
               transition={{ 
-                delay: index * 0.015, 
-                duration: 0.6, 
+                delay: index * 0.01, 
+                duration: 0.5, 
                 ease: [0.25, 0.1, 0.25, 1] 
               }}
               style={{
                 width: barWidth,
-                minHeight: dataPoint.actions > 0 ? 4 : 2,
+                minHeight: dataPoint.actions > 0 ? 3 : 1,
                 background: dataPoint.actions > 0 
                   ? (isToday 
-                    ? 'linear-gradient(180deg, rgb(255, 217, 0) 0%, rgb(255, 193, 7) 100%)'
-                    : isBestDay
-                    ? 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)'
+                    ? 'linear-gradient(180deg, #8B0000 0%, #B22222 100%)'
                     : `linear-gradient(180deg, 
-                        rgba(255, 217, 0, ${0.3 + intensity * 0.7}) 0%, 
-                        rgba(255, 193, 7, ${0.4 + intensity * 0.6}) 100%)`
+                        rgba(139, 0, 0, ${0.3 + intensity * 0.7}) 0%, 
+                        rgba(117, 0, 0, ${0.4 + intensity * 0.6}) 100%)`
                     )
                   : 'rgba(0, 0, 0, 0.05)',
-                borderRadius: '4px',
+                borderRadius: '3px',
                 position: 'relative',
                 cursor: 'pointer',
                 boxShadow: dataPoint.actions > 0 
-                  ? `0 2px 8px rgba(255, 217, 0, ${intensity * 0.3})`
+                  ? `0 2px 6px rgba(139, 0, 0, ${intensity * 0.2})`
                   : 'none'
               }}
               whileHover={{ 
-                scale: 1.1,
-                y: -2,
+                scale: 1.05,
+                y: -1,
                 boxShadow: isToday 
-                  ? '0 8px 24px rgba(255, 217, 0, 0.4)'
-                  : isBestDay
-                  ? '0 8px 24px rgba(34, 197, 94, 0.4)'
-                  : `0 8px 24px rgba(255, 217, 0, ${intensity * 0.4})`,
+                  ? '0 6px 20px rgba(139, 0, 0, 0.3)'
+                  : `0 6px 20px rgba(139, 0, 0, ${intensity * 0.3})`,
                 transition: { type: "spring", stiffness: 400, damping: 25 }
               }}
               onMouseEnter={(e) => showTooltip(e, dataPoint.day, dataPoint.actions)}
@@ -310,40 +290,27 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
               {isToday && (
                 <div style={{
                   position: 'absolute',
-                  top: '-6px',
+                  top: '-4px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: '6px',
-                  height: '6px',
-                  background: 'rgb(255, 217, 0)',
+                  width: '4px',
+                  height: '4px',
+                  background: '#8B0000',
                   borderRadius: '50%',
-                  boxShadow: '0 0 12px rgba(255, 217, 0, 0.6)'
+                  boxShadow: '0 0 8px rgba(139, 0, 0, 0.6)'
                 }} />
               )}
 
-              {/* Подсветка для лучшего дня */}
-              {isBestDay && !isToday && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  fontSize: '12px'
-                }}>
-                  👑
-                </div>
-              )}
-
               {/* Показываем номер дня */}
-              {(dataPoint.day % 5 === 0 || isToday || isBestDay) && (
+              {(dataPoint.day % 5 === 0 || isToday) && (
                 <div style={{
                   position: 'absolute',
-                  bottom: '-24px',
+                  bottom: '-18px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  fontSize: '11px',
-                  color: isToday ? 'rgb(255, 217, 0)' : isBestDay ? '#22c55e' : '#999',
-                  fontWeight: (isToday || isBestDay) ? 700 : 500
+                  fontSize: '10px',
+                  color: isToday ? '#8B0000' : '#999',
+                  fontWeight: isToday ? 700 : 500
                 }}>
                   {dataPoint.day}
                 </div>
@@ -353,60 +320,50 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
         })}
       </div>
 
-      {/* Современная легенда */}
+      {/* Компактная легенда */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'center',
-        gap: '32px',
+        gap: '24px',
         fontSize: '12px',
         color: '#666'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{
-            width: '12px',
-            height: '12px',
-            background: 'linear-gradient(135deg, rgb(255, 217, 0) 0%, rgb(255, 193, 7) 100%)',
-            borderRadius: '3px',
-            boxShadow: '0 2px 8px rgba(255, 217, 0, 0.3)'
+            width: '10px',
+            height: '10px',
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            borderRadius: '2px',
+            boxShadow: '0 1px 4px rgba(139, 0, 0, 0.3)'
           }} />
           <span style={{ fontWeight: 500 }}>Сегодня</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{
-            width: '12px',
-            height: '12px',
-            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-            borderRadius: '3px',
-            boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)'
-          }} />
-          <span style={{ fontWeight: 500 }}>Лучший день</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '12px',
-            height: '12px',
-            background: 'linear-gradient(135deg, rgba(255, 217, 0, 0.6) 0%, rgba(255, 193, 7, 0.7) 100%)',
-            borderRadius: '3px'
+            width: '10px',
+            height: '10px',
+            background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.6) 0%, rgba(117, 0, 0, 0.7) 100%)',
+            borderRadius: '2px'
           }} />
           <span style={{ fontWeight: 500 }}>Активность</span>
         </div>
       </div>
 
-      {/* Улучшенный Tooltip */}
+      {/* Исправленный Tooltip */}
       {tooltip.visible && (
         <div
           style={{
-            position: 'fixed',
+            position: 'absolute',
             left: tooltip.x,
             top: tooltip.y,
             transform: 'translateX(-50%) translateY(-100%)',
-            background: 'rgba(0, 0, 0, 0.9)',
+            background: 'rgba(26, 26, 26, 0.95)',
             color: '#fff',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            fontSize: '13px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '12px',
             fontWeight: 500,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)',
             zIndex: 1000,
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -417,38 +374,29 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '4px',
+            gap: '3px',
             alignItems: 'center'
           }}>
             <div style={{ 
-              fontSize: '14px', 
+              fontSize: '13px', 
               fontWeight: 600,
-              color: 'rgb(255, 217, 0)'
+              color: '#8B0000'
             }}>
               {tooltip.content}
             </div>
             <div style={{ 
-              fontSize: '16px', 
+              fontSize: '14px', 
               fontWeight: 700 
             }}>
               {tooltip.actions} {tooltip.actions === 1 ? 'действие' : tooltip.actions < 5 ? 'действия' : 'действий'}
             </div>
             {tooltip.day === currentDay && (
               <div style={{ 
-                fontSize: '11px', 
-                color: 'rgb(255, 217, 0)',
+                fontSize: '10px', 
+                color: '#8B0000',
                 fontWeight: 600 
               }}>
                 СЕГОДНЯ
-              </div>
-            )}
-            {tooltip.day === bestDay.day && tooltip.day !== currentDay && (
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#22c55e',
-                fontWeight: 600 
-              }}>
-                ЛУЧШИЙ ДЕНЬ
               </div>
             )}
           </div>
@@ -462,9 +410,9 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
               transform: 'translateX(-50%)',
               width: 0,
               height: 0,
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '6px solid rgba(0, 0, 0, 0.9)'
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '5px solid rgba(26, 26, 26, 0.95)'
             }}
           />
         </div>
