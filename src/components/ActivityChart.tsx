@@ -20,6 +20,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const [currentMonth, setCurrentMonth] = useState('');
   const [currentYear, setCurrentYear] = useState(2024);
   const [totalActions, setTotalActions] = useState(0);
+  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -135,9 +136,6 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ className }) => {
   const avgActions = Math.round(totalActions / activityData.length * 10) / 10;
   const activeDays = activityData.filter(d => d.actions > 0).length;
   const currentDay = new Date().getDate();
-
-  // Состояние для активного tooltip'а
-  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
 
   const showTooltip = (day: number) => {
     setActiveTooltip(day);
