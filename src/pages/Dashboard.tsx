@@ -6,7 +6,8 @@ import {
   Settings, 
   MessageCircle,
   Bell,
-  Newspaper
+  Newspaper,
+  Star
 } from 'lucide-react';
 import { FaRocket } from 'react-icons/fa';
 import '../styles/Dashboard.css';
@@ -16,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActivity } from '../hooks/useActivity';
 import ActivityChart from '../components/ActivityChart';
 import NewsModal from '../components/NewsModal';
+import FeedbackModal from '../components/FeedbackModal';
 
 interface LatestNews {
   id: number;
@@ -167,6 +169,7 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
   const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -709,9 +712,111 @@ const Dashboard: React.FC = () => {
           }}
         >
           <h2>Отзывы</h2>
-          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
-            Нам важно ваше мнение!
+          
+          <div style={{ marginTop: 16, marginBottom: 24 }}>
+            {/* Современный контейнер отзывов */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              padding: '16px',
+              background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+              borderRadius: '12px',
+              border: '1px solid #e8e8e8',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+            }}>
+              {/* Декоративный элемент */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '4px',
+                height: '100%',
+                background: '#FFA500',
+                borderRadius: '0 2px 2px 0'
+              }} />
+              
+              {/* Иконка и статус */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginLeft: '4px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '2px'
+                }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      size={16}
+                      color="#FFA500"
+                      fill="#FFA500"
+                    />
+                  ))}
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#666',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  ОТЗЫВЫ СОТРУДНИКОВ
+                </span>
+              </div>
+              
+              {/* Заголовок */}
+              <div style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: '#2c2c2c',
+                lineHeight: '1.3',
+                marginLeft: '4px'
+              }}>
+                Поделитесь мнением о работе в Yoddle
+              </div>
+            </div>
           </div>
+          
+          <motion.button
+            onClick={() => setShowFeedbackModal(true)}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.95, transition: { duration: 0.2 } }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '14px',
+              background: '#750000',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(117,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#600000';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(117,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#750000';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(117,0,0,0.2)';
+            }}
+          >
+            <Star size={20} />
+            Открыть отзывы
+          </motion.button>
         </motion.div>
       </motion.div>
 
@@ -732,6 +837,7 @@ const Dashboard: React.FC = () => {
       </motion.div>
       <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
       <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
+      <FeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} userId={user?.id || null} />
     </div>
   );
 };
