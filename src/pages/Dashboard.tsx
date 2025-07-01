@@ -601,29 +601,39 @@ const Dashboard: React.FC = () => {
             </div>
           ) : latestNews ? (
             <div style={{ marginTop: 16, marginBottom: 24 }}>
-              {/* Категория-бейджик */}
+              {/* Контейнер с обводкой (как у льгот) */}
               <div style={{
-                display: 'inline-block',
-                background: getCategoryColor(latestNews.category),
-                color: 'white',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: 600,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                padding: '12px',
+                background: '#f8f8f8',
+                borderRadius: '8px',
                 marginBottom: '12px'
               }}>
-                {latestNews.category}
-              </div>
-              
-              {/* Заголовок новости */}
-              <div style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#333',
-                lineHeight: '1.4',
-                marginBottom: '8px'
-              }}>
-                {latestNews.title}
+                {/* Категория-бейджик */}
+                <div style={{
+                  display: 'inline-block',
+                  background: getCategoryColor(latestNews.category),
+                  color: 'white',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  alignSelf: 'flex-start'
+                }}>
+                  {latestNews.category}
+                </div>
+                
+                {/* Заголовок новости */}
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: '#333',
+                  lineHeight: '1.4'
+                }}>
+                  {latestNews.title}
+                </div>
               </div>
               
               {/* Подзаголовок */}
