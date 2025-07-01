@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import { Client } from 'pg';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import newsRouter from './api/news.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -369,8 +375,12 @@ app.post('/api/user-benefits', async (req, res) => {
   }
 });
 
+// Подключаем API новостей
+app.use('/api/news', newsRouter);
+
 // Запуск сервера
 app.listen(PORT, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   console.log(`📊 Database: Connected to Supabase`);
+  console.log(`📰 News API: Available at /api/news`);
 }); 

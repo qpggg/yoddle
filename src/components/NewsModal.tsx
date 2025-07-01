@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X, Calendar, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, User, Loader2 } from 'lucide-react';
 
 interface NewsItem {
   id: number;
@@ -17,53 +17,40 @@ interface NewsModalProps {
   onClose: () => void;
 }
 
-// Данные новостей (позже можно вынести в отдельный файл или загружать с API)
-const newsData: NewsItem[] = [
-  {
-    id: 1,
-    title: "Новая функция: ИИ-рекомендации льгот",
-    content: "Мы запустили систему искусственного интеллекта, которая анализирует предпочтения сотрудников и предлагает персонализированные льготы. Теперь каждый сотрудник получает рекомендации, основанные на его активности и интересах.",
-    date: "2024-12-19",
-    author: "Команда Yoddle",
-    category: "Продукт",
-    image: "/api/placeholder/400/200"
-  },
-  {
-    id: 2,
-    title: "Интеграция с государственными сервисами",
-    content: "Yoddle теперь интегрирован с Госуслугами! Это означает, что многие льготы можно оформить прямо через нашу платформу без дополнительных походов в офисы. Экономьте время вместе с нами!",
-    date: "2024-12-15",
-    author: "Отдел разработки",
-    category: "Интеграция"
-  },
-  {
-    id: 3,
-    title: "Gamification 2.0: Новые достижения",
-    content: "Обновили систему достижений! Теперь доступны новые ранги: 'HR Гуру', 'Wellness Champion' и 'Benefits Master'. Выполняйте задания, накапливайте XP и получайте эксклюзивные награды.",
-    date: "2024-12-10",
-    author: "Product Team",
-    category: "Геймификация"
-  },
-  {
-    id: 4,
-    title: "Wellness программы: +50 новых партнеров",
-    content: "Мы заключили партнерские соглашения с ведущими фитнес-центрами, спа-салонами и медицинскими центрами. Теперь в каталоге доступно более 200 wellness услуг по всей России.",
-    date: "2024-12-05",
-    author: "Отдел партнерств",
-    category: "Партнерства"
-  },
-  {
-    id: 5,
-    title: "Мобильное приложение в разработке",
-    content: "Скоро выйдет мобильная версия Yoddle! Управляйте льготами, отслеживайте прогресс и получайте уведомления прямо на смартфоне. Beta-тестирование стартует в январе 2025.",
-    date: "2024-12-01",
-    author: "Mobile Team",
-    category: "Анонс"
-  }
-];
-
 const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [newsData, setNewsData] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Загружаем новости при открытии модального окна
+  useEffect(() => {
+    if (open) {
+      fetchNews();
+    }
+  }, [open]);
+
+  const fetchNews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/news/frontend/modal-data?limit=10');
+      const data = await response.json();
+      
+      if (data.success) {
+        setNewsData(data.data);
+        setCurrentIndex(0); // Сбрасываем на первую новость
+      } else {
+        setError('Ошибка при загрузке новостей');
+      }
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setError('Не удалось загрузить новости');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const nextNews = () => {
     setCurrentIndex((prev) => (prev + 1) % newsData.length);
@@ -159,7 +146,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                   color: '#666', 
                   fontSize: '14px' 
                 }}>
-                  {currentIndex + 1} из {newsData.length}
+                  {loading ? 'Загрузка...' : newsData.length === 0 ? 'Нет новостей' : `${currentIndex + 1} из ${newsData.length}`}
                 </p>
               </div>
               <button
@@ -188,170 +175,231 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
               maxHeight: 'calc(90vh - 200px)',
               overflowY: 'auto'
             }}>
-              {/* Категория */}
-              <div style={{
-                display: 'inline-block',
-                background: getCategoryColor(currentNews.category),
-                color: 'white',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: 600,
-                marginBottom: '16px'
-              }}>
-                {currentNews.category}
-              </div>
-
-              {/* Заголовок */}
-              <h1 style={{
-                margin: '0 0 16px 0',
-                fontSize: '28px',
-                fontWeight: 700,
-                color: '#333',
-                lineHeight: '1.2'
-              }}>
-                {currentNews.title}
-              </h1>
-
-              {/* Мета информация */}
-              <div style={{
-                display: 'flex',
-                gap: '20px',
-                marginBottom: '24px',
-                color: '#666',
-                fontSize: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar size={16} />
-                  {formatDate(currentNews.date)}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <User size={16} />
-                  {currentNews.author}
-                </div>
-              </div>
-
-              {/* Изображение (если есть) */}
-              {currentNews.image && (
+              {loading ? (
                 <div style={{
-                  marginBottom: '24px',
-                  borderRadius: '12px',
-                  overflow: 'hidden'
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '300px',
+                  gap: '16px'
                 }}>
-                  <img 
-                    src={currentNews.image} 
-                    alt={currentNews.title}
+                  <Loader2 
+                    size={40} 
+                    color="#750000" 
                     style={{
-                      width: '100%',
-                      height: '200px',
-                      objectFit: 'cover'
+                      animation: 'spin 1s linear infinite'
                     }}
                   />
+                  <p style={{ color: '#666', fontSize: '16px' }}>Загружаем новости...</p>
                 </div>
-              )}
+              ) : error ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '300px',
+                  gap: '16px'
+                }}>
+                  <p style={{ color: '#dc2626', fontSize: '16px' }}>{error}</p>
+                  <button
+                    onClick={fetchNews}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#750000',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Попробовать снова
+                  </button>
+                </div>
+              ) : newsData.length === 0 ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '300px',
+                  gap: '16px'
+                }}>
+                  <p style={{ color: '#666', fontSize: '16px' }}>Пока нет новостей</p>
+                </div>
+              ) : (
+                <>
+                  {/* Категория */}
+                  <div style={{
+                    display: 'inline-block',
+                    background: getCategoryColor(currentNews.category),
+                    color: 'white',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    marginBottom: '16px'
+                  }}>
+                    {currentNews.category}
+                  </div>
 
-              {/* Текст новости */}
-              <div style={{
-                fontSize: '16px',
-                lineHeight: '1.6',
-                color: '#444'
-              }}>
-                {currentNews.content}
-              </div>
+                  {/* Заголовок */}
+                  <h1 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    color: '#333',
+                    lineHeight: '1.2'
+                  }}>
+                    {currentNews.title}
+                  </h1>
+
+                  {/* Мета информация */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '20px',
+                    marginBottom: '24px',
+                    color: '#666',
+                    fontSize: '14px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={16} />
+                      {formatDate(currentNews.date)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <User size={16} />
+                      {currentNews.author}
+                    </div>
+                  </div>
+
+                  {/* Изображение (если есть) */}
+                  {currentNews.image && (
+                    <div style={{
+                      marginBottom: '24px',
+                      borderRadius: '12px',
+                      overflow: 'hidden'
+                    }}>
+                      <img 
+                        src={currentNews.image} 
+                        alt={currentNews.title}
+                        style={{
+                          width: '100%',
+                          height: '200px',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Текст новости */}
+                  <div style={{
+                    fontSize: '16px',
+                    lineHeight: '1.6',
+                    color: '#444',
+                    whiteSpace: 'pre-line'
+                  }}>
+                    {currentNews.content}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Navigation */}
-            <div style={{
-              padding: '20px 30px',
-              borderTop: '1px solid #eee',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#fafafa'
-            }}>
-              <motion.button
-                onClick={prevNews}
-                disabled={newsData.length <= 1}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  background: '#750000',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  opacity: newsData.length <= 1 ? 0.5 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (newsData.length > 1) {
-                    e.currentTarget.style.background = '#600000';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#750000';
-                }}
-              >
-                <ChevronLeft size={20} />
-                Предыдущая
-              </motion.button>
+            {!loading && !error && newsData.length > 0 && (
+              <div style={{
+                padding: '20px 30px',
+                borderTop: '1px solid #eee',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#fafafa'
+              }}>
+                <motion.button
+                  onClick={prevNews}
+                  disabled={newsData.length <= 1}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 20px',
+                    background: '#750000',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    opacity: newsData.length <= 1 ? 0.5 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (newsData.length > 1) {
+                      e.currentTarget.style.background = '#600000';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#750000';
+                  }}
+                >
+                  <ChevronLeft size={20} />
+                  Предыдущая
+                </motion.button>
 
-              {/* Dots indicator */}
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {newsData.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentIndex(index)}
-                    style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: index === currentIndex ? '#750000' : '#ddd',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease'
-                    }}
-                  />
-                ))}
+                {/* Dots indicator */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {newsData.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentIndex(index)}
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: index === currentIndex ? '#750000' : '#ddd',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <motion.button
+                  onClick={nextNews}
+                  disabled={newsData.length <= 1}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 20px',
+                    background: '#750000',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    opacity: newsData.length <= 1 ? 0.5 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (newsData.length > 1) {
+                      e.currentTarget.style.background = '#600000';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#750000';
+                  }}
+                >
+                  Следующая
+                  <ChevronRight size={20} />
+                </motion.button>
               </div>
-
-              <motion.button
-                onClick={nextNews}
-                disabled={newsData.length <= 1}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  background: '#750000',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  opacity: newsData.length <= 1 ? 0.5 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (newsData.length > 1) {
-                    e.currentTarget.style.background = '#600000';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#750000';
-                }}
-              >
-                Следующая
-                <ChevronRight size={20} />
-              </motion.button>
-            </div>
+            )}
           </motion.div>
         </motion.div>
       )}
