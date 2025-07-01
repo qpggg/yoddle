@@ -601,26 +601,43 @@ const Dashboard: React.FC = () => {
             </div>
           ) : latestNews ? (
             <div style={{ marginTop: 16, marginBottom: 24 }}>
-              {/* Контейнер с обводкой (как у льгот) */}
+              {/* Современный контейнер новости */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '12px',
-                padding: '12px',
-                background: '#f8f8f8',
-                borderRadius: '8px',
-                marginBottom: '12px'
+                gap: '14px',
+                padding: '16px',
+                background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+                borderRadius: '12px',
+                border: '1px solid #e8e8e8',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
               }}>
+                {/* Декоративный элемент */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '4px',
+                  height: '100%',
+                  background: getCategoryColor(latestNews.category),
+                  borderRadius: '0 2px 2px 0'
+                }} />
+                
                 {/* Категория-бейджик */}
                 <div style={{
                   display: 'inline-block',
                   background: getCategoryColor(latestNews.category),
                   color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
+                  padding: '6px 14px',
+                  borderRadius: '16px',
                   fontSize: '12px',
                   fontWeight: 600,
-                  alignSelf: 'flex-start'
+                  alignSelf: 'flex-start',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  boxShadow: `0 2px 6px ${getCategoryColor(latestNews.category)}33`
                 }}>
                   {latestNews.category}
                 </div>
@@ -628,17 +645,13 @@ const Dashboard: React.FC = () => {
                 {/* Заголовок новости */}
                 <div style={{
                   fontSize: '16px',
-                  fontWeight: 600,
-                  color: '#333',
-                  lineHeight: '1.4'
+                  fontWeight: 700,
+                  color: '#2c2c2c',
+                  lineHeight: '1.3',
+                  marginLeft: '4px'
                 }}>
                   {latestNews.title}
                 </div>
-              </div>
-              
-              {/* Подзаголовок */}
-              <div style={{ color: '#666', fontSize: 14 }}>
-                Последняя новость • Нажмите для просмотра всех
               </div>
             </div>
           ) : (
