@@ -17,6 +17,13 @@ import { useActivity } from '../hooks/useActivity';
 import ActivityChart from '../components/ActivityChart';
 import NewsModal from '../components/NewsModal';
 
+interface LatestNews {
+  id: number;
+  title: string;
+  category: string;
+  excerpt?: string;
+}
+
 interface ProfileEditModalProps {
   open: boolean;
   onClose: () => void;
@@ -161,6 +168,8 @@ const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNewsModal, setShowNewsModal] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
+  const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const navigate = useNavigate();
@@ -182,7 +191,45 @@ const Dashboard: React.FC = () => {
     loadProgress();
   }, [user?.id]);
 
+  // Загрузка последней новости
+  useEffect(() => {
+    const loadLatestNews = async () => {
+      setNewsLoading(true);
+      try {
+        const response = await fetch('/api/news?action=modal-data&limit=1');
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+          const news = data.data[0];
+          setLatestNews({
+            id: news.id,
+            title: news.title,
+            category: news.category,
+            excerpt: news.content ? news.content.slice(0, 100) + '...' : undefined
+          });
+        }
+      } catch (error) {
+        console.error('Error loading latest news:', error);
+      } finally {
+        setNewsLoading(false);
+      }
+    };
 
+    loadLatestNews();
+  }, []);
+
+  // Функция для получения цвета категории
+  const getCategoryColor = (category: string) => {
+    const colors: { [key: string]: string } = {
+      'Продукт': '#750000',
+      'Интеграция': '#2E8B57',
+      'Геймификация': '#FF6347',
+      'Партнерства': '#4682B4',
+      'Анонс': '#9370DB',
+      'Компания': '#32CD32'
+    };
+    return colors[category] || '#750000';
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -547,9 +594,49 @@ const Dashboard: React.FC = () => {
           }}
         >
           <h2>Новости</h2>
-          <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
-            Следите за нашими изменениями!
-          </div>
+          
+          {newsLoading ? (
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
+              Загрузка последних новостей...
+            </div>
+          ) : latestNews ? (
+            <div style={{ marginTop: 16, marginBottom: 24 }}>
+              {/* Категория-бейджик */}
+              <div style={{
+                display: 'inline-block',
+                background: getCategoryColor(latestNews.category),
+                color: 'white',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                marginBottom: '12px'
+              }}>
+                {latestNews.category}
+              </div>
+              
+              {/* Заголовок новости */}
+              <div style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#333',
+                lineHeight: '1.4',
+                marginBottom: '8px'
+              }}>
+                {latestNews.title}
+              </div>
+              
+              {/* Подзаголовок */}
+              <div style={{ color: '#666', fontSize: 14 }}>
+                Последняя новость • Нажмите для просмотра всех
+              </div>
+            </div>
+          ) : (
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
+              Следите за нашими изменениями!
+            </div>
+          )}
+          
           <motion.button
             onClick={() => setShowNewsModal(true)}
             whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
