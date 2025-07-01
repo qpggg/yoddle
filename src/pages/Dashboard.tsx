@@ -5,7 +5,8 @@ import {
   Gift, 
   Settings, 
   MessageCircle,
-  Bell
+  Bell,
+  Newspaper
 } from 'lucide-react';
 import { FaRocket } from 'react-icons/fa';
 import '../styles/Dashboard.css';
@@ -14,6 +15,7 @@ import { useUserBenefits } from '../hooks/useUserBenefits';
 import { useNavigate } from 'react-router-dom';
 import { useActivity } from '../hooks/useActivity';
 import ActivityChart from '../components/ActivityChart';
+import NewsModal from '../components/NewsModal';
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -157,6 +159,7 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
 
 const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
@@ -544,9 +547,44 @@ const Dashboard: React.FC = () => {
           }}
         >
           <h2>Новости</h2>
-          <div style={{ color: '#666', fontSize: 18, marginTop: 16 }}>
+          <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
             Следите за нашими изменениями!
           </div>
+          <motion.button
+            onClick={() => setShowNewsModal(true)}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.95, transition: { duration: 0.2 } }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '14px',
+              background: '#750000',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(117,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#600000';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(117,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#750000';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(117,0,0,0.2)';
+            }}
+          >
+            <Newspaper size={20} />
+            Читать новости
+          </motion.button>
         </motion.div>
 
         {/* Отзывы */}
@@ -583,6 +621,7 @@ const Dashboard: React.FC = () => {
         </motion.button>
       </motion.div>
       <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
+      <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
     </div>
   );
 };
