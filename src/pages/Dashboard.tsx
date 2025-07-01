@@ -599,11 +599,11 @@ const Dashboard: React.FC = () => {
           <h2>Новости</h2>
           
           {newsLoading ? (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, minHeight: '80px', display: 'flex', alignItems: 'center' }}>
               Загрузка последних новостей...
             </div>
           ) : latestNews ? (
-            <div style={{ marginTop: 16, marginBottom: 24 }}>
+            <div style={{ marginTop: 16, marginBottom: 24, minHeight: '80px' }}>
               {/* Современный контейнер новости */}
               <div style={{
                 display: 'flex',
@@ -658,7 +658,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24 }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, minHeight: '80px', display: 'flex', alignItems: 'center' }}>
               Следите за нашими изменениями!
             </div>
           )}
@@ -713,7 +713,7 @@ const Dashboard: React.FC = () => {
         >
           <h2>Отзывы</h2>
           
-          <div style={{ marginTop: 16, marginBottom: 24 }}>
+          <div style={{ marginTop: 16, marginBottom: 24, minHeight: '80px' }}>
             {/* Современный контейнер отзывов */}
             <div style={{
               display: 'flex',
@@ -777,7 +777,7 @@ const Dashboard: React.FC = () => {
                 lineHeight: '1.3',
                 marginLeft: '4px'
               }}>
-                Поделитесь мнением о работе в Yoddle
+                Поделитесь мнением о работе в своей компании
               </div>
             </div>
           </div>

@@ -96,7 +96,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Создаем представление (view) для отзывов с информацией о пользователях
+-- Создаем представление (view) для отзывов (без JOIN с users пока таблица не создана)
 CREATE OR REPLACE VIEW feedback_with_users AS
 SELECT 
     f.id,
@@ -104,13 +104,13 @@ SELECT
     f.rating,
     f.comment,
     f.created_at,
-    u.name as user_name,
-    u.email as user_email,
-    u.position,
-    u.avatar,
-    u.created_at as user_created_at
+    -- Временно используем заглушки пока таблица users не создана
+    'Сотрудник ' || f.user_id as user_name,
+    NULL as user_email,
+    'Должность не указана' as position,
+    NULL as avatar,
+    f.created_at as user_created_at
 FROM feedback f
-LEFT JOIN users u ON f.user_id = u.id
 ORDER BY f.created_at DESC;
 
 -- Добавляем RLS (Row Level Security) политики для безопасности

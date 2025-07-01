@@ -93,18 +93,23 @@ async function getRecentFeedback(req, res) {
     
     const result = await client.query(`
       SELECT 
-        f.id,
-        f.rating,
-        f.comment,
-        f.created_at,
-        u.name as user_name,
-        u.position,
-        u.avatar
-      FROM feedback f
-      JOIN users u ON f.user_id = u.id
-      ORDER BY f.created_at DESC
+        id,
+        user_id,
+        rating,
+        comment,
+        created_at
+      FROM feedback
+      ORDER BY created_at DESC
       LIMIT 5
     `);
+
+    // Добавляем имена пользователей как заглушки
+    result.rows = result.rows.map(row => ({
+      ...row,
+      user_name: `Сотрудник ${row.user_id}`,
+      position: 'Должность не указана',
+      avatar: null
+    }));
 
     await client.end();
 
@@ -207,18 +212,23 @@ async function getAllFeedback(req, res) {
     
     const result = await client.query(`
       SELECT 
-        f.id,
-        f.rating,
-        f.comment,
-        f.created_at,
-        u.name as user_name,
-        u.position,
-        u.avatar
-      FROM feedback f
-      JOIN users u ON f.user_id = u.id
-      ORDER BY f.created_at DESC
+        id,
+        user_id,
+        rating,
+        comment,
+        created_at
+      FROM feedback
+      ORDER BY created_at DESC
       LIMIT $1 OFFSET $2
     `, [parseInt(limit), parseInt(offset)]);
+
+    // Добавляем имена пользователей как заглушки
+    result.rows = result.rows.map(row => ({
+      ...row,
+      user_name: `Сотрудник ${row.user_id}`,
+      position: 'Должность не указана',
+      avatar: null
+    }));
 
     // Подсчет общего количества
     const countResult = await client.query('SELECT COUNT(*) as total FROM feedback');
