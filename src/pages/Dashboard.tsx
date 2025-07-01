@@ -598,17 +598,18 @@ const Dashboard: React.FC = () => {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            height: '100%'
+            height: '100%',
+            minHeight: '280px'
           }}
         >
           <h2>Новости</h2>
           
           {newsLoading ? (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'center' }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 16, flex: 1, display: 'flex', alignItems: 'center' }}>
               Загрузка последних новостей...
             </div>
           ) : latestNews ? (
-            <div style={{ marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
+            <div style={{ marginTop: 16, marginBottom: 16, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
                             {/* Современный контейнер новости */}
                 <div style={{
                   display: 'flex',
@@ -664,7 +665,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'center' }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 16, flex: 1, display: 'flex', alignItems: 'center' }}>
               Следите за нашими изменениями!
             </div>
           )}
@@ -719,12 +720,13 @@ const Dashboard: React.FC = () => {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            height: '100%'
+            height: '100%',
+            minHeight: '280px'
           }}
         >
           <h2>Отзывы</h2>
           
-          <div style={{ marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
+          <div style={{ marginTop: 16, marginBottom: 16, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
             {/* Современный контейнер отзывов */}
             <div style={{
               display: 'flex',
