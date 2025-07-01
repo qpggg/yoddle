@@ -595,28 +595,34 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%'
+          }}
         >
           <h2>Новости</h2>
           
           {newsLoading ? (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, minHeight: '80px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'center' }}>
               Загрузка последних новостей...
             </div>
           ) : latestNews ? (
-            <div style={{ marginTop: 16, marginBottom: 24, minHeight: '80px' }}>
-              {/* Современный контейнер новости */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '14px',
-                padding: '16px',
-                background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
-                borderRadius: '12px',
-                border: '1px solid #e8e8e8',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-              }}>
+            <div style={{ marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
+                            {/* Современный контейнер новости */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #e8e8e8',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  width: '100%'
+                }}>
                 {/* Декоративный элемент */}
                 <div style={{
                   position: 'absolute',
@@ -658,7 +664,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, minHeight: '80px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ color: '#666', fontSize: 16, marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'center' }}>
               Следите за нашими изменениями!
             </div>
           )}
@@ -710,10 +716,15 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%'
+          }}
         >
           <h2>Отзывы</h2>
           
-          <div style={{ marginTop: 16, marginBottom: 24, minHeight: '80px' }}>
+          <div style={{ marginTop: 16, marginBottom: 24, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
             {/* Современный контейнер отзывов */}
             <div style={{
               display: 'flex',
@@ -725,7 +736,8 @@ const Dashboard: React.FC = () => {
               border: '1px solid #e8e8e8',
               position: 'relative',
               overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              width: '100%'
             }}>
               {/* Декоративный элемент */}
               <div style={{
