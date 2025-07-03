@@ -38,6 +38,30 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Добавляем стили для кастомного скроллбара
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .notifications-content::-webkit-scrollbar {
+        width: 6px;
+      }
+      .notifications-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .notifications-content::-webkit-scrollbar-thumb {
+        background: #750000;
+        border-radius: 10px;
+      }
+      .notifications-content::-webkit-scrollbar-thumb:hover {
+        background: #950000;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   useEffect(() => {
     if (open) {
       fetchNotifications();
@@ -162,7 +186,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <motion.div 
+          className="modal-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -178,8 +203,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '80px 20px 20px 20px',
-            overflow: 'hidden'
+            padding: '100px 20px 20px 20px',
+            overflow: 'hidden',
+            willChange: 'backdrop-filter',
+            backfaceVisibility: 'hidden'
           }}
           onClick={onClose}
         >
@@ -191,81 +218,69 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
             style={{
               background: 'white',
               borderRadius: '20px',
-              maxWidth: '450px',
+              maxWidth: '520px',
               width: '100%',
-              maxHeight: 'calc(100vh - 140px)',
+              maxHeight: 'calc(100vh - 160px)',
               overflow: 'hidden',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-              position: 'relative'
+              position: 'relative',
+              willChange: 'transform',
+              backfaceVisibility: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div style={{
-              padding: '24px 24px 16px 24px',
-              borderBottom: '1px solid #f1f1f1',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+            <div 
+              style={{
+                padding: '32px',
+                maxHeight: 'calc(100vh - 160px)',
+                overflowY: 'auto'
+              }}
+              className="notifications-content"
+            >
+              {/* Заголовок */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px'
+                justifyContent: 'space-between',
+                marginBottom: '24px'
               }}>
                 <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'linear-gradient(135deg, #750000, #a00000)',
-                  borderRadius: '12px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  gap: '12px'
                 }}>
-                  <Bell size={20} color="white" />
-                </div>
-                <div>
-                  <h2 style={{
-                    margin: 0,
-                    fontSize: '20px',
-                    fontWeight: 700,
-                    color: '#2c2c2c'
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    background: 'linear-gradient(135deg, #750000, #a00000)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>
-                    Уведомления
-                  </h2>
-                  <p style={{
-                    margin: 0,
-                    fontSize: '13px',
-                    color: '#666'
-                  }}>
-                    {loading ? 'Загрузка...' : `${notifications.length} новых`}
-                  </p>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {notifications.length > 0 && (
-                  <motion.button
-                    onClick={markAllAsRead}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      background: 'none',
-                      border: '1px solid #e1e1e1',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
+                    <Bell size={24} color="white" />
+                  </div>
+                  <div>
+                    <h2 style={{
+                      margin: 0,
+                      fontSize: '24px',
+                      fontWeight: 700,
+                      color: '#2c2c2c'
+                    }}>
+                      Уведомления
+                    </h2>
+                    <p style={{
+                      margin: 0,
+                      fontSize: '14px',
                       color: '#666',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <CheckCircle size={14} />
-                    Все прочитано
-                  </motion.button>
-                )}
+                      marginTop: '4px'
+                    }}>
+                      {notifications.length > 0 
+                        ? `У вас ${notifications.length} новых уведомлений` 
+                        : 'Нет новых уведомлений'}
+                    </p>
+                  </div>
+                </div>
                 
                 <motion.button
                   onClick={onClose}
@@ -280,176 +295,172 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                     color: '#666'
                   }}
                 >
-                  <X size={20} />
+                  <X size={24} />
                 </motion.button>
               </div>
-            </div>
 
-            {/* Content */}
-            <div 
-              style={{
-                padding: '0',
-                maxHeight: 'calc(100vh - 200px)',
-                overflowY: 'auto'
-              }}
-              className="notification-scroll"
-            >
-              {loading ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '200px',
-                  color: '#666'
-                }}>
-                  Загрузка уведомлений...
-                </div>
-              ) : error ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '200px',
-                  color: '#dc2626'
-                }}>
-                  {error}
-                </div>
-              ) : notifications.length === 0 ? (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '200px',
-                  padding: '20px',
-                  textAlign: 'center'
-                }}>
-                  <CheckCircle size={48} color="#10b981" style={{ marginBottom: '16px' }} />
-                  <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>Все прочитано!</h3>
-                  <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-                    У вас нет новых уведомлений
-                  </p>
-                </div>
-              ) : (
-                <div style={{ padding: '8px 0' }}>
-                  {notifications.map((notification, index) => (
+              {/* Кнопка "Прочитать все" */}
+              {notifications.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={markAllAsRead}
+                  style={{
+                    background: 'linear-gradient(135deg, #fdf7f7, #faf0f0)',
+                    border: '2px solid #e8d5d5',
+                    borderRadius: '12px',
+                    padding: '12px 20px',
+                    width: '100%',
+                    marginBottom: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    color: '#750000',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  whileHover={{
+                    scale: 1.02,
+                    background: 'linear-gradient(135deg, #faf0f0, #f8e8e8)'
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Check size={18} />
+                  Прочитать все
+                </motion.button>
+              )}
+
+              {/* Список уведомлений */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                {loading ? (
+                  <div style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: '#666'
+                  }}>
+                    Загрузка...
+                  </div>
+                ) : error ? (
+                  <div style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: '#dc2626'
+                  }}>
+                    {error}
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div style={{
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    color: '#666',
+                    background: '#f9fafb',
+                    borderRadius: '12px'
+                  }}>
+                    <Bell size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                    <p style={{ margin: 0 }}>У вас нет новых уведомлений</p>
+                  </div>
+                ) : (
+                  notifications.map((notification, index) => (
                     <motion.div
                       key={notification.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleNotificationClick(notification)}
                       style={{
-                        padding: '16px 24px',
-                        borderBottom: '1px solid #f8f8f8',
-                        cursor: notification.link_url ? 'pointer' : 'default',
-                        transition: 'all 0.2s ease',
-                        position: 'relative'
+                        background: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#fafafa';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
+                      whileHover={{
+                        background: '#f9fafb',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
                       }}
                     >
-                      {/* Priority indicator */}
-                      {notification.priority > 1 && (
-                        <div style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: '4px',
-                          background: getPriorityColor(notification.priority)
-                        }} />
-                      )}
-                      
                       <div style={{
                         display: 'flex',
                         gap: '12px',
                         alignItems: 'flex-start'
                       }}>
-                        {/* Icon */}
                         <div style={{
-                          width: '40px',
-                          height: '40px',
-                          background: `${notification.type_color}15`,
-                          border: `1px solid ${notification.type_color}30`,
+                          width: '36px',
+                          height: '36px',
+                          background: notification.type_color,
                           borderRadius: '10px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: notification.type_color,
                           flexShrink: 0
                         }}>
                           {getIcon(notification.type_icon)}
                         </div>
                         
-                        {/* Content */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: 1 }}>
                           <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'flex-start',
                             marginBottom: '4px'
                           }}>
-                            <h4 style={{
+                            <h3 style={{
                               margin: 0,
-                              fontSize: '14px',
+                              fontSize: '16px',
                               fontWeight: 600,
-                              color: '#2c2c2c',
-                              lineHeight: '1.3'
+                              color: '#2c2c2c'
                             }}>
                               {notification.title}
-                            </h4>
-                            
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {notification.link_url && (
-                                <ExternalLink size={12} color="#666" />
-                              )}
-                              <motion.button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markAsRead(notification.id);
-                                }}
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  padding: '4px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  color: '#666'
-                                }}
-                              >
-                                <Check size={14} />
-                              </motion.button>
-                            </div>
+                            </h3>
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#666',
+                              flexShrink: 0,
+                              marginLeft: '12px'
+                            }}>
+                              {formatDate(notification.created_at)}
+                            </span>
                           </div>
                           
                           <p style={{
-                            margin: '0 0 8px 0',
-                            fontSize: '13px',
-                            color: '#555',
-                            lineHeight: '1.4'
+                            margin: 0,
+                            fontSize: '14px',
+                            color: '#4b5563',
+                            lineHeight: 1.5
                           }}>
                             {notification.message}
                           </p>
                           
-                          <span style={{
-                            fontSize: '11px',
-                            color: '#888'
-                          }}>
-                            {formatDate(notification.created_at)}
-                          </span>
+                          {notification.link_url && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginTop: '8px',
+                              fontSize: '13px',
+                              color: '#750000',
+                              fontWeight: 500
+                            }}>
+                              <span>Подробнее</span>
+                              <ExternalLink size={14} />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </motion.div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </motion.div>
         </motion.div>
