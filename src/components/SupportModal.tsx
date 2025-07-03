@@ -13,27 +13,17 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
     const style = document.createElement('style');
     style.textContent = `
       .support-modal-content::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
       }
       .support-modal-content::-webkit-scrollbar-track {
         background: transparent;
-        border-radius: 0 20px 20px 0;
       }
       .support-modal-content::-webkit-scrollbar-thumb {
         background: #750000;
-        border-radius: 6px;
-        border: 2px solid transparent;
-        background-clip: content-box;
+        border-radius: 10px;
       }
       .support-modal-content::-webkit-scrollbar-thumb:hover {
         background: #950000;
-        border-radius: 6px;
-        border: 2px solid transparent;
-        background-clip: content-box;
-      }
-      .support-modal-content::-webkit-scrollbar-corner {
-        background: transparent;
-        border-radius: 0 0 20px 0;
       }
     `;
     document.head.appendChild(style);
@@ -77,21 +67,25 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             style={{
               background: 'white',
               borderRadius: '20px',
-              padding: '32px',
               maxWidth: '520px',
               width: '100%',
               maxHeight: 'calc(100vh - 160px)',
-              overflowY: 'auto',
+              overflow: 'hidden',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
               position: 'relative',
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#750000 #f1f1f1',
               willChange: 'transform',
               backfaceVisibility: 'hidden'
             }}
-            className="support-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
+            <div 
+              style={{
+                padding: '32px',
+                maxHeight: 'calc(100vh - 160px)',
+                overflowY: 'auto'
+              }}
+              className="support-modal-content"
+            >
             {/* Заголовок */}
             <div style={{
               display: 'flex',
@@ -211,7 +205,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               </p>
               
               <motion.button
-                onClick={() => window.open('https://t.me/yoddle_hr', '_blank')}
+                onClick={() => window.open('https://t.me/yoddlee', '_blank')}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
@@ -293,7 +287,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               </p>
               
               <motion.button
-                onClick={() => window.open('https://t.me/your_telegram_username', '_blank')}
+                onClick={() => window.open('https://t.me/mpolshkov', '_blank')}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
@@ -327,6 +321,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 Обычно отвечаем в течение часа
               </p>
             </motion.div>
+            </div>
           </motion.div>
         </motion.div>
       )}
