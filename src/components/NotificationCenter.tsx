@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
   Bell, 
-  CheckCircle, 
   Clock, 
   Newspaper,
   Gift,
