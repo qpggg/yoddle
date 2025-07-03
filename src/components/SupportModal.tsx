@@ -17,14 +17,15 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
       }
       .support-modal-content::-webkit-scrollbar-track {
         background: #f1f1f1;
-        border-radius: 4px;
+        border-radius: 6px;
       }
       .support-modal-content::-webkit-scrollbar-thumb {
         background: #750000;
-        border-radius: 4px;
+        border-radius: 6px;
       }
       .support-modal-content::-webkit-scrollbar-thumb:hover {
         background: #950000;
+        border-radius: 6px;
       }
     `;
     document.head.appendChild(style);
@@ -51,9 +52,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             backdropFilter: 'blur(8px)',
             zIndex: 1000,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '20px',
+            padding: '60px 20px 20px 20px',
             overflow: 'hidden'
           }}
           onClick={onClose}
@@ -69,7 +70,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               padding: '32px',
               maxWidth: '520px',
               width: '100%',
-              maxHeight: '85vh',
+              maxHeight: 'calc(100vh - 120px)',
               overflowY: 'auto',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
               position: 'relative',
