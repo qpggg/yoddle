@@ -387,7 +387,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                     <p style={{ margin: 0 }}>У вас нет новых уведомлений</p>
                   </div>
                 ) : (
-                  notifications.map((notification, index) => (
+                  notifications.map((notification) => (
                     <motion.div
                       key={notification.id}
                       initial={{ opacity: 0, y: 15 }}
