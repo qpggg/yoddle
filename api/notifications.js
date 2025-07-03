@@ -3,7 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Проверяем наличие конфигурации
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('📢 Supabase configuration missing for notifications');
+}
+
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 export default async function handler(req, res) {
   try {
@@ -21,6 +27,36 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
+    // Проверяем доступность Supabase
+    if (!supabase) {
+      console.warn('📢 Supabase not configured - returning fallback response');
+      
+      // Возвращаем fallback ответы для основных запросов
+      if (method === 'GET') {
+        if (action === 'count') {
+          return res.status(200).json({ success: true, count: 0 });
+        }
+        if (action === 'unread') {
+          return res.status(200).json({ success: true, data: [], count: 0 });
+        }
+        if (action === 'recent') {
+          return res.status(200).json({ success: true, data: [] });
+        }
+        if (action === 'stats') {
+          return res.status(200).json({ success: true, data: [] });
+        }
+        if (action === 'types') {
+          return res.status(200).json({ success: true, data: [] });
+        }
+      }
+      
+      return res.status(503).json({
+        success: false,
+        error: 'Система уведомлений временно недоступна. База данных не настроена.',
+        fallback: true
+      });
+    }
+
     // ================================================
     // GET ENDPOINTS
     // ================================================
@@ -33,6 +69,18 @@ export default async function handler(req, res) {
 
         if (error) {
           console.error('❌ Error fetching unread notifications:', error);
+          
+          // Если функция не найдена, возвращаем fallback
+          if (error.message?.includes('function') || error.message?.includes('does not exist')) {
+            console.warn('📢 Database functions not created yet - returning fallback');
+            return res.status(200).json({
+              success: true,
+              data: [],
+              count: 0,
+              fallback: true
+            });
+          }
+          
           return res.status(500).json({ 
             success: false, 
             error: 'Ошибка получения уведомлений' 
@@ -53,6 +101,17 @@ export default async function handler(req, res) {
 
         if (error) {
           console.error('❌ Error counting notifications:', error);
+          
+          // Если функция не найдена, возвращаем fallback
+          if (error.message?.includes('function') || error.message?.includes('does not exist')) {
+            console.warn('📢 Database functions not created yet - returning fallback count');
+            return res.status(200).json({
+              success: true,
+              count: 0,
+              fallback: true
+            });
+          }
+          
           return res.status(500).json({ 
             success: false, 
             error: 'Ошибка подсчета уведомлений' 

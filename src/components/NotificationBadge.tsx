@@ -35,15 +35,29 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     
     try {
       const response = await fetch(`/api/notifications?action=count${userId ? `&user_id=${userId}` : ''}`);
+      
+      // Проверяем статус ответа
+      if (!response.ok) {
+        console.warn('📢 Notifications API not available:', response.status);
+        setCount(0);
+        onCountChange?.(0);
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
         const newCount = data.count || 0;
         setCount(newCount);
         onCountChange?.(newCount);
+      } else {
+        setCount(0);
+        onCountChange?.(0);
       }
     } catch (err) {
-      console.error('Error fetching notification count:', err);
+      console.warn('📢 Notifications system not ready:', err instanceof Error ? err.message : 'Unknown error');
+      setCount(0);
+      onCountChange?.(0);
     } finally {
       setLoading(false);
     }

@@ -36,6 +36,15 @@ export const useNotifications = ({
     
     try {
       const response = await fetch(`/api/notifications?action=unread${userId ? `&user_id=${userId}` : ''}`);
+      
+      // Проверяем статус ответа
+      if (!response.ok) {
+        setError('📢 Система уведомлений временно недоступна. Таблицы базы данных еще не созданы.');
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -45,8 +54,10 @@ export const useNotifications = ({
         setError(data.error || 'Ошибка загрузки уведомлений');
       }
     } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('Не удалось загрузить уведомления');
+      console.warn('📢 Notifications system not ready:', err instanceof Error ? err.message : 'Unknown error');
+      setError('📢 Система уведомлений временно недоступна. Проверьте создание таблиц в базе данных.');
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
@@ -56,13 +67,24 @@ export const useNotifications = ({
   const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await fetch(`/api/notifications?action=count${userId ? `&user_id=${userId}` : ''}`);
+      
+      // Проверяем статус ответа
+      if (!response.ok) {
+        console.warn('📢 Notifications API not available:', response.status);
+        setUnreadCount(0);
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
         setUnreadCount(data.count || 0);
+      } else {
+        setUnreadCount(0);
       }
     } catch (err) {
-      console.error('Error fetching notification count:', err);
+      console.warn('📢 Notifications system not ready:', err instanceof Error ? err.message : 'Unknown error');
+      setUnreadCount(0);
     }
   }, [userId]);
 
