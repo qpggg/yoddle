@@ -54,28 +54,32 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '60px 20px 20px 20px',
-            overflow: 'hidden'
+            padding: '100px 20px 20px 20px',
+            overflow: 'hidden',
+            willChange: 'backdrop-filter',
+            backfaceVisibility: 'hidden'
           }}
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 50 }}
+            initial={{ scale: 0.95, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 50 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            exit={{ scale: 0.95, opacity: 0, y: 30 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
             style={{
               background: 'white',
               borderRadius: '20px',
               padding: '32px',
               maxWidth: '520px',
               width: '100%',
-              maxHeight: 'calc(100vh - 120px)',
+              maxHeight: 'calc(100vh - 160px)',
               overflowY: 'auto',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
               position: 'relative',
               scrollbarWidth: 'thin',
-              scrollbarColor: '#750000 #f1f1f1'
+              scrollbarColor: '#750000 #f1f1f1',
+              willChange: 'transform',
+              backfaceVisibility: 'hidden'
             }}
             className="support-modal-content"
             onClick={(e) => e.stopPropagation()}
@@ -142,9 +146,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
 
             {/* Телеграм-чат для маркетинга */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.05, duration: 0.2 }}
               style={{
                 background: 'linear-gradient(135deg, #fdf7f7, #faf0f0)',
                 border: '2px solid #e8d5d5',
@@ -226,9 +230,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
 
             {/* Контакт поддержки */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.1, duration: 0.2 }}
               style={{
                 background: 'linear-gradient(135deg, #fdfafa, #fcf5f5)',
                 border: '2px solid #f0d5d5',
