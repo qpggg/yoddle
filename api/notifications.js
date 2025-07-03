@@ -1,15 +1,14 @@
 // API для системы уведомлений Yoddle
-import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { Pool } = pg;
 
-// Проверяем наличие конфигурации
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('📢 Supabase configuration missing for notifications');
-}
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const pool = new Pool({
+  connectionString: process.env.PG_CONNECTION_STRING,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 export default async function handler(req, res) {
   try {
@@ -27,36 +26,6 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
-    // Проверяем доступность Supabase
-    if (!supabase) {
-      console.warn('📢 Supabase not configured - returning fallback response');
-      
-      // Возвращаем fallback ответы для основных запросов
-      if (method === 'GET') {
-        if (action === 'count') {
-          return res.status(200).json({ success: true, count: 0 });
-        }
-        if (action === 'unread') {
-          return res.status(200).json({ success: true, data: [], count: 0 });
-        }
-        if (action === 'recent') {
-          return res.status(200).json({ success: true, data: [] });
-        }
-        if (action === 'stats') {
-          return res.status(200).json({ success: true, data: [] });
-        }
-        if (action === 'types') {
-          return res.status(200).json({ success: true, data: [] });
-        }
-      }
-      
-      return res.status(503).json({
-        success: false,
-        error: 'Система уведомлений временно недоступна. База данных не настроена.',
-        fallback: true
-      });
-    }
-
     // ================================================
     // GET ENDPOINTS
     // ================================================
@@ -64,63 +33,36 @@ export default async function handler(req, res) {
       
       // Получить все непрочитанные уведомления
       if (action === 'unread') {
-        const { data, error } = await supabase
-          .rpc('get_unread_notifications', { p_user_id: user_id || null });
-
-        if (error) {
-          console.error('❌ Error fetching unread notifications:', error);
-          
-          // Если функция не найдена, возвращаем fallback
-          if (error.message?.includes('function') || error.message?.includes('does not exist')) {
-            console.warn('📢 Database functions not created yet - returning fallback');
-            return res.status(200).json({
-              success: true,
-              data: [],
-              count: 0,
-              fallback: true
-            });
-          }
-          
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка получения уведомлений' 
-          });
-        }
-
+        const query = `
+          SELECT * FROM notifications 
+          WHERE (user_id = $1 OR is_global = true)
+          AND read = false
+          ORDER BY created_at DESC
+        `;
+        
+        const { rows } = await pool.query(query, [user_id]);
+        
         return res.status(200).json({
           success: true,
-          data: data || [],
-          count: data?.length || 0
+          data: rows,
+          count: rows.length
         });
       }
 
       // Подсчет непрочитанных уведомлений
       if (action === 'count') {
-        const { data, error } = await supabase
-          .rpc('count_unread_notifications', { p_user_id: user_id || null });
-
-        if (error) {
-          console.error('❌ Error counting notifications:', error);
-          
-          // Если функция не найдена, возвращаем fallback
-          if (error.message?.includes('function') || error.message?.includes('does not exist')) {
-            console.warn('📢 Database functions not created yet - returning fallback count');
-            return res.status(200).json({
-              success: true,
-              count: 0,
-              fallback: true
-            });
-          }
-          
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка подсчета уведомлений' 
-          });
-        }
-
+        const query = `
+          SELECT COUNT(*) as count 
+          FROM notifications 
+          WHERE (user_id = $1 OR is_global = true)
+          AND read = false
+        `;
+        
+        const { rows } = await pool.query(query, [user_id]);
+        
         return res.status(200).json({
           success: true,
-          count: data || 0
+          count: parseInt(rows[0].count)
         });
       }
 
@@ -128,142 +70,54 @@ export default async function handler(req, res) {
       if (action === 'recent') {
         const limit = parseInt(query.limit) || 10;
         
-        let queryBuilder = supabase
-          .from('recent_notifications')
-          .select('*');
-
-        // Фильтр по пользователю
-        if (user_id) {
-          queryBuilder = queryBuilder.or(`is_global.eq.true,user_id.eq.${user_id}`);
-        } else {
-          queryBuilder = queryBuilder.eq('is_global', true);
-        }
-
-        queryBuilder = queryBuilder
-          .order('created_at', { ascending: false })
-          .limit(limit);
-
-        const { data, error } = await queryBuilder;
-
-        if (error) {
-          console.error('❌ Error fetching recent notifications:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка получения последних уведомлений' 
-          });
-        }
-
+        const query = `
+          SELECT * FROM notifications
+          WHERE (user_id = $1 OR is_global = true)
+          ORDER BY created_at DESC
+          LIMIT $2
+        `;
+        
+        const { rows } = await pool.query(query, [user_id, limit]);
+        
         return res.status(200).json({
           success: true,
-          data: data || []
+          data: rows
         });
       }
 
       // Получить статистику уведомлений
       if (action === 'stats') {
-        const { data, error } = await supabase
-          .from('notification_stats')
-          .select('*');
-
-        if (error) {
-          console.error('❌ Error fetching notification stats:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка получения статистики' 
-          });
-        }
-
+        const query = `
+          SELECT 
+            type,
+            COUNT(*) as total,
+            SUM(CASE WHEN read = false THEN 1 ELSE 0 END) as unread
+          FROM notifications
+          WHERE user_id = $1 OR is_global = true
+          GROUP BY type
+        `;
+        
+        const { rows } = await pool.query(query, [user_id]);
+        
         return res.status(200).json({
           success: true,
-          data: data || []
+          data: rows
         });
       }
 
       // Получить типы уведомлений
       if (action === 'types') {
-        const { data, error } = await supabase
-          .from('notification_types')
-          .select('*')
-          .order('name');
-
-        if (error) {
-          console.error('❌ Error fetching notification types:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка получения типов уведомлений' 
-          });
-        }
-
+        const query = `
+          SELECT DISTINCT type 
+          FROM notifications 
+          ORDER BY type
+        `;
+        
+        const { rows } = await pool.query(query);
+        
         return res.status(200).json({
           success: true,
-          data: data || []
-        });
-      }
-
-      // Получить все уведомления с пагинацией
-      if (action === 'all' || !action) {
-        const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit) || 20;
-        const offset = (page - 1) * limit;
-
-        let queryBuilder = supabase
-          .from('notifications')
-          .select(`
-            id,
-            title,
-            message,
-            is_read,
-            priority,
-            link_url,
-            created_at,
-            read_at,
-            notification_types (
-              name,
-              icon,
-              color,
-              description
-            )
-          `);
-
-        // Фильтры
-        if (user_id) {
-          queryBuilder = queryBuilder.or(`is_global.eq.true,user_id.eq.${user_id}`);
-        } else {
-          queryBuilder = queryBuilder.eq('is_global', true);
-        }
-
-        if (type) {
-          queryBuilder = queryBuilder.eq('notification_types.name', type);
-        }
-
-        if (query.is_read !== undefined) {
-          queryBuilder = queryBuilder.eq('is_read', query.is_read === 'true');
-        }
-
-        // Применяем пагинацию и сортировку
-        queryBuilder = queryBuilder
-          .order('created_at', { ascending: false })
-          .range(offset, offset + limit - 1);
-
-        const { data, error, count } = await queryBuilder;
-
-        if (error) {
-          console.error('❌ Error fetching notifications:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка получения уведомлений' 
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          data: data || [],
-          pagination: {
-            page,
-            limit,
-            total: count || 0,
-            pages: Math.ceil((count || 0) / limit)
-          }
+          data: rows
         });
       }
     }
@@ -272,156 +126,51 @@ export default async function handler(req, res) {
     // POST ENDPOINTS
     // ================================================
     if (method === 'POST') {
-      const { type_name, title, message, is_global = false, link_url, expires_at } = req.body;
-
       // Создать новое уведомление
       if (action === 'create') {
-        if (!type_name || !title || !message) {
-          return res.status(400).json({
-            success: false,
-            error: 'Обязательные поля: type_name, title, message'
-          });
-        }
-
-        const { data, error } = await supabase
-          .rpc('create_notification', {
-            p_type_name: type_name,
-            p_title: title,
-            p_message: message,
-            p_user_id: user_id || null,
-            p_is_global: is_global,
-            p_priority: priority,
-            p_link_url: link_url || null
-          });
-
-        if (error) {
-          console.error('❌ Error creating notification:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка создания уведомления' 
-          });
-        }
-
+        const query = `
+          INSERT INTO notifications (
+            user_id, type, title, message, priority, is_global
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6
+          ) RETURNING *
+        `;
+        
+        const { rows } = await pool.query(query, [
+          user_id,
+          type,
+          req.body.title,
+          req.body.message,
+          priority,
+          req.body.is_global || false
+        ]);
+        
         return res.status(201).json({
           success: true,
-          notification_id: data,
-          message: 'Уведомление создано успешно'
-        });
-      }
-
-      // Массовое создание уведомлений
-      if (action === 'bulk-create') {
-        const { notifications } = req.body;
-
-        if (!Array.isArray(notifications) || notifications.length === 0) {
-          return res.status(400).json({
-            success: false,
-            error: 'Поле notifications должно быть массивом'
-          });
-        }
-
-        const results = [];
-        const errors = [];
-
-        for (const notification of notifications) {
-          try {
-            const { data, error } = await supabase
-              .rpc('create_notification', {
-                p_type_name: notification.type_name,
-                p_title: notification.title,
-                p_message: notification.message,
-                p_user_id: notification.user_id || null,
-                p_is_global: notification.is_global || false,
-                p_priority: notification.priority || 1,
-                p_link_url: notification.link_url || null
-              });
-
-            if (error) {
-              errors.push({ notification, error: error.message });
-            } else {
-              results.push({ notification_id: data });
-            }
-          } catch (err) {
-            errors.push({ notification, error: err.message });
-          }
-        }
-
-        return res.status(200).json({
-          success: true,
-          created: results.length,
-          errors: errors.length,
-          results,
-          errors
+          data: rows[0]
         });
       }
     }
 
     // ================================================
-    // PUT ENDPOINTS  
+    // PUT ENDPOINTS
     // ================================================
     if (method === 'PUT') {
-      
       // Отметить уведомление как прочитанное
-      if (action === 'mark-read') {
-        if (!notification_id) {
-          return res.status(400).json({
-            success: false,
-            error: 'Требуется notification_id'
-          });
-        }
-
-        const { data, error } = await supabase
-          .rpc('mark_notification_read', {
-            p_notification_id: parseInt(notification_id),
-            p_user_id: user_id || 'anonymous'
-          });
-
-        if (error) {
-          console.error('❌ Error marking notification as read:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка обновления уведомления' 
-          });
-        }
-
+      if (action === 'read') {
+        const query = `
+          UPDATE notifications 
+          SET read = true, 
+              read_at = CURRENT_TIMESTAMP 
+          WHERE id = $1 AND (user_id = $2 OR is_global = true)
+          RETURNING *
+        `;
+        
+        const { rows } = await pool.query(query, [notification_id, user_id]);
+        
         return res.status(200).json({
           success: true,
-          updated: data,
-          message: 'Уведомление отмечено как прочитанное'
-        });
-      }
-
-      // Отметить все уведомления как прочитанные
-      if (action === 'mark-all-read') {
-        let queryBuilder = supabase
-          .from('notifications')
-          .update({ 
-            is_read: true, 
-            read_at: new Date().toISOString() 
-          });
-
-        if (user_id) {
-          queryBuilder = queryBuilder.or(`is_global.eq.true,user_id.eq.${user_id}`);
-        } else {
-          queryBuilder = queryBuilder.eq('is_global', true);
-        }
-
-        queryBuilder = queryBuilder.eq('is_read', false);
-
-        const { data, error } = await queryBuilder;
-
-        if (error) {
-          console.error('❌ Error marking all notifications as read:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка обновления уведомлений' 
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          updated_count: data?.length || 0,
-          message: 'Все уведомления отмечены как прочитанные'
+          data: rows[0]
         });
       }
     }
@@ -430,33 +179,25 @@ export default async function handler(req, res) {
     // DELETE ENDPOINTS
     // ================================================
     if (method === 'DELETE') {
-      
-      // Удалить уведомление (только для админов/создателей)
-      if (action === 'delete' && notification_id) {
-        const { data, error } = await supabase
-          .from('notifications')
-          .delete()
-          .eq('id', notification_id);
-
-        if (error) {
-          console.error('❌ Error deleting notification:', error);
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Ошибка удаления уведомления' 
-          });
-        }
-
+      if (notification_id) {
+        const query = `
+          DELETE FROM notifications 
+          WHERE id = $1 AND (user_id = $2 OR is_global = true)
+          RETURNING id
+        `;
+        
+        const { rows } = await pool.query(query, [notification_id, user_id]);
+        
         return res.status(200).json({
           success: true,
-          message: 'Уведомление удалено'
+          data: rows[0]
         });
       }
     }
 
-    // Неизвестный endpoint
-    return res.status(404).json({
+    return res.status(400).json({
       success: false,
-      error: 'Endpoint не найден'
+      error: 'Неверный запрос'
     });
 
   } catch (error) {
