@@ -124,6 +124,26 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
     }
   };
 
+  const deleteNotification = async (notificationId: number) => {
+    try {
+      const response = await fetch(
+        `/api/notifications?action=delete&notification_id=${notificationId}${userId ? `&user_id=${userId}` : ''}`,
+        { method: 'DELETE' }
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Удаляем уведомление из локального состояния
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      } else {
+        console.error('Error deleting notification:', data.error);
+      }
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
+
   const getIcon = (iconName: string) => {
     const iconProps = { size: 20 };
     
@@ -372,7 +392,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                       key={notification.id}
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.2 }}
                       style={{
                         background: '#fff',
                         border: '1px solid #e5e7eb',
@@ -392,9 +413,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                       <motion.button
                         onClick={(e) => {
                           e.stopPropagation();
-                          markAsRead(notification.id);
+                          deleteNotification(notification.id);
                         }}
-                        whileHover={{ scale: 1.1 }}
+                        whileHover={{ 
+                          scale: 1.1,
+                          background: 'rgba(220, 38, 38, 0.1)',
+                          color: '#dc2626'
+                        }}
                         whileTap={{ scale: 0.9 }}
                         style={{
                           position: 'absolute',
@@ -405,7 +430,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                           padding: '4px',
                           cursor: 'pointer',
                           color: '#666',
-                          zIndex: 2
+                          zIndex: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          transition: 'all 0.2s ease'
                         }}
                       >
                         <XCircle size={20} />
@@ -432,7 +464,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                           {getIcon(notification.type_icon)}
                         </div>
                         
-                        <div style={{ flex: 1, paddingRight: '24px' }}>
+                        <div style={{ flex: 1, paddingRight: '40px' }}>
                           <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
