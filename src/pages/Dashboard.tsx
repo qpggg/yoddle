@@ -18,6 +18,7 @@ import { useActivity } from '../hooks/useActivity';
 import ActivityChart from '../components/ActivityChart';
 import NewsModal from '../components/NewsModal';
 import FeedbackModal from '../components/FeedbackModal';
+import SupportModal from '../components/SupportModal';
 
 interface LatestNews {
   id: number;
@@ -170,6 +171,7 @@ const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNewsModal, setShowNewsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
   const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -843,6 +845,7 @@ const Dashboard: React.FC = () => {
         <p>Нужна помощь? Обратитесь в поддержку</p>
         <motion.button 
           className="support-btn"
+          onClick={() => setShowSupportModal(true)}
           whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
           whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
         >
@@ -852,6 +855,7 @@ const Dashboard: React.FC = () => {
       <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
       <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
       <FeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} userId={user?.id || null} />
+      <SupportModal open={showSupportModal} onClose={() => setShowSupportModal(false)} />
     </div>
   );
 };
