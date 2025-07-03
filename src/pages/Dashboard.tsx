@@ -182,6 +182,13 @@ const Dashboard: React.FC = () => {
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const { unreadCount } = useNotifications({ userId: user?.id });
+  
+  // Логирование для отладки (можно убрать в продакшене)
+  React.useEffect(() => {
+    if (unreadCount > 0) {
+      console.log(`📢 Непрочитанных уведомлений: ${unreadCount}`);
+    }
+  }, [unreadCount]);
   const navigate = useNavigate();
 
   // Загрузка прогресса пользователя
