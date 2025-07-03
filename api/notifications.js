@@ -36,7 +36,7 @@ export default async function handler(req, res) {
         const query = `
           SELECT * FROM notifications 
           WHERE (user_id = $1 OR is_global = true)
-          AND read = false
+          AND is_read = false
           ORDER BY created_at DESC
         `;
         
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
           SELECT COUNT(*) as count 
           FROM notifications 
           WHERE (user_id = $1 OR is_global = true)
-          AND read = false
+          AND is_read = false
         `;
         
         const { rows } = await pool.query(query, [user_id]);
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
           SELECT 
             type,
             COUNT(*) as total,
-            SUM(CASE WHEN read = false THEN 1 ELSE 0 END) as unread
+            SUM(CASE WHEN is_read = false THEN 1 ELSE 0 END) as unread
           FROM notifications
           WHERE user_id = $1 OR is_global = true
           GROUP BY type
@@ -160,7 +160,7 @@ export default async function handler(req, res) {
       if (action === 'read') {
         const query = `
           UPDATE notifications 
-          SET read = true, 
+          SET is_read = true, 
               read_at = CURRENT_TIMESTAMP 
           WHERE id = $1 AND (user_id = $2 OR is_global = true)
           RETURNING *
