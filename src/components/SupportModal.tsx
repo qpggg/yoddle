@@ -8,6 +8,31 @@ interface SupportModalProps {
 }
 
 const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
+  // Стили для кастомного скроллбара
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .support-modal-content::-webkit-scrollbar {
+        width: 8px;
+      }
+      .support-modal-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+      .support-modal-content::-webkit-scrollbar-thumb {
+        background: #750000;
+        border-radius: 4px;
+      }
+      .support-modal-content::-webkit-scrollbar-thumb:hover {
+        background: #950000;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
     <AnimatePresence>
       {open && (
@@ -28,7 +53,8 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: '20px',
+            overflow: 'hidden'
           }}
           onClick={onClose}
         >
@@ -43,11 +69,14 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               padding: '32px',
               maxWidth: '520px',
               width: '100%',
-              maxHeight: '80vh',
+              maxHeight: '85vh',
               overflowY: 'auto',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-              position: 'relative'
+              position: 'relative',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#750000 #f1f1f1'
             }}
+            className="support-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Заголовок */}
@@ -116,8 +145,8 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               style={{
-                background: 'linear-gradient(135deg, #f8f9ff, #f0f4ff)',
-                border: '2px solid #e1e8ff',
+                background: 'linear-gradient(135deg, #fdf7f7, #faf0f0)',
+                border: '2px solid #e8d5d5',
                 borderRadius: '16px',
                 padding: '24px',
                 marginBottom: '20px',
@@ -132,9 +161,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 right: '-10px',
                 width: '60px',
                 height: '60px',
-                background: 'linear-gradient(45deg, #4f46e5, #7c3aed)',
+                background: 'linear-gradient(45deg, #750000, #a00000)',
                 borderRadius: '50%',
-                opacity: 0.1
+                opacity: 0.12
               }} />
               
               <div style={{
@@ -143,7 +172,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 gap: '12px',
                 marginBottom: '16px'
               }}>
-                <Users size={24} color="#4f46e5" />
+                <Users size={24} color="#750000" />
                 <h3 style={{
                   margin: 0,
                   fontSize: '18px',
@@ -175,7 +204,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                  background: 'linear-gradient(135deg, #750000, #a00000)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
@@ -186,7 +215,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                  boxShadow: '0 4px 12px rgba(117, 0, 0, 0.35)'
                 }}
               >
                 Подписаться на канал
@@ -200,8 +229,8 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               style={{
-                background: 'linear-gradient(135deg, #fff8f0, #fff4e6)',
-                border: '2px solid #ffedd5',
+                background: 'linear-gradient(135deg, #fdfafa, #fcf5f5)',
+                border: '2px solid #f0d5d5',
                 borderRadius: '16px',
                 padding: '24px',
                 position: 'relative',
@@ -212,12 +241,12 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               <div style={{
                 position: 'absolute',
                 top: '-15px',
-                left: '-15px',
+                right: '-15px',
                 width: '80px',
                 height: '80px',
-                background: 'linear-gradient(45deg, #f59e0b, #d97706)',
+                background: 'linear-gradient(45deg, #950000, #750000)',
                 borderRadius: '50%',
-                opacity: 0.1
+                opacity: 0.15
               }} />
               
               <div style={{
@@ -226,7 +255,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 gap: '12px',
                 marginBottom: '16px'
               }}>
-                <Heart size={24} color="#f59e0b" />
+                <Heart size={24} color="#950000" />
                 <h3 style={{
                   margin: 0,
                   fontSize: '18px',
@@ -257,7 +286,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  background: 'linear-gradient(135deg, #950000, #750000)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
@@ -268,7 +297,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+                  boxShadow: '0 4px 12px rgba(149, 0, 0, 0.35)'
                 }}
               >
                 Написать в поддержку

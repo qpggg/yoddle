@@ -433,6 +433,7 @@ const Dashboard: React.FC = () => {
               className="action-btn"
               whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
               whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
+              onClick={() => setShowSupportModal(true)}
             >
               <MessageCircle size={24} />
               <span>Поддержка</span>
