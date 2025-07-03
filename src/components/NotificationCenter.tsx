@@ -137,14 +137,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
     }
   };
 
-  const getPriorityColor = (priority: number) => {
-    switch (priority) {
-      case 3: return '#dc2626'; // высокий - красный
-      case 2: return '#f59e0b'; // средний - оранжевый  
-      default: return '#6b7280'; // низкий - серый
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
