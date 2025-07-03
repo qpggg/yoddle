@@ -19,6 +19,9 @@ import ActivityChart from '../components/ActivityChart';
 import NewsModal from '../components/NewsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import SupportModal from '../components/SupportModal';
+import NotificationCenter from '../components/NotificationCenter';
+import NotificationBadge from '../components/NotificationBadge';
+import { useNotifications } from '../hooks/useNotifications';
 
 interface LatestNews {
   id: number;
@@ -172,11 +175,13 @@ const Dashboard: React.FC = () => {
   const [showNewsModal, setShowNewsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
   const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const { user, setUser } = useUser();
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
+  const { unreadCount } = useNotifications({ userId: user?.id });
   const navigate = useNavigate();
 
   // Загрузка прогресса пользователя
@@ -273,13 +278,16 @@ const Dashboard: React.FC = () => {
           <p className="subtitle">Ваш персональный кабинет</p>
         </div>
         <div className="header-actions">
-          <motion.button 
-            className="notification-btn"
-            whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-            whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-          >
-            <Bell size={24} />
-          </motion.button>
+          <NotificationBadge userId={user?.id}>
+            <motion.button 
+              className="notification-btn"
+              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
+              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
+              onClick={() => setShowNotificationCenter(true)}
+            >
+              <Bell size={24} />
+            </motion.button>
+          </NotificationBadge>
         </div>
       </motion.div>
 
@@ -429,6 +437,17 @@ const Dashboard: React.FC = () => {
               <UserCircle size={24} />
               <span>Профиль</span>
             </motion.button>
+            <NotificationBadge userId={user?.id}>
+              <motion.button 
+                className="action-btn"
+                whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
+                whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
+                onClick={() => setShowNotificationCenter(true)}
+              >
+                <Bell size={24} />
+                <span>Уведомления</span>
+              </motion.button>
+            </NotificationBadge>
             <motion.button 
               className="action-btn"
               whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
@@ -857,6 +876,11 @@ const Dashboard: React.FC = () => {
       <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
       <FeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} userId={user?.id || null} />
       <SupportModal open={showSupportModal} onClose={() => setShowSupportModal(false)} />
+      <NotificationCenter 
+        open={showNotificationCenter} 
+        onClose={() => setShowNotificationCenter(false)} 
+        userId={user?.id || null} 
+      />
     </div>
   );
 };

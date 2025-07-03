@@ -23,6 +23,34 @@ import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
+import ToastNotification, { useToast } from './components/ToastNotification';
+import React, { createContext, useContext } from 'react';
+
+// Контекст для Toast уведомлений
+const ToastContext = createContext<ReturnType<typeof useToast> | undefined>(undefined);
+
+export const useGlobalToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useGlobalToast must be used within ToastProvider');
+  }
+  return context;
+};
+
+const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const toast = useToast();
+  
+  return (
+    <ToastContext.Provider value={toast}>
+      {children}
+      <ToastNotification 
+        toasts={toast.toasts} 
+        onRemove={toast.removeToast}
+        position="top-right"
+      />
+    </ToastContext.Provider>
+  );
+};
 
 const HomePage = () => (
   <Box>
@@ -39,26 +67,28 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <ScrollToTop />
-        <Box>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/benefits" element={<BenefitsPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/my-benefits" element={<MyBenefits />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/preferences" element={<Preferences />} />
-          </Routes>
-          <Footer />
-        </Box>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <ScrollToTop />
+          <Box>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/benefits" element={<BenefitsPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/my-benefits" element={<MyBenefits />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/preferences" element={<Preferences />} />
+            </Routes>
+            <Footer />
+          </Box>
+        </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 };
