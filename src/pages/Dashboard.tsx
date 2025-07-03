@@ -183,7 +183,7 @@ const Dashboard: React.FC = () => {
   const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
   const { unreadCount } = useNotifications({ userId: user?.id });
   
-  // Логирование для отладки (можно убрать в продакшене)
+  // Логирование уведомлений для отладки
   React.useEffect(() => {
     if (unreadCount > 0) {
       console.log(`📢 Непрочитанных уведомлений: ${unreadCount}`);
