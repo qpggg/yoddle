@@ -16,16 +16,24 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
         width: 8px;
       }
       .support-modal-content::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 6px;
+        background: transparent;
+        border-radius: 0 20px 20px 0;
       }
       .support-modal-content::-webkit-scrollbar-thumb {
         background: #750000;
         border-radius: 6px;
+        border: 2px solid transparent;
+        background-clip: content-box;
       }
       .support-modal-content::-webkit-scrollbar-thumb:hover {
         background: #950000;
         border-radius: 6px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      .support-modal-content::-webkit-scrollbar-corner {
+        background: transparent;
+        border-radius: 0 0 20px 0;
       }
     `;
     document.head.appendChild(style);
