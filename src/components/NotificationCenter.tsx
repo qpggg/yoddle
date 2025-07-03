@@ -10,7 +10,8 @@ import {
   Settings,
   Download,
   ExternalLink,
-  Check
+  Check,
+  XCircle
 } from 'lucide-react';
 
 interface Notification {
@@ -216,24 +217,23 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
               position: 'relative',
               willChange: 'transform',
-              backfaceVisibility: 'hidden'
+              backfaceVisibility: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div 
-              style={{
-                padding: '32px',
-                maxHeight: 'calc(100vh - 160px)',
-                overflowY: 'auto'
-              }}
-              className="notifications-content"
-            >
-              {/* Заголовок */}
+            {/* Фиксированный заголовок */}
+            <div style={{
+              padding: '32px 32px 24px 32px',
+              borderBottom: '1px solid #f1f1f1',
+              background: 'white'
+            }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '24px'
+                marginBottom: notifications.length > 0 ? '24px' : 0
               }}>
                 <div style={{
                   display: 'flex',
@@ -302,7 +302,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                     borderRadius: '12px',
                     padding: '12px 20px',
                     width: '100%',
-                    marginBottom: '20px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -323,7 +322,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                   Прочитать все
                 </motion.button>
               )}
+            </div>
 
+            {/* Скроллируемый контент */}
+            <div 
+              className="notifications-content"
+              style={{
+                padding: '24px 32px',
+                overflowY: 'auto',
+                flex: 1
+              }}
+            >
               {/* Список уведомлений */}
               <div style={{ 
                 display: 'flex', 
@@ -364,7 +373,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      onClick={() => handleNotificationClick(notification)}
                       style={{
                         background: '#fff',
                         border: '1px solid #e5e7eb',
@@ -380,11 +388,37 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
                       }}
                     >
-                      <div style={{
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'flex-start'
-                      }}>
+                      {/* Кнопка удаления */}
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notification.id);
+                        }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          background: 'none',
+                          border: 'none',
+                          padding: '4px',
+                          cursor: 'pointer',
+                          color: '#666',
+                          zIndex: 2
+                        }}
+                      >
+                        <XCircle size={20} />
+                      </motion.button>
+
+                      <div 
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'flex-start'
+                        }}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
                         <div style={{
                           width: '36px',
                           height: '36px',
@@ -398,7 +432,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                           {getIcon(notification.type_icon)}
                         </div>
                         
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, paddingRight: '24px' }}>
                           <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
