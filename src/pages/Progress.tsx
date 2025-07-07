@@ -831,7 +831,7 @@ const Progress: React.FC = () => {
         </div>
 
         {/* Информация об уровнях */}
-        <motion.div variants={itemVariants} style={{ marginTop: '3rem' }}>
+        <motion.div variants={itemVariants} style={{ marginTop: '6rem' }}>
           <Paper elevation={0} sx={{
             ...cardStyle,
             background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
