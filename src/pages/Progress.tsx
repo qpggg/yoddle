@@ -363,16 +363,58 @@ const Progress: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
       <Container maxWidth="lg">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-          <Typography variant="h4" align="center" sx={{ 
-            fontWeight: 700, 
-            color: '#8B0000', 
-            mb: 8, 
-            lineHeight: 1.4, 
-            fontSize: { xs: '1.8rem', md: '2.2rem' } 
-          }}>
-            {user?.name}, ваш прогресс в Yoddle
-          </Typography>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Box
+              sx={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '16px',
+                backgroundColor: 'rgba(139, 0, 0, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3,
+                '& svg': {
+                  fontSize: '36px',
+                  color: '#8B0000'
+                }
+              }}
+            >
+              <FaRocket />
+            </Box>
+            
+            <Typography
+              variant="h3"
+              sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 900,
+                color: '#1A1A1A',
+                mb: 2,
+                fontSize: { xs: '2rem', md: '3rem' }
+              }}
+            >
+              {user?.name}, ваш прогресс в Yoddle
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 500,
+                color: '#666',
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6
+              }}
+            >
+              Отслеживайте свои достижения, собирайте очки опыта и открывайте новые уровни
+            </Typography>
+          </Box>
         </motion.div>
 
         {/* ОСНОВНОЙ ПРОГРЕСС - УЛУЧШЕННЫЙ ДИЗАЙН */}
