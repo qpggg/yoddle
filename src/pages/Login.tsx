@@ -30,6 +30,12 @@ const Login: React.FC = () => {
       
       // 🎉 АВТОЛОГИРОВАНИЕ ВХОДА (СНАЧАЛА ЛОГИРУЕМ, ПОТОМ ПЕРЕХОДИМ)
       try {
+        // Получаем текущее время
+        const now = new Date();
+        const hours = now.getHours();
+        const isWeekend = now.getDay() === 0 || now.getDay() === 6; // 0 = Воскресенье, 6 = Суббота
+        
+        // Логируем основной вход
         const loginResponse = await fetch('/api/activity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -40,6 +46,56 @@ const Login: React.FC = () => {
             description: `Пользователь ${data.user.name || data.user.email} вошел в систему`
           })
         });
+        
+        // Проверяем специальные условия для достижений
+        const specialActions = [];
+        
+        // 🦉 Сова - вход после 22:00
+        if (hours >= 22 || hours < 6) {
+          specialActions.push({
+            action: 'late_login',
+            xp_earned: 30,
+            description: `🦉 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Сова"`
+          });
+        }
+        
+        // 🐦 Ранняя пташка - вход до 9:00
+        if (hours >= 6 && hours < 9) {
+          specialActions.push({
+            action: 'early_login', 
+            xp_earned: 30,
+            description: `🐦 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Ранняя пташка"`
+          });
+        }
+        
+        // ⚔️ Воин выходных - активность в выходные
+        if (isWeekend) {
+          specialActions.push({
+            action: 'weekend_activity',
+            xp_earned: 40,
+            description: `⚔️ Активность в выходной день - заработано достижение "Воин выходных"`
+          });
+        }
+        
+        // Логируем все специальные действия
+        for (const specialAction of specialActions) {
+          try {
+            const specialResponse = await fetch('/api/activity', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: Number(data.user.id),
+                ...specialAction
+              })
+            });
+            
+            if (specialResponse.ok) {
+              console.log(`✅ Специальное достижение: ${specialAction.action}`);
+            }
+          } catch (specialError) {
+            console.error(`❌ Ошибка логирования ${specialAction.action}:`, specialError);
+          }
+        }
         
         if (loginResponse.ok) {
           console.log('✅ Логирование входа успешно');

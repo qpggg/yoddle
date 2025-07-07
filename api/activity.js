@@ -60,6 +60,12 @@ async function checkAndUnlockAchievements(client, userId, action) {
         case 'custom':
           if (achievement.code === 'profile_complete' && action === 'profile_update') {
             shouldUnlock = currentProgress.profile_completion >= achievement.requirement_value;
+          } else if (achievement.code === 'night_owl' && action === 'late_login') {
+            shouldUnlock = true; // Достижение разблокируется при входе после 22:00
+          } else if (achievement.code === 'early_bird' && action === 'early_login') {
+            shouldUnlock = true; // Достижение разблокируется при входе до 9:00
+          } else if (achievement.code === 'weekend_warrior' && action === 'weekend_activity') {
+            shouldUnlock = true; // Достижение разблокируется за активность в выходные
           }
           break;
       }
