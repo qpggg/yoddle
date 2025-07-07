@@ -1,5 +1,91 @@
 import { Client } from 'pg';
 
+// 🏆 ФУНКЦИЯ ПРОВЕРКИ И РАЗБЛОКИРОВКИ ДОСТИЖЕНИЙ
+async function checkAndUnlockAchievements(client, userId, action) {
+  try {
+    // Получаем текущий прогресс пользователя
+    const progressResult = await client.query(
+      'SELECT * FROM user_progress WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (!progressResult.rows[0]) return;
+    
+    const currentProgress = progressResult.rows[0];
+    
+    // Получаем все достижения с их требованиями
+    const allAchievements = await client.query(`
+      SELECT code, requirement_type, requirement_value, requirement_action
+      FROM achievements 
+      WHERE is_active = true
+    `);
+    
+    // Получаем уже разблокированные достижения
+    const unlockedAchievements = await client.query(
+      'SELECT achievement_id FROM user_achievements WHERE user_id = $1',
+      [userId]
+    );
+    const unlockedIds = unlockedAchievements.rows.map(row => row.achievement_id);
+    
+    const achievementsToUnlock = [];
+    
+    // Проверяем каждое достижение
+    for (const achievement of allAchievements.rows) {
+      if (unlockedIds.includes(achievement.code)) continue; // Уже разблокировано
+      
+      let shouldUnlock = false;
+      
+      switch (achievement.requirement_type) {
+        case 'total_xp':
+          shouldUnlock = currentProgress.xp >= achievement.requirement_value;
+          break;
+          
+        case 'count':
+          if (achievement.requirement_action === 'benefit_added' && action === 'benefit_added') {
+            // Подсчитываем количество льгот пользователя
+            const benefitsCount = await client.query(
+              'SELECT COUNT(*) FROM user_benefits WHERE user_id = $1',
+              [userId]
+            );
+            shouldUnlock = parseInt(benefitsCount.rows[0].count) >= achievement.requirement_value;
+          }
+          break;
+          
+        case 'streak':
+          if (achievement.requirement_action === 'login') {
+            shouldUnlock = currentProgress.login_streak >= achievement.requirement_value;
+          }
+          break;
+          
+        case 'custom':
+          if (achievement.code === 'profile_complete' && action === 'profile_update') {
+            shouldUnlock = currentProgress.profile_completion >= achievement.requirement_value;
+          }
+          break;
+      }
+      
+      if (shouldUnlock) {
+        achievementsToUnlock.push(achievement.code);
+      }
+    }
+    
+    // Разблокируем достижения
+    for (const achievementId of achievementsToUnlock) {
+      await client.query(
+        'INSERT INTO user_achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [userId, achievementId]
+      );
+      console.log(`🏆 Достижение ${achievementId} разблокировано для пользователя ${userId}`);
+    }
+    
+    return achievementsToUnlock;
+    
+  } catch (error) {
+    console.error('Ошибка проверки достижений:', error);
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   const client = new Client({
     connectionString: process.env.PG_CONNECTION_STRING,
@@ -127,17 +213,40 @@ export default async function handler(req, res) {
 
       // Обновляем общий прогресс пользователя (если таблица user_progress существует)
       try {
+        // Получаем текущий XP для расчета нового уровня
+        const currentProgressResult = await client.query(
+          'SELECT xp FROM user_progress WHERE user_id = $1',
+          [userIdNumber]
+        );
+        
+        const currentXP = currentProgressResult.rows[0]?.xp || 0;
+        const newXP = currentXP + xpValue;
+        
+        // Рассчитываем новый уровень
+        let newLevel = 1;
+        if (newXP >= 1001) newLevel = 5;
+        else if (newXP >= 501) newLevel = 4;
+        else if (newXP >= 301) newLevel = 3;
+        else if (newXP >= 101) newLevel = 2;
+
         const updateProgressQuery = `
           UPDATE user_progress 
           SET 
-            xp = xp + $2,
+            xp = $2,
+            level = $3,
             last_activity = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
           WHERE user_id = $1;
         `;
         
-        await client.query(updateProgressQuery, [userIdNumber, xpValue]);
-        console.log('Activity API POST: Прогресс пользователя обновлен');
+        await client.query(updateProgressQuery, [userIdNumber, newXP, newLevel]);
+        console.log(`Activity API POST: Прогресс обновлен - XP: ${newXP}, Уровень: ${newLevel}`);
+
+        // 🏆 ПРОВЕРКА И РАЗБЛОКИРОВКА ДОСТИЖЕНИЙ
+        if (xpValue > 0) {
+          await checkAndUnlockAchievements(client, userIdNumber, action);
+        }
+
       } catch (progressError) {
         console.log('Activity API POST: Таблица user_progress не найдена или ошибка обновления:', progressError.message);
         // Не прерываем выполнение, если таблица прогресса не существует

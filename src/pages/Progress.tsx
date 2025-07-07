@@ -3,18 +3,23 @@ import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, Circular
 import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { 
+  FaRocket, 
   FaFire, 
   FaStar, 
   FaCrown, 
-  FaEye,
-  FaHeart,
-  FaRocket,
+  FaEye, 
+  FaHeart, 
+  FaUserShield, 
   FaBolt,
   FaCheckCircle,
-  FaLock
+  FaLock,
+  FaGift,
+  FaBullseye,
+  FaSun,
+  FaUserNinja,
+  FaFistRaised
 } from 'react-icons/fa';
 import { GiCrystalShine, GiTrophyCup } from 'react-icons/gi';
-import { FaUserShield } from 'react-icons/fa6';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -74,24 +79,28 @@ interface UserProgress {
 
 // Функция для преобразования иконки из строки в React элемент
 const getIconFromString = (iconString: string) => {
-  switch (iconString) {
-    case '👋': return <FaRocket />;
-    case '🎁': return <FaEye />;
-    case '✅': return <FaUserShield />;
-    case '🔥': return <FaFire />;
-    case '⭐': return <FaStar />;
-    case '👑': return <FaCrown />;
-    case '🌱': return <FaRocket />;
-    case '🚀': return <FaRocket />;
-    case '⚡': return <FaBolt />;
-    case '🏅': return <GiTrophyCup />;
-    case '🏆': return <GiTrophyCup />;
-    case '💎': return <GiCrystalShine />;
-    case '🐦': return <FaFire />;
-    case '🦉': return <FaFire />;
-    case '⚔️': return <FaBolt />;
-    default: return <FaStar />;
-  }
+  const iconMap: { [key: string]: React.ReactElement } = {
+    // Фирменные иконки достижений
+    '👤': <FaRocket size={32} />,
+    '🔥': <FaFire size={32} />,
+    '⭐': <FaStar size={32} />,
+    '👑': <FaCrown size={32} />,
+    '✅': <FaCheckCircle size={32} />,
+    '🎁': <FaGift size={32} />,
+    '🏆': <GiTrophyCup size={32} />,
+    '💎': <GiCrystalShine size={32} />,
+    '🌟': <FaStar size={32} />,
+    '🚀': <FaRocket size={32} />,
+    '⚡': <FaBolt size={32} />,
+    '🎯': <FaBullseye size={32} />,
+    '🔓': <FaLock size={32} />,
+    '🎊': <FaGift size={32} />,
+    '🌅': <FaSun size={32} />,
+    '🦉': <FaUserNinja size={32} />,
+    '⚔️': <FaFistRaised size={32} />
+  };
+  
+  return iconMap[iconString] || <FaStar size={32} />;
 };
 
 // Функция для определения редкости достижения
@@ -614,8 +623,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Профиль', 
                 icon: <FaUserShield />, 
-                color: '#2E8B57', 
-                gradient: 'linear-gradient(135deg, #2E8B57 0%, #32CD32 100%)',
+                color: '#8B0000', 
+                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                 actions: [
                   { action: 'Обновление профиля', xp: 25, icon: <FaUserShield /> },
                   { action: 'Загрузка аватара', xp: 30, icon: <FaUserShield /> },
@@ -625,8 +634,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Льготы', 
                 icon: <FaHeart />, 
-                color: '#FF6347', 
-                gradient: 'linear-gradient(135deg, #FF6347 0%, #FF4500 100%)',
+                color: '#8B0000', 
+                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                 actions: [
                   { action: 'Добавление льготы', xp: 50, icon: <FaHeart /> },
                   { action: 'Использование льготы', xp: 25, icon: <FaCheckCircle /> },
@@ -636,8 +645,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Достижения', 
                 icon: <GiTrophyCup />, 
-                color: '#9370DB', 
-                gradient: 'linear-gradient(135deg, #9370DB 0%, #BA55D3 100%)',
+                color: '#8B0000', 
+                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                 actions: [
                   { action: 'Повышение уровня', xp: 100, icon: <FaCrown /> },
                   { action: 'Серия входов (неделя)', xp: 50, icon: <FaFire /> },
@@ -661,6 +670,9 @@ const Progress: React.FC = () => {
                     position: 'relative',
                     border: `2px solid ${category.color}20`,
                     background: '#fff',
+                    minHeight: '300px',
+                    display: 'flex',
+                    flexDirection: 'column',
                     '&:hover': {
                       borderColor: `${category.color}80`,
                       background: `${category.color}05`
@@ -684,7 +696,8 @@ const Progress: React.FC = () => {
                       alignItems: 'center', 
                       gap: 2.5, 
                       mb: 3,
-                      pt: 1.5
+                      pt: 1.5,
+                      px: 3
                     }}>
                       <Box sx={{ 
                         color: category.color, 
@@ -709,7 +722,14 @@ const Progress: React.FC = () => {
                     </Box>
 
                     {/* Список действий */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: 2.5,
+                      px: 3,
+                      pb: 3,
+                      flex: 1
+                    }}>
                       {category.actions.map((item, idx) => (
                         <Box key={idx} sx={{
                           display: 'flex',
