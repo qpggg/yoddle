@@ -10,7 +10,6 @@ import {
   FaEye,
   FaHeart,
   FaRocket,
-
   FaBolt,
   FaCheckCircle,
   FaLock
@@ -45,17 +44,18 @@ const cardStyle = {
   flexDirection: 'column'
 };
 
-
-
 interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactElement;
+  icon: string; // Теперь это строка из БД
   unlocked: boolean;
   points: number;
-  category: 'activity' | 'social' | 'explorer' | 'expert';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  tier: number;
+  requirement_type: string;
+  requirement_value: number;
+  requirement_action: string;
+  unlocked_at?: string;
 }
 
 interface UserProgress {
@@ -73,95 +73,44 @@ interface UserProgress {
   };
 }
 
-const RANKS = [
-  { name: 'Новичок', minXP: 0, maxXP: 100, color: '#8E8E93', icon: <FaUserShield />, gradient: 'linear-gradient(135deg, #8E8E93 0%, #A8A8AA 100%)' },
-  { name: 'Активный', minXP: 101, maxXP: 300, color: '#34C759', icon: <FaRocket />, gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)' },
-  { name: 'Эксперт', minXP: 301, maxXP: 500, color: '#007AFF', icon: <FaBolt />, gradient: 'linear-gradient(135deg, #007AFF 0%, #0A84FF 100%)' },
-  { name: 'Мастер', minXP: 501, maxXP: 1000, color: '#AF52DE', icon: <FaCrown />, gradient: 'linear-gradient(135deg, #AF52DE 0%, #BF5AF2 100%)' },
-  { name: 'Легенда', minXP: 1001, maxXP: Infinity, color: '#FF9500', icon: <GiTrophyCup />, gradient: 'linear-gradient(135deg, #FF9500 0%, #FF9F0A 100%)' }
-];
-
-const ACHIEVEMENTS: Achievement[] = [
-  {
-    id: 'first_login',
-    title: 'Первые шаги',
-    description: 'Добро пожаловать в Yoddle!',
-    icon: <FaRocket />,
-    unlocked: true,
-    points: 25,
-    category: 'activity',
-    rarity: 'common'
-  },
-  {
-    id: 'profile_complete',
-    title: 'Мастер профиля',
-    description: 'Заполните профиль на 100%',
-    icon: <FaUserShield />,
-    unlocked: false,
-    points: 50,
-    category: 'activity',
-    rarity: 'rare'
-  },
-  {
-    id: 'first_benefit',
-    title: 'Исследователь',
-    description: 'Выберите первую льготу',
-    icon: <FaEye />,
-    unlocked: true,
-    points: 30,
-    category: 'explorer',
-    rarity: 'common'
-  },
-  {
-    id: 'wellness_expert',
-    title: 'Эксперт велнеса',
-    description: 'Выберите 5 льгот категории "Здоровье"',
-    icon: <FaHeart />,
-    unlocked: false,
-    points: 100,
-    category: 'expert',
-    rarity: 'epic'
-  },
-  {
-    id: 'streak_week',
-    title: 'Постоянство',
-    description: '7 дней подряд в приложении',
-    icon: <FaFire />,
-    unlocked: false,
-    points: 75,
-    category: 'activity',
-    rarity: 'rare'
-  },
-  {
-    id: 'social_butterfly',
-    title: 'Социальная бабочка',
-    description: 'Пригласите 3 коллег',
-    icon: <FaUserFriends />,
-    unlocked: false,
-    points: 150,
-    category: 'social',
-    rarity: 'epic'
-  },
-  {
-    id: 'master_user',
-    title: 'Мастер платформы',
-    description: 'Используйте все функции Yoddle',
-    icon: <GiCrystalShine />,
-    unlocked: false,
-    points: 200,
-    category: 'expert',
-    rarity: 'legendary'
-  },
-  {
-    id: 'feedback_hero',
-    title: 'Герой отзывов',
-    description: 'Оставьте 10 отзывов о льготах',
-    icon: <FaStar />,
-    unlocked: false,
-    points: 80,
-    category: 'social',
-    rarity: 'rare'
+// Функция для преобразования иконки из строки в React элемент
+const getIconFromString = (iconString: string) => {
+  switch (iconString) {
+    case '👋': return <FaRocket />;
+    case '🎁': return <FaEye />;
+    case '✅': return <FaUserShield />;
+    case '🔥': return <FaFire />;
+    case '⭐': return <FaStar />;
+    case '👑': return <FaCrown />;
+    case '🌱': return <FaRocket />;
+    case '🚀': return <FaRocket />;
+    case '⚡': return <FaBolt />;
+    case '🏅': return <GiTrophyCup />;
+    case '🏆': return <GiTrophyCup />;
+    case '💎': return <GiCrystalShine />;
+    case '🐦': return <FaFire />;
+    case '🦉': return <FaFire />;
+    case '⚔️': return <FaBolt />;
+    default: return <FaStar />;
   }
+};
+
+// Функция для определения редкости достижения
+const getRarityFromTier = (tier: number) => {
+  switch (tier) {
+    case 1: return 'common';
+    case 2: return 'rare';
+    case 3: return 'epic';
+    default: return 'common';
+  }
+};
+
+const RANKS = [
+  { name: 'Новичок', minXP: 0, maxXP: 100, icon: '🌱' },
+  { name: 'Активист', minXP: 101, maxXP: 300, icon: '🚀' },
+  { name: 'Профи', minXP: 301, maxXP: 500, icon: '⭐' },
+  { name: 'Эксперт', minXP: 501, maxXP: 1000, icon: '👑' },
+  { name: 'Мастер', minXP: 1001, maxXP: Infinity, icon: '💎' }
 ];
 
 const getRarityConfig = (rarity: string) => {
@@ -175,7 +124,8 @@ const getRarityConfig = (rarity: string) => {
 };
 
 const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
-  const rarityConfig = getRarityConfig(achievement.rarity);
+  const rarity = getRarityFromTier(achievement.tier);
+  const rarityConfig = getRarityConfig(rarity);
   
   return (
     <motion.div 
@@ -213,7 +163,7 @@ const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
           mb: 2, 
           fontSize: '2rem' 
         }}>
-          {achievement.icon}
+          {getIconFromString(achievement.icon)}
         </Box>
         
         <Typography variant="h6" sx={{ 
@@ -264,69 +214,57 @@ const StatCard = ({ title, value, subtitle, icon }: {
   subtitle?: string; 
   icon: React.ReactElement;
 }) => (
-  <motion.div 
-    variants={itemVariants} 
-    whileHover={{ 
-      y: -8, 
-      boxShadow: '0 20px 40px rgba(139,0,0,0.15)',
-      transition: { duration: 0.2 }
-    }}
-    style={{ 
-      height: '100%',
-      borderRadius: '24px',
-      overflow: 'hidden'
-    }}
-  >
+  <motion.div variants={itemVariants}>
     <Paper elevation={0} sx={{
       ...cardStyle,
-      borderRadius: '24px',
-      minHeight: '200px',
-      justifyContent: 'center',
-      alignItems: 'center',
       textAlign: 'center',
-      overflow: 'hidden'
+      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+      color: '#fff',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-        <Box sx={{ 
-          color: '#8B0000', 
-          fontSize: '2rem', 
-          background: '#8B000015',
-          borderRadius: '16px',
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+      <Box sx={{
+        position: 'absolute',
+        top: -20,
+        right: -20,
+        width: 80,
+        height: 80,
+        borderRadius: '50%',
+        background: 'rgba(255,255,255,0.1)',
+        zIndex: 0
+      }} />
+      
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ fontSize: '2.5rem', mb: 2, opacity: 0.9 }}>
           {icon}
         </Box>
-      </Box>
-      
-      <Typography variant="h6" sx={{ 
-        fontWeight: 700, 
-        color: '#1A1A1A',
-        mb: 2,
-        fontSize: '1rem'
-      }}>
-        {title}
-      </Typography>
-      
-      <Typography variant="h2" sx={{ 
-        fontWeight: 800, 
-        color: '#8B0000', 
-        mb: 1,
-        fontSize: '2.5rem'
-      }}>
-        {value}
-      </Typography>
-      
-      {subtitle && (
-        <Typography variant="body2" sx={{ 
-          color: '#555', 
-          fontWeight: 500
+        
+        <Typography variant="h3" sx={{ 
+          fontWeight: 900, 
+          mb: 1,
+          textShadow: '0 2px 10px rgba(0,0,0,0.3)'
         }}>
-          {subtitle}
+          {value}
         </Typography>
-      )}
+        
+        {subtitle && (
+          <Typography variant="body2" sx={{ 
+            opacity: 0.8, 
+            mb: 1,
+            fontWeight: 500
+          }}>
+            {subtitle}
+          </Typography>
+        )}
+        
+        <Typography variant="body1" sx={{ 
+          fontWeight: 600,
+          opacity: 0.9,
+          fontSize: '1rem'
+        }}>
+          {title}
+        </Typography>
+      </Box>
     </Paper>
   </motion.div>
 );
@@ -336,24 +274,21 @@ const Progress: React.FC = () => {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
 
-
-
-  // Функция для загрузки реальных данных из API
   const loadRealProgress = async () => {
     if (!user?.id) return;
     
     setLoading(true);
     try {
-      // 🔄 ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ПРОГРЕССА И ЛЬГОТ
+      // Параллельная загрузка данных
       const [progressResponse, benefitsResponse] = await Promise.all([
         fetch(`/api/progress?user_id=${user.id}`),
         fetch(`/api/user-benefits?user_id=${user.id}`)
       ]);
       
-      const progressData = await progressResponse.json();
-      const benefitsData = await benefitsResponse.json();
-      
-      if (progressData.progress) {
+      if (progressResponse.ok && benefitsResponse.ok) {
+        const progressData = await progressResponse.json();
+        const benefitsData = await benefitsResponse.json();
+        
         const userXP = progressData.progress.xp || 0;
         const currentRank = RANKS.find(rank => 
           userXP >= rank.minXP && userXP <= rank.maxXP
@@ -375,10 +310,7 @@ const Progress: React.FC = () => {
           nextLevelXP: currentRank.maxXP === Infinity ? Infinity : currentRank.maxXP,
           totalXP: userXP,
           rank: currentRank.name,
-          achievements: ACHIEVEMENTS.map(achievement => ({
-            ...achievement,
-            unlocked: achievement.id === 'first_login' || achievement.id === 'first_benefit'
-          })),
+          achievements: progressData.achievements || [], // Теперь это данные из БД
           stats: {
             loginStreak: progressData.progress.login_streak || 0,
             benefitsUsed: realBenefitsCount, // ✅ РЕАЛЬНОЕ КОЛИЧЕСТВО ЛЬГОТ
@@ -409,7 +341,9 @@ const Progress: React.FC = () => {
   if (!progress) return null;
 
   const currentRank = RANKS.find(rank => rank.name === progress.rank) || RANKS[0];
-  const progressPercent = Math.min(((progress.currentXP - currentRank.minXP) / (currentRank.maxXP - currentRank.minXP)) * 100, 100);
+  const progressPercent = currentRank.maxXP === Infinity ? 100 : (progress.currentXP / currentRank.maxXP) * 100;
+  
+  // Разделяем достижения на полученные и доступные
   const unlockedAchievements = progress.achievements.filter(a => a.unlocked);
   const lockedAchievements = progress.achievements.filter(a => !a.unlocked);
 
@@ -485,9 +419,9 @@ const Progress: React.FC = () => {
                     fontSize: '3.5rem',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(255,255,255,0.1)'
-                  }}>
-                    {currentRank.icon}
-                  </Box>
+                                      }}>
+                     {currentRank.icon}
+                    </Box>
                 </Box>
               </motion.div>
               
@@ -609,6 +543,202 @@ const Progress: React.FC = () => {
               />
             </Grid>
           </Grid>
+        </motion.div>
+
+        {/* СИСТЕМА ОЧКОВ */}
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
+          <Typography variant="h4" sx={{ 
+            fontWeight: 800, 
+            color: '#1A1A1A', 
+            mb: 4, 
+            textAlign: 'center' 
+          }}>
+            Система очков
+          </Typography>
+          
+          <motion.div variants={itemVariants}>
+            <Paper elevation={0} sx={{
+              ...cardStyle,
+              background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+              color: '#fff',
+              mb: 3
+            }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <FaStar /> Как работает система XP
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                lineHeight: 1.6,
+                opacity: 0.95,
+                fontSize: '1.1rem'
+              }}>
+                Выполняйте действия в приложении и получайте очки опыта (XP). 
+                Накапливайте XP для повышения уровня, получения достижений и разблокировки новых возможностей!
+              </Typography>
+            </Paper>
+          </motion.div>
+
+          <Grid container spacing={3}>
+            {[
+              { category: 'Активность', icon: <FaBolt />, color: '#FF6B35', actions: [
+                { action: 'Ежедневный вход', xp: 10, icon: '🔐' },
+                { action: 'Первый вход за день', xp: 15, icon: '🌅' },
+                { action: 'Просмотр прогресса', xp: 5, icon: '📊' }
+              ]},
+              { category: 'Профиль', icon: <FaUserShield />, color: '#34C759', actions: [
+                { action: 'Обновление профиля', xp: 25, icon: '👤' },
+                { action: 'Загрузка аватара', xp: 30, icon: '📸' },
+                { action: 'Тест предпочтений', xp: 75, icon: '📋' }
+              ]},
+              { category: 'Льготы', icon: <FaHeart />, color: '#8B0000', actions: [
+                { action: 'Добавление льготы', xp: 50, icon: '🎁' },
+                { action: 'Использование льготы', xp: 25, icon: '✨' },
+                { action: 'Получение рекомендаций', xp: 20, icon: '🎯' }
+              ]},
+              { category: 'Достижения', icon: <GiTrophyCup />, color: '#AF52DE', actions: [
+                { action: 'Повышение уровня', xp: 100, icon: '⬆️' },
+                { action: 'Серия входов (неделя)', xp: 50, icon: '🔥' },
+                { action: 'Разблокировка достижения', xp: 'Бонус', icon: '🏆' }
+              ]}
+            ].map((category, index) => (
+              <Grid item xs={12} md={6} key={category.category}>
+                <motion.div variants={itemVariants}>
+                  <Paper elevation={0} sx={{
+                    ...cardStyle,
+                    border: `2px solid ${category.color}`,
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}>
+                    {/* Декоративная полоска */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 4,
+                      background: category.color
+                    }} />
+                    
+                    {/* Заголовок категории */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 2, 
+                      mb: 3,
+                      pt: 1
+                    }}>
+                      <Box sx={{ 
+                        color: category.color, 
+                        fontSize: '1.5rem',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {category.icon}
+                      </Box>
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 700, 
+                        color: '#1A1A1A' 
+                      }}>
+                        {category.category}
+                      </Typography>
+                    </Box>
+
+                    {/* Список действий */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {category.actions.map((item, idx) => (
+                        <Box key={idx} sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          p: 2,
+                          borderRadius: '12px',
+                          background: '#f8f9fa',
+                          border: '1px solid #eee'
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ fontSize: '1.2rem' }}>{item.icon}</Box>
+                            <Typography variant="body2" sx={{ 
+                              fontWeight: 600,
+                              color: '#555'
+                            }}>
+                              {item.action}
+                            </Typography>
+                          </Box>
+                          <Chip 
+                            label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
+                            size="small"
+                            sx={{
+                              background: category.color,
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              height: 28
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Информация об уровнях */}
+          <motion.div variants={itemVariants} style={{ marginTop: '2rem' }}>
+            <Paper elevation={0} sx={{
+              ...cardStyle,
+              background: 'linear-gradient(135deg, #AF52DE 0%, #5856D6 100%)',
+              color: '#fff'
+            }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <GiCrystalShine /> Уровни и ранги
+              </Typography>
+              
+              <Grid container spacing={2}>
+                {[
+                  { level: 1, name: 'Новичок', xp: '0-100 XP', icon: '🌱' },
+                  { level: 2, name: 'Активист', xp: '101-300 XP', icon: '🚀' },
+                  { level: 3, name: 'Профи', xp: '301-500 XP', icon: '⭐' },
+                  { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: '👑' },
+                  { level: 5, name: 'Мастер', xp: '1001+ XP', icon: '💎' }
+                ].map((rank, idx) => (
+                  <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
+                    <Box sx={{
+                      textAlign: 'center',
+                      p: 2,
+                      borderRadius: '16px',
+                      background: progress.level === rank.level ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+                      border: progress.level === rank.level ? '2px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <Box sx={{ fontSize: '2rem', mb: 1 }}>{rank.icon}</Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                        Уровень {rank.level}
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.9rem' }}>
+                        {rank.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
+                        {rank.xp}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          </motion.div>
         </motion.div>
 
         {/* ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ */}

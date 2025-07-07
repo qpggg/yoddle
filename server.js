@@ -168,11 +168,25 @@ app.get('/api/progress', async (req, res) => {
       [user_id]
     );
     
-    // Получаем разблокированные достижения
-    const achievementsResult = await client.query(
-      'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1',
-      [user_id]
-    );
+    // Получаем ВСЕ достижения из БД с информацией о том, какие разблокированы
+    const achievementsResult = await client.query(`
+      SELECT 
+        a.code as id,
+        a.name as title,
+        a.description,
+        a.icon,
+        a.xp_reward as points,
+        a.tier,
+        a.requirement_type,
+        a.requirement_value,
+        a.requirement_action,
+        CASE WHEN ua.achievement_id IS NOT NULL THEN true ELSE false END as unlocked,
+        ua.unlocked_at
+      FROM achievements a
+      LEFT JOIN user_achievements ua ON a.code = ua.achievement_id AND ua.user_id = $1
+      WHERE a.is_active = true
+      ORDER BY a.tier ASC, a.xp_reward ASC
+    `, [user_id]);
     
     // Если прогресса нет, создаем базовый
     let progress = progressResult.rows[0];
@@ -203,7 +217,8 @@ app.get('/api/progress', async (req, res) => {
     
     return res.status(200).json({ 
       progress,
-      achievements: achievementsResult.rows.map(a => a.achievement_id)
+      achievements: achievementsResult.rows,
+      unlockedAchievements: achievementsResult.rows.filter(a => a.unlocked).map(a => a.id)
     });
     
   } catch (error) {

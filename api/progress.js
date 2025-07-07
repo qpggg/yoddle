@@ -23,11 +23,25 @@ export default async function handler(req, res) {
         [user_id]
       );
       
-      // Получаем разблокированные достижения
-      const achievementsResult = await client.query(
-        'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1',
-        [user_id]
-      );
+      // Получаем ВСЕ достижения из БД с информацией о том, какие разблокированы
+      const achievementsResult = await client.query(`
+        SELECT 
+          a.code as id,
+          a.name as title,
+          a.description,
+          a.icon,
+          a.xp_reward as points,
+          a.tier,
+          a.requirement_type,
+          a.requirement_value,
+          a.requirement_action,
+          CASE WHEN ua.achievement_id IS NOT NULL THEN true ELSE false END as unlocked,
+          ua.unlocked_at
+        FROM achievements a
+        LEFT JOIN user_achievements ua ON a.code = ua.achievement_id AND ua.user_id = $1
+        WHERE a.is_active = true
+        ORDER BY a.tier ASC, a.xp_reward ASC
+      `, [user_id]);
       
       // Если прогресса нет, создаем базовый
       let progress = progressResult.rows[0];
@@ -58,7 +72,8 @@ export default async function handler(req, res) {
       
       return res.status(200).json({ 
         progress,
-        achievements: achievementsResult.rows.map(a => a.achievement_id)
+        achievements: achievementsResult.rows,
+        unlockedAchievements: achievementsResult.rows.filter(a => a.unlocked).map(a => a.id)
       });
       
     } catch (error) {
@@ -113,20 +128,61 @@ export default async function handler(req, res) {
         currentProgress = { ...currentProgress, xp: newXP, level: newLevel };
       }
       
-      // Проверяем и разблокируем достижения
+      // УЛУЧШЕННАЯ ЛОГИКА РАЗБЛОКИРОВКИ ДОСТИЖЕНИЙ
       const achievementsToUnlock = [];
       
-      // Логика достижений
-      if (action === 'profile_complete' && !achievementsToUnlock.includes('profile_complete')) {
-        achievementsToUnlock.push('profile_complete');
-      }
+      // Получаем все достижения с их требованиями
+      const allAchievements = await client.query(`
+        SELECT code, requirement_type, requirement_value, requirement_action
+        FROM achievements 
+        WHERE is_active = true
+      `);
       
-      if (action === 'first_benefit' && !achievementsToUnlock.includes('first_benefit')) {
-        achievementsToUnlock.push('first_benefit');
-      }
+      // Получаем уже разблокированные достижения
+      const unlockedAchievements = await client.query(
+        'SELECT achievement_id FROM user_achievements WHERE user_id = $1',
+        [user_id]
+      );
+      const unlockedIds = unlockedAchievements.rows.map(row => row.achievement_id);
       
-      if (currentProgress.xp >= 300 && !achievementsToUnlock.includes('streak_week')) {
-        achievementsToUnlock.push('streak_week');
+      // Проверяем каждое достижение
+      for (const achievement of allAchievements.rows) {
+        if (unlockedIds.includes(achievement.code)) continue; // Уже разблокировано
+        
+        let shouldUnlock = false;
+        
+        switch (achievement.requirement_type) {
+          case 'total_xp':
+            shouldUnlock = currentProgress.xp >= achievement.requirement_value;
+            break;
+            
+          case 'count':
+            if (achievement.requirement_action === 'benefit_added' && action === 'benefit_added') {
+              // Подсчитываем количество льгот пользователя
+              const benefitsCount = await client.query(
+                'SELECT COUNT(*) FROM user_benefits WHERE user_id = $1',
+                [user_id]
+              );
+              shouldUnlock = parseInt(benefitsCount.rows[0].count) >= achievement.requirement_value;
+            }
+            break;
+            
+          case 'streak':
+            if (achievement.requirement_action === 'login') {
+              shouldUnlock = currentProgress.login_streak >= achievement.requirement_value;
+            }
+            break;
+            
+          case 'custom':
+            if (achievement.code === 'profile_complete' && action === 'profile_update') {
+              shouldUnlock = currentProgress.profile_completion >= achievement.requirement_value;
+            }
+            break;
+        }
+        
+        if (shouldUnlock) {
+          achievementsToUnlock.push(achievement.code);
+        }
       }
       
       // Разблокируем достижения
