@@ -545,7 +545,7 @@ const Dashboard: React.FC = () => {
                   border: '1px solid rgba(255,255,255,0.1)',
                   marginBottom: '0.5rem'
                 }}>
-                  <FaRocket />
+                  {userProgress ? getRankByXP(userProgress.xp).icon : <FaRocket />}
                 </div>
               
                               <div className="profile-details" style={{ textAlign: 'center' }}>
