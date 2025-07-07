@@ -560,68 +560,119 @@ const Progress: React.FC = () => {
               ...cardStyle,
               background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
               color: '#fff',
-              mb: 3
+              mb: 3,
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              <Typography variant="h6" sx={{ 
-                fontWeight: 700, 
-                mb: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <FaStar /> Как работает система XP
-              </Typography>
-              <Typography variant="body1" sx={{ 
-                lineHeight: 1.6,
-                opacity: 0.95,
-                fontSize: '1.1rem'
-              }}>
-                Выполняйте действия в приложении и получайте очки опыта (XP). 
-                Накапливайте XP для повышения уровня, получения достижений и разблокировки новых возможностей!
-              </Typography>
+              {/* Декоративные элементы */}
+              <Box sx={{
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+                zIndex: 0
+              }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 700, 
+                  mb: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  <FaStar size={24} /> Как работает система XP
+                </Typography>
+                <Typography variant="body1" sx={{ 
+                  lineHeight: 1.7,
+                  opacity: 0.95,
+                  fontSize: '1.1rem'
+                }}>
+                  Выполняйте действия в приложении и получайте очки опыта (XP). 
+                  Накапливайте XP для повышения уровня, получения достижений и разблокировки новых возможностей!
+                </Typography>
+              </Box>
             </Paper>
           </motion.div>
 
           <Grid container spacing={3}>
             {[
-              { category: 'Активность', icon: <FaBolt />, color: '#FF6B35', actions: [
-                { action: 'Ежедневный вход', xp: 10, icon: '🔐' },
-                { action: 'Первый вход за день', xp: 15, icon: '🌅' },
-                { action: 'Просмотр прогресса', xp: 5, icon: '📊' }
-              ]},
-              { category: 'Профиль', icon: <FaUserShield />, color: '#34C759', actions: [
-                { action: 'Обновление профиля', xp: 25, icon: '👤' },
-                { action: 'Загрузка аватара', xp: 30, icon: '📸' },
-                { action: 'Тест предпочтений', xp: 75, icon: '📋' }
-              ]},
-              { category: 'Льготы', icon: <FaHeart />, color: '#8B0000', actions: [
-                { action: 'Добавление льготы', xp: 50, icon: '🎁' },
-                { action: 'Использование льготы', xp: 25, icon: '✨' },
-                { action: 'Получение рекомендаций', xp: 20, icon: '🎯' }
-              ]},
-              { category: 'Достижения', icon: <GiTrophyCup />, color: '#AF52DE', actions: [
-                { action: 'Повышение уровня', xp: 100, icon: '⬆️' },
-                { action: 'Серия входов (неделя)', xp: 50, icon: '🔥' },
-                { action: 'Разблокировка достижения', xp: 'Бонус', icon: '🏆' }
-              ]}
+              { 
+                category: 'Активность', 
+                icon: <FaBolt />, 
+                color: '#FF6B35', 
+                gradient: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+                actions: [
+                  { action: 'Ежедневный вход', xp: 10, icon: <FaRocket /> },
+                  { action: 'Первый вход за день', xp: 15, icon: <FaFire /> },
+                  { action: 'Просмотр прогресса', xp: 5, icon: <FaBolt /> }
+                ]
+              },
+              { 
+                category: 'Профиль', 
+                icon: <FaUserShield />, 
+                color: '#34C759', 
+                gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)',
+                actions: [
+                  { action: 'Обновление профиля', xp: 25, icon: <FaUserShield /> },
+                  { action: 'Загрузка аватара', xp: 30, icon: <FaUserShield /> },
+                  { action: 'Тест предпочтений', xp: 75, icon: <FaCheckCircle /> }
+                ]
+              },
+              { 
+                category: 'Льготы', 
+                icon: <FaHeart />, 
+                color: '#8B0000', 
+                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                actions: [
+                  { action: 'Добавление льготы', xp: 50, icon: <FaHeart /> },
+                  { action: 'Использование льготы', xp: 25, icon: <FaCheckCircle /> },
+                  { action: 'Получение рекомендаций', xp: 20, icon: <FaEye /> }
+                ]
+              },
+              { 
+                category: 'Достижения', 
+                icon: <GiTrophyCup />, 
+                color: '#AF52DE', 
+                gradient: 'linear-gradient(135deg, #AF52DE 0%, #BF5AF2 100%)',
+                actions: [
+                  { action: 'Повышение уровня', xp: 100, icon: <FaCrown /> },
+                  { action: 'Серия входов (неделя)', xp: 50, icon: <FaFire /> },
+                  { action: 'Разблокировка достижения', xp: 'Бонус', icon: <GiTrophyCup /> }
+                ]
+              }
             ].map((category, _) => (
               <Grid item xs={12} md={6} key={category.category}>
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  variants={itemVariants}
+                  whileHover={{ 
+                    y: -8, 
+                    boxShadow: '0 20px 40px rgba(139,0,0,0.15)',
+                    transition: { duration: 0.2 }
+                  }}
+                >
                   <Paper elevation={0} sx={{
                     ...cardStyle,
-                    border: `2px solid ${category.color}`,
-                    borderRadius: '20px',
+                    borderRadius: '24px',
                     overflow: 'hidden',
-                    position: 'relative'
+                    position: 'relative',
+                    border: `1px solid ${category.color}20`,
+                    '&:hover': {
+                      borderColor: category.color
+                    },
+                    transition: 'all 0.3s ease'
                   }}>
-                    {/* Декоративная полоска */}
+                    {/* Декоративная полоска сверху */}
                     <Box sx={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
                       height: 4,
-                      background: category.color
+                      background: category.gradient
                     }} />
                     
                     {/* Заголовок категории */}
@@ -634,15 +685,19 @@ const Progress: React.FC = () => {
                     }}>
                       <Box sx={{ 
                         color: category.color, 
-                        fontSize: '1.5rem',
+                        fontSize: '1.8rem',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        p: 1,
+                        borderRadius: '12px',
+                        background: `${category.color}15`
                       }}>
                         {category.icon}
                       </Box>
                       <Typography variant="h6" sx={{ 
                         fontWeight: 700, 
-                        color: '#1A1A1A' 
+                        color: '#1A1A1A',
+                        fontSize: '1.2rem'
                       }}>
                         {category.category}
                       </Typography>
@@ -650,21 +705,38 @@ const Progress: React.FC = () => {
 
                     {/* Список действий */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                             {category.actions.map((item, idx) => (
-                          <Box key={idx} sx={{
+                      {category.actions.map((item, idx) => (
+                        <Box key={idx} sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          p: 2,
-                          borderRadius: '12px',
+                          p: 2.5,
+                          borderRadius: '16px',
                           background: '#f8f9fa',
-                          border: '1px solid #eee'
+                          border: '1px solid #eee',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            background: '#f0f0f0',
+                            borderColor: category.color + '40',
+                            transform: 'translateX(4px)'
+                          }
                         }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ fontSize: '1.2rem' }}>{item.icon}</Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                            <Box sx={{ 
+                              color: category.color, 
+                              fontSize: '1.3rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              p: 1,
+                              borderRadius: '8px',
+                              background: `${category.color}15`
+                            }}>
+                              {item.icon}
+                            </Box>
                             <Typography variant="body2" sx={{ 
                               fontWeight: 600,
-                              color: '#555'
+                              color: '#333',
+                              fontSize: '0.95rem'
                             }}>
                               {item.action}
                             </Typography>
@@ -673,11 +745,13 @@ const Progress: React.FC = () => {
                             label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
                             size="small"
                             sx={{
-                              background: category.color,
+                              background: category.gradient,
                               color: '#fff',
                               fontWeight: 700,
                               fontSize: '0.8rem',
-                              height: 28
+                              height: 32,
+                              borderRadius: '16px',
+                              boxShadow: `0 4px 12px ${category.color}30`
                             }}
                           />
                         </Box>
@@ -690,52 +764,98 @@ const Progress: React.FC = () => {
           </Grid>
 
           {/* Информация об уровнях */}
-          <motion.div variants={itemVariants} style={{ marginTop: '2rem' }}>
+          <motion.div variants={itemVariants} style={{ marginTop: '3rem' }}>
             <Paper elevation={0} sx={{
               ...cardStyle,
               background: 'linear-gradient(135deg, #AF52DE 0%, #5856D6 100%)',
-              color: '#fff'
+              color: '#fff',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              <Typography variant="h6" sx={{ 
-                fontWeight: 700, 
-                mb: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <GiCrystalShine /> Уровни и ранги
-              </Typography>
+              {/* Декоративные элементы */}
+              <Box sx={{
+                position: 'absolute',
+                top: -30,
+                right: -30,
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+                zIndex: 0
+              }} />
               
-              <Grid container spacing={2}>
-                {[
-                  { level: 1, name: 'Новичок', xp: '0-100 XP', icon: '🌱' },
-                  { level: 2, name: 'Активист', xp: '101-300 XP', icon: '🚀' },
-                  { level: 3, name: 'Профи', xp: '301-500 XP', icon: '⭐' },
-                  { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: '👑' },
-                  { level: 5, name: 'Мастер', xp: '1001+ XP', icon: '💎' }
-                ].map((rank, _) => (
-                  <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
-                    <Box sx={{
-                      textAlign: 'center',
-                      p: 2,
-                      borderRadius: '16px',
-                      background: progress.level === rank.level ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
-                      border: progress.level === rank.level ? '2px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.1)'
-                    }}>
-                      <Box sx={{ fontSize: '2rem', mb: 1 }}>{rank.icon}</Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                        Уровень {rank.level}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.9rem' }}>
-                        {rank.name}
-                      </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
-                        {rank.xp}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 700, 
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
+                }}>
+                  <GiCrystalShine size={24} /> Уровни и ранги
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {[
+                    { level: 1, name: 'Новичок', xp: '0-100 XP', icon: <FaRocket />, color: '#8E8E93' },
+                    { level: 2, name: 'Активист', xp: '101-300 XP', icon: <FaBolt />, color: '#34C759' },
+                    { level: 3, name: 'Профи', xp: '301-500 XP', icon: <FaStar />, color: '#007AFF' },
+                    { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: <FaCrown />, color: '#AF52DE' },
+                    { level: 5, name: 'Мастер', xp: '1001+ XP', icon: <GiCrystalShine />, color: '#FF9500' }
+                  ].map((rank, _) => (
+                    <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
+                      <Box sx={{
+                        textAlign: 'center',
+                        p: 2.5,
+                        borderRadius: '20px',
+                        background: progress.level === rank.level 
+                          ? 'rgba(255,255,255,0.25)' 
+                          : 'rgba(255,255,255,0.1)',
+                        border: progress.level === rank.level 
+                          ? '2px solid rgba(255,255,255,0.5)' 
+                          : '1px solid rgba(255,255,255,0.2)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          background: 'rgba(255,255,255,0.2)',
+                          transform: 'translateY(-2px)'
+                        }
+                      }}>
+                        <Box sx={{ 
+                          fontSize: '2.2rem', 
+                          mb: 1.5,
+                          color: progress.level === rank.level ? '#fff' : 'rgba(255,255,255,0.8)',
+                          display: 'flex',
+                          justifyContent: 'center'
+                        }}>
+                          {rank.icon}
+                        </Box>
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          mb: 0.5,
+                          fontSize: '0.95rem'
+                        }}>
+                          Уровень {rank.level}
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          opacity: 0.9, 
+                          fontSize: '0.9rem',
+                          fontWeight: 600
+                        }}>
+                          {rank.name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ 
+                          opacity: 0.8, 
+                          fontSize: '0.75rem',
+                          display: 'block',
+                          mt: 0.5
+                        }}>
+                          {rank.xp}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             </Paper>
           </motion.div>
         </motion.div>
