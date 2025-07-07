@@ -6,7 +6,6 @@ import {
   FaFire, 
   FaStar, 
   FaCrown, 
-  FaUserFriends,
   FaEye,
   FaHeart,
   FaRocket,
@@ -605,7 +604,7 @@ const Progress: React.FC = () => {
                 { action: 'Серия входов (неделя)', xp: 50, icon: '🔥' },
                 { action: 'Разблокировка достижения', xp: 'Бонус', icon: '🏆' }
               ]}
-            ].map((category, index) => (
+            ].map((category, _) => (
               <Grid item xs={12} md={6} key={category.category}>
                 <motion.div variants={itemVariants}>
                   <Paper elevation={0} sx={{
@@ -651,8 +650,8 @@ const Progress: React.FC = () => {
 
                     {/* Список действий */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {category.actions.map((item, idx) => (
-                        <Box key={idx} sx={{
+                                             {category.actions.map((item, idx) => (
+                          <Box key={idx} sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
@@ -714,7 +713,7 @@ const Progress: React.FC = () => {
                   { level: 3, name: 'Профи', xp: '301-500 XP', icon: '⭐' },
                   { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: '👑' },
                   { level: 5, name: 'Мастер', xp: '1001+ XP', icon: '💎' }
-                ].map((rank, idx) => (
+                ].map((rank, _) => (
                   <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
                     <Box sx={{
                       textAlign: 'center',
