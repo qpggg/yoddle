@@ -9,7 +9,8 @@ import {
   Newspaper,
   Star
 } from 'lucide-react';
-import { FaRocket } from 'react-icons/fa';
+import { FaRocket, FaBolt, FaStar, FaCrown } from 'react-icons/fa';
+import { GiCrystalShine } from 'react-icons/gi';
 import '../styles/Dashboard.css';
 import { useUser, User } from '../hooks/useUser';
 import { useUserBenefits } from '../hooks/useUserBenefits';
@@ -22,6 +23,20 @@ import SupportModal from '../components/SupportModal';
 import NotificationCenter from '../components/NotificationCenter';
 import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
+
+// Константа с рангами (такая же как в Progress.tsx)
+const RANKS = [
+  { name: 'Новичок', minXP: 0, maxXP: 100, icon: <FaRocket /> },
+  { name: 'Активист', minXP: 101, maxXP: 300, icon: <FaBolt /> },
+  { name: 'Профи', minXP: 301, maxXP: 500, icon: <FaStar /> },
+  { name: 'Эксперт', minXP: 501, maxXP: 1000, icon: <FaCrown /> },
+  { name: 'Мастер', minXP: 1001, maxXP: Infinity, icon: <GiCrystalShine /> }
+];
+
+// Функция для определения ранга по XP
+const getRankByXP = (xp: number) => {
+  return RANKS.find(rank => xp >= rank.minXP && xp <= rank.maxXP) || RANKS[0];
+};
 
 interface LatestNews {
   id: number;
@@ -540,12 +555,7 @@ const Dashboard: React.FC = () => {
                     marginBottom: '0.25rem',
                     color: 'white'
                   }}>
-                    Ваш рейтинг: {userProgress ? (
-                      userProgress.xp >= 1001 ? 'Легенда' :
-                      userProgress.xp >= 501 ? 'Мастер' :
-                      userProgress.xp >= 301 ? 'Эксперт' :
-                      userProgress.xp >= 101 ? 'Активный' : 'Новичок'
-                    ) : 'Загрузка...'}
+                    Ваш рейтинг: {userProgress ? getRankByXP(userProgress.xp).name : 'Загрузка...'}
                   </div>
                   <div style={{ 
                     fontWeight: 400, 
@@ -553,11 +563,7 @@ const Dashboard: React.FC = () => {
                     marginBottom: '0.75rem',
                     opacity: 0.9
                   }}>
-                    {userProgress ? `(${userProgress.xp}/${
-                      userProgress.xp >= 1001 ? '∞' :
-                      userProgress.xp >= 501 ? '1001' :
-                      userProgress.xp >= 301 ? '501' :
-                      userProgress.xp >= 101 ? '301' : '101'
+                    {userProgress ? `(${userProgress.xp}/${getRankByXP(userProgress.xp).maxXP === Infinity ? '∞' : getRankByXP(userProgress.xp).maxXP}
                     } XP)` : '(Загрузка...)'}
                   </div>
                   
@@ -573,11 +579,7 @@ const Dashboard: React.FC = () => {
                       background: 'white', 
                       height: '100%', 
                       width: userProgress ? `${Math.min(
-                        userProgress.xp >= 1001 ? 100 :
-                        userProgress.xp >= 501 ? ((userProgress.xp - 501) / 500) * 100 :
-                        userProgress.xp >= 301 ? ((userProgress.xp - 301) / 200) * 100 :
-                        userProgress.xp >= 101 ? ((userProgress.xp - 101) / 200) * 100 :
-                        (userProgress.xp / 101) * 100
+getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getRankByXP(userProgress.xp).minXP) / (getRankByXP(userProgress.xp).maxXP - getRankByXP(userProgress.xp).minXP)) * 100
                       , 100)}%` : '0%', 
                       borderRadius: '12px',
                       boxShadow: '0 1px 4px rgba(255,255,255,0.3)'
