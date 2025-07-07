@@ -603,8 +603,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Активность', 
                 icon: <FaBolt />, 
-                color: '#FF6B35', 
-                gradient: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+                color: '#8B0000', 
+                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                 actions: [
                   { action: 'Ежедневный вход', xp: 10, icon: <FaRocket /> },
                   { action: 'Первый вход за день', xp: 15, icon: <FaFire /> },
@@ -614,8 +614,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Профиль', 
                 icon: <FaUserShield />, 
-                color: '#34C759', 
-                gradient: 'linear-gradient(135deg, #34C759 0%, #30D158 100%)',
+                color: '#2E8B57', 
+                gradient: 'linear-gradient(135deg, #2E8B57 0%, #32CD32 100%)',
                 actions: [
                   { action: 'Обновление профиля', xp: 25, icon: <FaUserShield /> },
                   { action: 'Загрузка аватара', xp: 30, icon: <FaUserShield /> },
@@ -625,8 +625,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Льготы', 
                 icon: <FaHeart />, 
-                color: '#8B0000', 
-                gradient: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                color: '#FF6347', 
+                gradient: 'linear-gradient(135deg, #FF6347 0%, #FF4500 100%)',
                 actions: [
                   { action: 'Добавление льготы', xp: 50, icon: <FaHeart /> },
                   { action: 'Использование льготы', xp: 25, icon: <FaCheckCircle /> },
@@ -636,8 +636,8 @@ const Progress: React.FC = () => {
               { 
                 category: 'Достижения', 
                 icon: <GiTrophyCup />, 
-                color: '#AF52DE', 
-                gradient: 'linear-gradient(135deg, #AF52DE 0%, #BF5AF2 100%)',
+                color: '#9370DB', 
+                gradient: 'linear-gradient(135deg, #9370DB 0%, #BA55D3 100%)',
                 actions: [
                   { action: 'Повышение уровня', xp: 100, icon: <FaCrown /> },
                   { action: 'Серия входов (неделя)', xp: 50, icon: <FaFire /> },
@@ -650,8 +650,8 @@ const Progress: React.FC = () => {
                   variants={itemVariants}
                   whileHover={{ 
                     y: -8, 
-                    boxShadow: '0 20px 40px rgba(139,0,0,0.15)',
-                    transition: { duration: 0.2 }
+                    boxShadow: `0 20px 40px ${category.color}25`,
+                    transition: { duration: 0.3 }
                   }}
                 >
                   <Paper elevation={0} sx={{
@@ -659,9 +659,11 @@ const Progress: React.FC = () => {
                     borderRadius: '24px',
                     overflow: 'hidden',
                     position: 'relative',
-                    border: `1px solid ${category.color}20`,
+                    border: `2px solid ${category.color}20`,
+                    background: '#fff',
                     '&:hover': {
-                      borderColor: category.color
+                      borderColor: `${category.color}80`,
+                      background: `${category.color}05`
                     },
                     transition: 'all 0.3s ease'
                   }}>
@@ -671,87 +673,98 @@ const Progress: React.FC = () => {
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: 4,
-                      background: category.gradient
+                      height: 5,
+                      background: category.gradient,
+                      borderRadius: '24px 24px 0 0'
                     }} />
                     
                     {/* Заголовок категории */}
                     <Box sx={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: 2, 
+                      gap: 2.5, 
                       mb: 3,
-                      pt: 1
+                      pt: 1.5
                     }}>
                       <Box sx={{ 
                         color: category.color, 
-                        fontSize: '1.8rem',
+                        fontSize: '2rem',
                         display: 'flex',
                         alignItems: 'center',
-                        p: 1,
-                        borderRadius: '12px',
-                        background: `${category.color}15`
+                        p: 1.5,
+                        borderRadius: '16px',
+                        background: `${category.color}15`,
+                        border: `1px solid ${category.color}20`
                       }}>
                         {category.icon}
                       </Box>
                       <Typography variant="h6" sx={{ 
-                        fontWeight: 700, 
+                        fontWeight: 800, 
                         color: '#1A1A1A',
-                        fontSize: '1.2rem'
+                        fontSize: '1.3rem',
+                        letterSpacing: '-0.5px'
                       }}>
                         {category.category}
                       </Typography>
                     </Box>
 
                     {/* Список действий */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                       {category.actions.map((item, idx) => (
                         <Box key={idx} sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          p: 2.5,
-                          borderRadius: '16px',
+                          p: 3,
+                          borderRadius: '18px',
                           background: '#f8f9fa',
-                          border: '1px solid #eee',
-                          transition: 'all 0.2s ease',
+                          border: `1px solid ${category.color}15`,
+                          transition: 'all 0.3s ease',
                           '&:hover': {
-                            background: '#f0f0f0',
-                            borderColor: category.color + '40',
-                            transform: 'translateX(4px)'
+                            background: `${category.color}08`,
+                            borderColor: `${category.color}40`,
+                            transform: 'translateX(6px)',
+                            boxShadow: `0 4px 12px ${category.color}20`
                           }
                         }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <Box sx={{ 
                               color: category.color, 
-                              fontSize: '1.3rem',
+                              fontSize: '1.4rem',
                               display: 'flex',
                               alignItems: 'center',
-                              p: 1,
-                              borderRadius: '8px',
-                              background: `${category.color}15`
+                              p: 1.2,
+                              borderRadius: '12px',
+                              background: `${category.color}15`,
+                              border: `1px solid ${category.color}20`
                             }}>
                               {item.icon}
                             </Box>
-                            <Typography variant="body2" sx={{ 
+                            <Typography variant="body1" sx={{ 
                               fontWeight: 600,
-                              color: '#333',
-                              fontSize: '0.95rem'
+                              color: '#2D3748',
+                              fontSize: '1rem',
+                              letterSpacing: '-0.2px'
                             }}>
                               {item.action}
                             </Typography>
                           </Box>
                           <Chip 
                             label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
-                            size="small"
+                            size="medium"
                             sx={{
                               background: category.gradient,
                               color: '#fff',
-                              fontWeight: 700,
-                              fontSize: '0.8rem',
-                              height: 32,
-                              borderRadius: '16px',
-                              boxShadow: `0 4px 12px ${category.color}30`
+                              fontWeight: 800,
+                              fontSize: '0.9rem',
+                              height: 36,
+                              borderRadius: '18px',
+                              boxShadow: `0 4px 16px ${category.color}40`,
+                              border: '1px solid rgba(255,255,255,0.2)',
+                              minWidth: 80,
+                              '& .MuiChip-label': {
+                                px: 2
+                              }
                             }}
                           />
                         </Box>
@@ -767,7 +780,7 @@ const Progress: React.FC = () => {
           <motion.div variants={itemVariants} style={{ marginTop: '3rem' }}>
             <Paper elevation={0} sx={{
               ...cardStyle,
-              background: 'linear-gradient(135deg, #AF52DE 0%, #5856D6 100%)',
+              background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
               color: '#fff',
               position: 'relative',
               overflow: 'hidden'
@@ -781,6 +794,16 @@ const Progress: React.FC = () => {
                 height: 120,
                 borderRadius: '50%',
                 background: 'rgba(255,255,255,0.1)',
+                zIndex: 0
+              }} />
+              <Box sx={{
+                position: 'absolute',
+                bottom: -50,
+                left: -50,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.05)',
                 zIndex: 0
               }} />
               
@@ -798,10 +821,10 @@ const Progress: React.FC = () => {
                 <Grid container spacing={2}>
                   {[
                     { level: 1, name: 'Новичок', xp: '0-100 XP', icon: <FaRocket />, color: '#8E8E93' },
-                    { level: 2, name: 'Активист', xp: '101-300 XP', icon: <FaBolt />, color: '#34C759' },
-                    { level: 3, name: 'Профи', xp: '301-500 XP', icon: <FaStar />, color: '#007AFF' },
-                    { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: <FaCrown />, color: '#AF52DE' },
-                    { level: 5, name: 'Мастер', xp: '1001+ XP', icon: <GiCrystalShine />, color: '#FF9500' }
+                    { level: 2, name: 'Активист', xp: '101-300 XP', icon: <FaBolt />, color: '#2E8B57' },
+                    { level: 3, name: 'Профи', xp: '301-500 XP', icon: <FaStar />, color: '#4682B4' },
+                    { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: <FaCrown />, color: '#9370DB' },
+                    { level: 5, name: 'Мастер', xp: '1001+ XP', icon: <GiCrystalShine />, color: '#FFD700' }
                   ].map((rank, _) => (
                     <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
                       <Box sx={{
@@ -815,9 +838,11 @@ const Progress: React.FC = () => {
                           ? '2px solid rgba(255,255,255,0.5)' 
                           : '1px solid rgba(255,255,255,0.2)',
                         transition: 'all 0.3s ease',
+                        backdropFilter: 'blur(10px)',
                         '&:hover': {
                           background: 'rgba(255,255,255,0.2)',
-                          transform: 'translateY(-2px)'
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
                         }
                       }}>
                         <Box sx={{ 
@@ -825,21 +850,24 @@ const Progress: React.FC = () => {
                           mb: 1.5,
                           color: progress.level === rank.level ? '#fff' : 'rgba(255,255,255,0.8)',
                           display: 'flex',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          filter: progress.level === rank.level ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' : 'none'
                         }}>
                           {rank.icon}
                         </Box>
                         <Typography variant="body2" sx={{ 
                           fontWeight: 700, 
                           mb: 0.5,
-                          fontSize: '0.95rem'
+                          fontSize: '0.95rem',
+                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
                         }}>
                           Уровень {rank.level}
                         </Typography>
                         <Typography variant="body2" sx={{ 
                           opacity: 0.9, 
                           fontSize: '0.9rem',
-                          fontWeight: 600
+                          fontWeight: 600,
+                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
                         }}>
                           {rank.name}
                         </Typography>
@@ -847,7 +875,8 @@ const Progress: React.FC = () => {
                           opacity: 0.8, 
                           fontSize: '0.75rem',
                           display: 'block',
-                          mt: 0.5
+                          mt: 0.5,
+                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
                         }}>
                           {rank.xp}
                         </Typography>
