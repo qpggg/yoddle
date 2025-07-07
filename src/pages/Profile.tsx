@@ -7,12 +7,9 @@ import {
   FaUser, 
   FaEnvelope, 
   FaPhone, 
-  FaBriefcase, 
   FaGift, 
   FaSignOutAlt,
   FaEdit,
-  FaMapMarkerAlt,
-  FaCalendarAlt,
   FaHeart
 } from 'react-icons/fa';
 
