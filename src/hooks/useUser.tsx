@@ -24,7 +24,33 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Попытка восстановить пользователя из localStorage
     const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
+    if (stored) {
+      const storedUser = JSON.parse(stored);
+      
+      // 🔄 ПРОВЕРКА И ОБНОВЛЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ
+      // Если в localStorage нет email (старая структура данных), обновляем данные из API
+      if (storedUser.id && (!storedUser.email || storedUser.email === undefined)) {
+        console.log('🔄 Обнаружены устаревшие данные пользователя, обновляем из API...');
+        
+        // Загружаем актуальные данные пользователя
+        fetch(`/api/profile?id=${storedUser.id}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.user) {
+              console.log('✅ Данные пользователя обновлены:', data.user);
+              setUser(data.user);
+            } else {
+              setUser(storedUser); // Используем старые данные если API недоступен
+            }
+          })
+          .catch(error => {
+            console.error('❌ Ошибка загрузки актуальных данных пользователя:', error);
+            setUser(storedUser); // Используем старые данные при ошибке
+          });
+      } else {
+        setUser(storedUser);
+      }
+    }
   }, []);
 
   useEffect(() => {

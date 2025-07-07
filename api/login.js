@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   try {
     await client.connect();
     const result = await client.query(
-      'SELECT * FROM enter WHERE login = $1 AND password = $2',
+      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE login = $1 AND password = $2',
       [login, password]
     );
     await client.end();
