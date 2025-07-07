@@ -10,8 +10,28 @@ import {
   FaGift, 
   FaSignOutAlt,
   FaEdit,
-  FaHeart
+  FaHeart,
+  FaHeartbeat, 
+  FaFutbol, 
+  FaGraduationCap, 
+  FaBook, 
+  FaLeaf, 
+  FaUsers, 
+  FaHandHoldingHeart
 } from 'react-icons/fa';
+import { GiBrain } from "react-icons/gi";
+
+// Иконки для категорий льгот
+const categoryIcons: { [key: string]: React.ReactElement } = {
+  'Здоровье': <FaHeartbeat size={20} style={{ color: '#8B0000' }} />,
+  'Спорт': <FaFutbol size={20} style={{ color: '#8B0000' }} />,
+  'Обучение': <FaGraduationCap size={20} style={{ color: '#8B0000' }} />,
+  'Психология': <GiBrain size={20} style={{ color: '#8B0000' }} />,
+  'Социальная поддержка': <FaHandHoldingHeart size={20} style={{ color: '#8B0000' }} />,
+  'Отдых': <FaLeaf size={20} style={{ color: '#8B0000' }} />,
+  'Транспорт': <FaUsers size={20} style={{ color: '#8B0000' }} />,
+  'Default': <FaBook size={20} style={{ color: '#8B0000' }} />
+};
 
 // Типы
 interface UserProgress {
@@ -265,7 +285,7 @@ const Profile: React.FC = () => {
                       fontSize: '0.9rem',
                       fontWeight: 600
                     }}>
-                      🔥 {userProgress.login_streak} дней
+                      {userProgress.login_streak} дней подряд
                     </div>
                   </div>
                 )}
@@ -410,7 +430,7 @@ const Profile: React.FC = () => {
                 <h3 style={{
                   fontSize: '1.8rem',
                   fontWeight: 800,
-                  color: '#8B0000',
+                  color: '#1A1A1A',
                   margin: 0,
                   fontFamily: 'Inter, sans-serif'
                 }}>
@@ -458,18 +478,26 @@ const Profile: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    <h4 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: 700,
-                      color: '#8B0000',
-                      margin: '0 0 0.5rem 0'
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      marginBottom: '0.75rem'
                     }}>
-                      {benefit.name}
-                    </h4>
+                      {categoryIcons[benefit.category] || categoryIcons['Default']}
+                      <h4 style={{
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        color: '#1A1A1A',
+                        margin: 0
+                      }}>
+                        {benefit.name}
+                      </h4>
+                    </div>
                     <p style={{
                       fontSize: '0.9rem',
                       color: '#666',
-                      margin: '0 0 0.5rem 0',
+                      margin: '0 0 0.75rem 0',
                       lineHeight: 1.5
                     }}>
                       {benefit.description}
@@ -497,7 +525,7 @@ const Profile: React.FC = () => {
                 color: '#666'
               }}>
                 <FaGift size={48} style={{ color: '#ddd', marginBottom: '1rem' }} />
-                <h4 style={{ margin: '0 0 0.5rem 0', color: '#8B0000' }}>Нет льгот</h4>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1A1A1A' }}>Нет льгот</h4>
                 <p style={{ margin: 0 }}>
                   Перейдите на страницу "Мои льготы" чтобы добавить льготы
                 </p>

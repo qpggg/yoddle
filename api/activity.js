@@ -31,7 +31,10 @@ async function checkAndUnlockAchievements(client, userId, action) {
     
     // Проверяем каждое достижение
     for (const achievement of allAchievements.rows) {
-      if (unlockedIds.includes(achievement.code)) continue; // Уже разблокировано
+      if (unlockedIds.includes(achievement.code)) {
+        console.log(`🔒 Достижение ${achievement.code} уже разблокировано для пользователя ${userId}`);
+        continue; // Уже разблокировано
+      }
       
       let shouldUnlock = false;
       
@@ -68,16 +71,17 @@ async function checkAndUnlockAchievements(client, userId, action) {
           if (achievement.code === 'profile_complete' && action === 'profile_update') {
             shouldUnlock = currentProgress.profile_completion >= achievement.requirement_value;
           } else if (achievement.code === 'night_owl' && action === 'late_login') {
-            shouldUnlock = true; // Достижение разблокируется при входе после 22:00
+            shouldUnlock = true; // Достижение за поздний вход
           } else if (achievement.code === 'early_bird' && action === 'early_login') {
-            shouldUnlock = true; // Достижение разблокируется при входе до 9:00
+            shouldUnlock = true; // Достижение за ранний вход
           } else if (achievement.code === 'weekend_warrior' && action === 'weekend_activity') {
-            shouldUnlock = true; // Достижение разблокируется за активность в выходные
+            shouldUnlock = true; // Достижение за активность в выходные
           }
           break;
       }
       
       if (shouldUnlock) {
+        console.log(`🏆 Готово к разблокировке: ${achievement.code} для пользователя ${userId} (действие: ${action})`);
         achievementsToUnlock.push(achievement.code);
       }
     }

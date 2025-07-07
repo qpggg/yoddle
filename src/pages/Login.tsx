@@ -9,12 +9,16 @@ const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
   const navigate = useNavigate();
   const { setUser } = useUser();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Предотвращаем двойное нажатие
+    
     setError('');
+    setIsLoading(true);
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
@@ -24,6 +28,7 @@ const Login: React.FC = () => {
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || 'Ошибка входа');
+        setIsLoading(false);
         return;
       }
       const data = await res.json();
@@ -35,24 +40,19 @@ const Login: React.FC = () => {
         const hours = now.getHours();
         const isWeekend = now.getDay() === 0 || now.getDay() === 6; // 0 = Воскресенье, 6 = Суббота
         
-        // Логируем основной вход
-        const loginResponse = await fetch('/api/activity', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: Number(data.user.id),
-            action: 'login',
-            xp_earned: 10,
-            description: `Пользователь ${data.user.name || data.user.email} вошел в систему`
-          })
-        });
+        // Создаем массив всех действий для одного запроса
+        const allActions = [];
         
-        // Проверяем специальные условия для достижений
-        const specialActions = [];
+        // Основной вход
+        allActions.push({
+          action: 'login',
+          xp_earned: 10,
+          description: `Пользователь ${data.user.name || data.user.email} вошел в систему`
+        });
         
         // 🦉 Сова - вход после 22:00
         if (hours >= 22 || hours < 6) {
-          specialActions.push({
+          allActions.push({
             action: 'late_login',
             xp_earned: 30,
             description: `🦉 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Сова"`
@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         
         // 🐦 Ранняя пташка - вход до 9:00
         if (hours >= 6 && hours < 9) {
-          specialActions.push({
+          allActions.push({
             action: 'early_login', 
             xp_earned: 30,
             description: `🐦 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Ранняя пташка"`
@@ -70,30 +70,40 @@ const Login: React.FC = () => {
         
         // ⚔️ Воин выходных - активность в выходные
         if (isWeekend) {
-          specialActions.push({
+          allActions.push({
             action: 'weekend_activity',
             xp_earned: 40,
             description: `⚔️ Активность в выходной день - заработано достижение "Воин выходных"`
           });
         }
         
-        // Логируем все специальные действия
-        for (const specialAction of specialActions) {
+        // Логируем все действия последовательно с небольшой задержкой
+        let allSuccess = true;
+        for (let i = 0; i < allActions.length; i++) {
           try {
-            const specialResponse = await fetch('/api/activity', {
+            const actionResponse = await fetch('/api/activity', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 user_id: Number(data.user.id),
-                ...specialAction
+                ...allActions[i]
               })
             });
             
-            if (specialResponse.ok) {
-              console.log(`✅ Специальное достижение: ${specialAction.action}`);
+            if (actionResponse.ok) {
+              console.log(`✅ Действие ${allActions[i].action} успешно записано`);
+            } else {
+              allSuccess = false;
+              console.error(`❌ Ошибка записи ${allActions[i].action}`);
             }
-          } catch (specialError) {
-            console.error(`❌ Ошибка логирования ${specialAction.action}:`, specialError);
+            
+            // Небольшая задержка между запросами чтобы избежать race conditions
+            if (i < allActions.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } catch (actionError) {
+            allSuccess = false;
+            console.error(`❌ Ошибка при записи ${allActions[i].action}:`, actionError);
           }
         }
         
@@ -105,12 +115,10 @@ const Login: React.FC = () => {
             const progressData = await progressResponse.json();
             const currentStreak = progressData.progress?.login_streak || 0;
             
-            // Проверяем, был ли вход вчера (для продления streak)
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            const lastLoginResult = await fetch(`/api/activity?user_id=${data.user.id}&action=login&date=${yesterday.toISOString().split('T')[0]}`);
-            const wasActiveYesterday = lastLoginResult.ok;
+            // Проверяем, был ли вход вчера через прогресс данные
+            // Пока используем простую логику - каждый вход увеличивает streak на 1
+            // В будущем можно добавить более сложную логику проверки дат
+            const wasActiveYesterday = true; // Упрощенная логика
             
             // Обновляем streak
             const newStreak = wasActiveYesterday ? currentStreak + 1 : 1;
@@ -147,7 +155,7 @@ const Login: React.FC = () => {
           console.error('❌ Ошибка обновления streak:', streakError);
         }
         
-        if (loginResponse.ok) {
+        if (allSuccess) {
           console.log('✅ Логирование входа успешно');
         } else {
           console.error('❌ Ошибка логирования входа');
@@ -160,6 +168,8 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err) {
       setError('Ошибка соединения с сервером');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -263,16 +273,21 @@ const Login: React.FC = () => {
                   variant="contained"
                   size="large"
                   type="submit"
+                  disabled={isLoading}
                   sx={{
                     backgroundColor: '#8B0000',
                     color: '#fff',
                     py: 1.5,
                     '&:hover': {
                       backgroundColor: '#6B0000'
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#ccc',
+                      color: '#888'
                     }
                   }}
                 >
-                  Войти
+                  {isLoading ? 'Вход...' : 'Войти'}
                 </Button>
               </Box>
             </Box>
