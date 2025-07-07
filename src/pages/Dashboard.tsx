@@ -560,11 +560,22 @@ const Dashboard: React.FC = () => {
                   <div style={{ 
                     fontWeight: 400, 
                     fontSize: '0.9rem', 
-                    marginBottom: '0.75rem',
+                    marginBottom: '0.5rem',
                     opacity: 0.9
                   }}>
-                    {userProgress ? `(${userProgress.xp}/${getRankByXP(userProgress.xp).maxXP === Infinity ? '∞' : getRankByXP(userProgress.xp).maxXP}
-                    } XP)` : '(Загрузка...)'}
+                    {userProgress ? `(${userProgress.xp}/${getRankByXP(userProgress.xp).maxXP === Infinity ? '∞' : getRankByXP(userProgress.xp).maxXP} XP)` : '(Загрузка...)'}
+                  </div>
+                  <div style={{ 
+                    fontWeight: 500, 
+                    fontSize: '0.85rem', 
+                    marginBottom: '0.75rem',
+                    opacity: 0.8
+                  }}>
+                    {userProgress ? (
+                      getRankByXP(userProgress.xp).maxXP === Infinity 
+                        ? '🎉 Максимальный ранг!' 
+                        : `${getRankByXP(userProgress.xp).maxXP - userProgress.xp} XP до следующего уровня`
+                    ) : ''}
                   </div>
                   
                   <div style={{ 
