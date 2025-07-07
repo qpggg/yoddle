@@ -119,11 +119,11 @@ const getRarityFromTier = (tier: number) => {
 };
 
 const RANKS = [
-  { name: 'Новичок', minXP: 0, maxXP: 100, icon: '🌱' },
-  { name: 'Активист', minXP: 101, maxXP: 300, icon: '🚀' },
-  { name: 'Профи', minXP: 301, maxXP: 500, icon: '⭐' },
-  { name: 'Эксперт', minXP: 501, maxXP: 1000, icon: '👑' },
-  { name: 'Мастер', minXP: 1001, maxXP: Infinity, icon: '💎' }
+  { name: 'Новичок', minXP: 0, maxXP: 100, icon: <FaRocket /> },
+  { name: 'Активист', minXP: 101, maxXP: 300, icon: <FaBolt /> },
+  { name: 'Профи', minXP: 301, maxXP: 500, icon: <FaStar /> },
+  { name: 'Эксперт', minXP: 501, maxXP: 1000, icon: <FaCrown /> },
+  { name: 'Мастер', minXP: 1001, maxXP: Infinity, icon: <GiCrystalShine /> }
 ];
 
 const getRarityConfig = (rarity: string) => {
@@ -557,13 +557,8 @@ const Progress: React.FC = () => {
           </Grid>
         </motion.div>
 
-        {/* СИСТЕМА ОЧКОВ - УПРОЩЕННЫЕ АНИМАЦИИ */}
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          transition={{ duration: 0.5 }}
-          style={{ marginBottom: '4rem' }}
-        >
+        {/* СИСТЕМА ОЧКОВ - МИНИМАЛЬНЫЕ АНИМАЦИИ */}
+        <div style={{ marginBottom: '4rem' }}>
           <Typography variant="h4" sx={{ 
             fontWeight: 800, 
             color: '#1A1A1A', 
@@ -581,13 +576,13 @@ const Progress: React.FC = () => {
             position: 'relative',
             overflow: 'hidden'
           }}>
-            {/* Упрощенные декоративные элементы */}
+            {/* Минимальные декоративные элементы */}
             <Box sx={{
               position: 'absolute',
-              top: -30,
-              right: -30,
-              width: 100,
-              height: 100,
+              top: -20,
+              right: -20,
+              width: 60,
+              height: 60,
               borderRadius: '50%',
               background: 'rgba(255,255,255,0.1)',
               zIndex: 0
@@ -676,7 +671,7 @@ const Progress: React.FC = () => {
                     borderColor: `${category.color}80`,
                     background: `${category.color}05`
                   },
-                  transition: 'all 0.2s ease'
+                  transition: 'border-color 0.2s ease'
                 }}>
                   {/* Декоративная полоска сверху */}
                   <Box sx={{
@@ -738,12 +733,10 @@ const Progress: React.FC = () => {
                         borderRadius: '18px',
                         background: '#f8f9fa',
                         border: `1px solid ${category.color}15`,
-                        transition: 'all 0.2s ease',
+                        transition: 'background-color 0.2s ease',
                         '&:hover': {
                           background: `${category.color}08`,
-                          borderColor: `${category.color}40`,
-                          transform: 'translateX(3px)',
-                          boxShadow: `0 2px 8px ${category.color}20`
+                          borderColor: `${category.color}40`
                         }
                       }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -778,7 +771,7 @@ const Progress: React.FC = () => {
                             fontSize: '0.9rem',
                             height: 36,
                             borderRadius: '18px',
-                            boxShadow: `0 4px 16px ${category.color}40`,
+                            boxShadow: `0 2px 8px ${category.color}30`,
                             border: '1px solid rgba(255,255,255,0.2)',
                             minWidth: 80,
                             '& .MuiChip-label': {
@@ -793,118 +786,118 @@ const Progress: React.FC = () => {
               </Grid>
             ))}
           </Grid>
+        </div>
 
-          {/* Информация об уровнях */}
-          <motion.div variants={itemVariants} style={{ marginTop: '3rem' }}>
-            <Paper elevation={0} sx={{
-              ...cardStyle,
-              background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
-              color: '#fff',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Декоративные элементы */}
-              <Box sx={{
-                position: 'absolute',
-                top: -30,
-                right: -30,
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.1)',
-                zIndex: 0
-              }} />
-              <Box sx={{
-                position: 'absolute',
-                bottom: -50,
-                left: -50,
-                width: 150,
-                height: 150,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.05)',
-                zIndex: 0
-              }} />
+        {/* Информация об уровнях */}
+        <motion.div variants={itemVariants} style={{ marginTop: '3rem' }}>
+          <Paper elevation={0} sx={{
+            ...cardStyle,
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            color: '#fff',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Декоративные элементы */}
+            <Box sx={{
+              position: 'absolute',
+              top: -30,
+              right: -30,
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              zIndex: 0
+            }} />
+            <Box sx={{
+              position: 'absolute',
+              bottom: -50,
+              left: -50,
+              width: 150,
+              height: 150,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.05)',
+              zIndex: 0
+            }} />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <GiCrystalShine size={24} /> Уровни и ранги
+              </Typography>
               
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 700, 
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <GiCrystalShine size={24} /> Уровни и ранги
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  {[
-                    { level: 1, name: 'Новичок', xp: '0-100 XP', icon: <FaRocket />, color: '#8E8E93' },
-                    { level: 2, name: 'Активист', xp: '101-300 XP', icon: <FaBolt />, color: '#2E8B57' },
-                    { level: 3, name: 'Профи', xp: '301-500 XP', icon: <FaStar />, color: '#4682B4' },
-                    { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: <FaCrown />, color: '#9370DB' },
-                    { level: 5, name: 'Мастер', xp: '1001+ XP', icon: <GiCrystalShine />, color: '#FFD700' }
-                  ].map((rank, _) => (
-                    <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
-                      <Box sx={{
-                        textAlign: 'center',
-                        p: 2.5,
-                        borderRadius: '20px',
-                        background: progress.level === rank.level 
-                          ? 'rgba(255,255,255,0.25)' 
-                          : 'rgba(255,255,255,0.1)',
-                        border: progress.level === rank.level 
-                          ? '2px solid rgba(255,255,255,0.5)' 
-                          : '1px solid rgba(255,255,255,0.2)',
-                        transition: 'all 0.3s ease',
-                        backdropFilter: 'blur(10px)',
-                        '&:hover': {
-                          background: 'rgba(255,255,255,0.2)',
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
-                        }
+              <Grid container spacing={2}>
+                {[
+                  { level: 1, name: 'Новичок', xp: '0-100 XP', icon: <FaRocket />, color: '#8E8E93' },
+                  { level: 2, name: 'Активист', xp: '101-300 XP', icon: <FaBolt />, color: '#2E8B57' },
+                  { level: 3, name: 'Профи', xp: '301-500 XP', icon: <FaStar />, color: '#4682B4' },
+                  { level: 4, name: 'Эксперт', xp: '501-1000 XP', icon: <FaCrown />, color: '#9370DB' },
+                  { level: 5, name: 'Мастер', xp: '1001+ XP', icon: <GiCrystalShine />, color: '#FFD700' }
+                ].map((rank, _) => (
+                  <Grid item xs={12} sm={6} md={2.4} key={rank.level}>
+                    <Box sx={{
+                      textAlign: 'center',
+                      p: 2.5,
+                      borderRadius: '20px',
+                      background: progress.level === rank.level 
+                        ? 'rgba(255,255,255,0.25)' 
+                        : 'rgba(255,255,255,0.1)',
+                      border: progress.level === rank.level 
+                        ? '2px solid rgba(255,255,255,0.5)' 
+                        : '1px solid rgba(255,255,255,0.2)',
+                      transition: 'all 0.3s ease',
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        background: 'rgba(255,255,255,0.2)',
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+                      }
+                    }}>
+                      <Box sx={{ 
+                        fontSize: '2.2rem', 
+                        mb: 1.5,
+                        color: progress.level === rank.level ? '#fff' : 'rgba(255,255,255,0.8)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        filter: progress.level === rank.level ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' : 'none'
                       }}>
-                        <Box sx={{ 
-                          fontSize: '2.2rem', 
-                          mb: 1.5,
-                          color: progress.level === rank.level ? '#fff' : 'rgba(255,255,255,0.8)',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          filter: progress.level === rank.level ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' : 'none'
-                        }}>
-                          {rank.icon}
-                        </Box>
-                        <Typography variant="body2" sx={{ 
-                          fontWeight: 700, 
-                          mb: 0.5,
-                          fontSize: '0.95rem',
-                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
-                        }}>
-                          Уровень {rank.level}
-                        </Typography>
-                        <Typography variant="body2" sx={{ 
-                          opacity: 0.9, 
-                          fontSize: '0.9rem',
-                          fontWeight: 600,
-                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
-                        }}>
-                          {rank.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ 
-                          opacity: 0.8, 
-                          fontSize: '0.75rem',
-                          display: 'block',
-                          mt: 0.5,
-                          textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
-                        }}>
-                          {rank.xp}
-                        </Typography>
+                        {rank.icon}
                       </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            </Paper>
-          </motion.div>
+                      <Typography variant="body2" sx={{ 
+                        fontWeight: 700, 
+                        mb: 0.5,
+                        fontSize: '0.95rem',
+                        textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                      }}>
+                        Уровень {rank.level}
+                      </Typography>
+                      <Typography variant="body2" sx={{ 
+                        opacity: 0.9, 
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
+                      }}>
+                        {rank.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        opacity: 0.8, 
+                        fontSize: '0.75rem',
+                        display: 'block',
+                        mt: 0.5,
+                        textShadow: progress.level === rank.level ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
+                      }}>
+                        {rank.xp}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Paper>
         </motion.div>
 
         {/* ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ */}

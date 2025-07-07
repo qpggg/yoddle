@@ -88,13 +88,29 @@ async function checkAndUnlockAchievements(client, userId, action) {
         const xpReward = rewardResult.rows[0]?.xp_reward || 0;
         
         if (xpReward > 0) {
-          // Добавляем XP за достижение
-          await client.query(
-            'UPDATE user_progress SET xp = xp + $2 WHERE user_id = $1',
-            [userId, xpReward]
+          // Получаем текущий XP для пересчета уровня
+          const currentProgressResult = await client.query(
+            'SELECT xp FROM user_progress WHERE user_id = $1',
+            [userId]
           );
           
-          console.log(`🏆 Достижение ${achievementId} разблокировано для пользователя ${userId} (+${xpReward} XP)`);
+          const currentXP = currentProgressResult.rows[0]?.xp || 0;
+          const newXP = currentXP + xpReward;
+          
+          // Рассчитываем новый уровень
+          let newLevel = 1;
+          if (newXP >= 1001) newLevel = 5;
+          else if (newXP >= 501) newLevel = 4;
+          else if (newXP >= 301) newLevel = 3;
+          else if (newXP >= 101) newLevel = 2;
+          
+          // Обновляем XP и уровень за достижение
+          await client.query(
+            'UPDATE user_progress SET xp = $2, level = $3 WHERE user_id = $1',
+            [userId, newXP, newLevel]
+          );
+          
+          console.log(`🏆 Достижение ${achievementId} разблокировано для пользователя ${userId} (+${xpReward} XP) - Новый XP: ${newXP}, Уровень: ${newLevel}`);
         }
       }
     }
