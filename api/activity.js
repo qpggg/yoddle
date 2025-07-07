@@ -48,11 +48,18 @@ async function checkAndUnlockAchievements(client, userId, action) {
               [userId]
             );
             shouldUnlock = parseInt(benefitsCount.rows[0].count) >= achievement.requirement_value;
+          } else if (achievement.requirement_action === 'login' && action === 'login') {
+            // Подсчитываем количество входов пользователя
+            const loginCount = await client.query(
+              'SELECT COUNT(*) FROM activity_log WHERE user_id = $1 AND action = $2',
+              [userId, 'login']
+            );
+            shouldUnlock = parseInt(loginCount.rows[0].count) >= achievement.requirement_value;
           }
           break;
           
         case 'streak':
-          if (achievement.requirement_action === 'login') {
+          if (achievement.requirement_action === 'login' && (action === 'login' || action === 'streak_update')) {
             shouldUnlock = currentProgress.login_streak >= achievement.requirement_value;
           }
           break;

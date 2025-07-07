@@ -97,6 +97,56 @@ const Login: React.FC = () => {
           }
         }
         
+        // 🔥 ОБНОВЛЯЕМ LOGIN_STREAK (серию входов)
+        try {
+          // Получаем текущий прогресс для определения streak
+          const progressResponse = await fetch(`/api/progress?user_id=${data.user.id}`);
+          if (progressResponse.ok) {
+            const progressData = await progressResponse.json();
+            const currentStreak = progressData.progress?.login_streak || 0;
+            
+            // Проверяем, был ли вход вчера (для продления streak)
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            const lastLoginResult = await fetch(`/api/activity?user_id=${data.user.id}&action=login&date=${yesterday.toISOString().split('T')[0]}`);
+            const wasActiveYesterday = lastLoginResult.ok;
+            
+            // Обновляем streak
+            const newStreak = wasActiveYesterday ? currentStreak + 1 : 1;
+            
+            const streakUpdateResponse = await fetch('/api/progress', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: Number(data.user.id),
+                field: 'login_streak',
+                value: newStreak
+              })
+            });
+            
+            if (streakUpdateResponse.ok) {
+              console.log(`🔥 Login streak обновлен: ${newStreak} дней`);
+              
+              // Проверяем достижения за streak отдельным запросом
+              if (newStreak >= 3) {
+                await fetch('/api/activity', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: Number(data.user.id),
+                    action: 'streak_update',
+                    xp_earned: 0,
+                    description: `Серия входов: ${newStreak} дней подряд`
+                  })
+                });
+              }
+            }
+          }
+        } catch (streakError) {
+          console.error('❌ Ошибка обновления streak:', streakError);
+        }
+        
         if (loginResponse.ok) {
           console.log('✅ Логирование входа успешно');
         } else {

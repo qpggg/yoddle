@@ -129,8 +129,37 @@ function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProp
       const updated = await res.json();
       setUser(updated.user);
       
+      // 📊 РАСЧЕТ ПРОЦЕНТА ЗАПОЛНЕНИЯ ПРОФИЛЯ
+      const profile = updated.user;
+      let completionPercent = 0;
+      
+      // Проверяем заполненность полей (по 20% за каждое)
+      if (profile.name && profile.name.trim()) completionPercent += 20;
+      if (profile.email && profile.email.trim()) completionPercent += 20;
+      if (profile.phone && profile.phone.trim()) completionPercent += 20;
+      if (profile.position && profile.position.trim()) completionPercent += 20;
+      if (profile.avatar) completionPercent += 20;
+      
+      console.log(`📊 Процент заполнения профиля: ${completionPercent}%`);
+      
+      // Обновляем процент в базе данных
+      try {
+        await fetch('/api/progress', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: Number(profile.id),
+            field: 'profile_completion',
+            value: completionPercent
+          })
+        });
+        console.log('✅ Profile completion обновлен в БД');
+      } catch (updateError) {
+        console.error('❌ Ошибка обновления profile_completion:', updateError);
+      }
+      
       // 🎉 АВТОЛОГИРОВАНИЕ ОБНОВЛЕНИЯ ПРОФИЛЯ
-      await logProfileUpdate(`Профиль обновлен: ${form.name}, ${form.position}`);
+      await logProfileUpdate(`Профиль обновлен: ${form.name}, ${form.position} (${completionPercent}% заполнения)`);
     }
     onClose();
   };
