@@ -15,9 +15,7 @@ import {
   FaLock,
   FaGift,
   FaBullseye,
-  FaSun,
-  FaUserNinja,
-  FaFistRaised
+  FaSun
 } from 'react-icons/fa';
 import { GiCrystalShine, GiTrophyCup } from 'react-icons/gi';
 
@@ -25,15 +23,22 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 }
+    transition: {
+      duration: 0.6,
+      ease: 'easeOut',
+    }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { y: 10, opacity: 0 },
   visible: {
-    opacity: 1, y: 0,
-    transition: { type: 'spring', stiffness: 100 }
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: 'easeOut',
+    }
   }
 };
 
@@ -80,24 +85,24 @@ interface UserProgress {
 // Функция для преобразования иконки из строки в React элемент
 const getIconFromString = (iconString: string) => {
   const iconMap: { [key: string]: React.ReactElement } = {
-    // Фирменные иконки достижений
-    '👤': <FaRocket size={32} />,
-    '🔥': <FaFire size={32} />,
-    '⭐': <FaStar size={32} />,
-    '👑': <FaCrown size={32} />,
-    '✅': <FaCheckCircle size={32} />,
-    '🎁': <FaGift size={32} />,
-    '🏆': <GiTrophyCup size={32} />,
-    '💎': <GiCrystalShine size={32} />,
-    '🌟': <FaStar size={32} />,
-    '🚀': <FaRocket size={32} />,
-    '⚡': <FaBolt size={32} />,
-    '🎯': <FaBullseye size={32} />,
-    '🔓': <FaLock size={32} />,
-    '🎊': <FaGift size={32} />,
-    '🌅': <FaSun size={32} />,
-    '🦉': <FaUserNinja size={32} />,
-    '⚔️': <FaFistRaised size={32} />
+    // Иконки уровней и достижений - соответствуют секции "уровни и ранги"
+    '👤': <FaRocket size={32} />,        // Новичок
+    '🔥': <FaFire size={32} />,          // Активист  
+    '⭐': <FaStar size={32} />,          // Профи
+    '👑': <FaCrown size={32} />,         // Эксперт
+    '✅': <FaCheckCircle size={32} />,   // Завершение
+    '🎁': <FaGift size={32} />,         // Льготы
+    '🏆': <GiTrophyCup size={32} />,    // Достижения
+    '💎': <GiCrystalShine size={32} />, // Мастер
+    '🌟': <FaStar size={32} />,         // Звезда
+    '🚀': <FaRocket size={32} />,       // Ракета
+    '⚡': <FaBolt size={32} />,         // Молния
+    '🎯': <FaBullseye size={32} />,     // Цель
+    '🔓': <FaLock size={32} />,         // Разблокировка
+    '🎊': <FaGift size={32} />,         // Подарок
+    '🌅': <FaSun size={32} />,          // Утро
+    '🦉': <FaBolt size={32} />,         // Сова -> Молния
+    '⚔️': <FaBolt size={32} />          // Меч -> Молния
   };
   
   return iconMap[iconString] || <FaStar size={32} />;
@@ -546,15 +551,19 @@ const Progress: React.FC = () => {
               <StatCard
                 title="Серия входов"
                 value={progress.stats.loginStreak}
-                subtitle="дней подряд"
                 icon={<FaBolt />}
               />
             </Grid>
           </Grid>
         </motion.div>
 
-        {/* СИСТЕМА ОЧКОВ */}
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
+        {/* СИСТЕМА ОЧКОВ - УПРОЩЕННЫЕ АНИМАЦИИ */}
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ duration: 0.5 }}
+          style={{ marginBottom: '4rem' }}
+        >
           <Typography variant="h4" sx={{ 
             fontWeight: 800, 
             color: '#1A1A1A', 
@@ -564,48 +573,46 @@ const Progress: React.FC = () => {
             Система очков
           </Typography>
           
-          <motion.div variants={itemVariants}>
-            <Paper elevation={0} sx={{
-              ...cardStyle,
-              background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
-              color: '#fff',
-              mb: 3,
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Декоративные элементы */}
-              <Box sx={{
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 150,
-                height: 150,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.1)',
-                zIndex: 0
-              }} />
-              
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 700, 
-                  mb: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <FaStar size={24} /> Как работает система XP
-                </Typography>
-                <Typography variant="body1" sx={{ 
-                  lineHeight: 1.7,
-                  opacity: 0.95,
-                  fontSize: '1.1rem'
-                }}>
-                  Выполняйте действия в приложении и получайте очки опыта (XP). 
-                  Накапливайте XP для повышения уровня, получения достижений и разблокировки новых возможностей!
-                </Typography>
-              </Box>
-            </Paper>
-          </motion.div>
+          <Paper elevation={0} sx={{
+            ...cardStyle,
+            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+            color: '#fff',
+            mb: 3,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Упрощенные декоративные элементы */}
+            <Box sx={{
+              position: 'absolute',
+              top: -30,
+              right: -30,
+              width: 100,
+              height: 100,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              zIndex: 0
+            }} />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 700, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <FaStar size={24} /> Как работает система XP
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                lineHeight: 1.7,
+                opacity: 0.95,
+                fontSize: '1.1rem'
+              }}>
+                Выполняйте действия в приложении и получайте очки опыта (XP). 
+                Накапливайте XP для повышения уровня, получения достижений и разблокировки новых возможностей!
+              </Typography>
+            </Box>
+          </Paper>
 
           <Grid container spacing={3}>
             {[
@@ -655,143 +662,134 @@ const Progress: React.FC = () => {
               }
             ].map((category, _) => (
               <Grid item xs={12} md={6} key={category.category}>
-                <motion.div 
-                  variants={itemVariants}
-                  whileHover={{ 
-                    y: -8, 
-                    boxShadow: `0 20px 40px ${category.color}25`,
-                    transition: { duration: 0.3 }
-                  }}
-                >
-                  <Paper elevation={0} sx={{
-                    ...cardStyle,
-                    borderRadius: '24px',
-                    overflow: 'hidden',
-                    position: 'relative',
-                    border: `2px solid ${category.color}20`,
-                    background: '#fff',
-                    minHeight: '300px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    '&:hover': {
-                      borderColor: `${category.color}80`,
-                      background: `${category.color}05`
-                    },
-                    transition: 'all 0.3s ease'
+                <Paper elevation={0} sx={{
+                  ...cardStyle,
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  border: `2px solid ${category.color}20`,
+                  background: '#fff',
+                  minHeight: '300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  '&:hover': {
+                    borderColor: `${category.color}80`,
+                    background: `${category.color}05`
+                  },
+                  transition: 'all 0.2s ease'
+                }}>
+                  {/* Декоративная полоска сверху */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 5,
+                    background: category.gradient,
+                    borderRadius: '24px 24px 0 0'
+                  }} />
+                  
+                  {/* Заголовок категории */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2.5, 
+                    mb: 3,
+                    pt: 1.5,
+                    px: 3
                   }}>
-                    {/* Декоративная полоска сверху */}
-                    <Box sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 5,
-                      background: category.gradient,
-                      borderRadius: '24px 24px 0 0'
-                    }} />
-                    
-                    {/* Заголовок категории */}
                     <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 2.5, 
-                      mb: 3,
-                      pt: 1.5,
-                      px: 3
+                      color: category.color, 
+                      fontSize: '2rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      p: 1.5,
+                      borderRadius: '16px',
+                      background: `${category.color}15`,
+                      border: `1px solid ${category.color}20`
                     }}>
-                      <Box sx={{ 
-                        color: category.color, 
-                        fontSize: '2rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        p: 1.5,
-                        borderRadius: '16px',
-                        background: `${category.color}15`,
-                        border: `1px solid ${category.color}20`
-                      }}>
-                        {category.icon}
-                      </Box>
-                      <Typography variant="h6" sx={{ 
-                        fontWeight: 800, 
-                        color: '#1A1A1A',
-                        fontSize: '1.3rem',
-                        letterSpacing: '-0.5px'
-                      }}>
-                        {category.category}
-                      </Typography>
+                      {category.icon}
                     </Box>
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: '#1A1A1A',
+                      fontSize: '1.3rem',
+                      letterSpacing: '-0.5px'
+                    }}>
+                      {category.category}
+                    </Typography>
+                  </Box>
 
-                    {/* Список действий */}
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: 2.5,
-                      px: 3,
-                      pb: 3,
-                      flex: 1
-                    }}>
-                      {category.actions.map((item, idx) => (
-                        <Box key={idx} sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          p: 3,
-                          borderRadius: '18px',
-                          background: '#f8f9fa',
-                          border: `1px solid ${category.color}15`,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            background: `${category.color}08`,
-                            borderColor: `${category.color}40`,
-                            transform: 'translateX(6px)',
-                            boxShadow: `0 4px 12px ${category.color}20`
-                          }
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Box sx={{ 
-                              color: category.color, 
-                              fontSize: '1.4rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              p: 1.2,
-                              borderRadius: '12px',
-                              background: `${category.color}15`,
-                              border: `1px solid ${category.color}20`
-                            }}>
-                              {item.icon}
-                            </Box>
-                            <Typography variant="body1" sx={{ 
-                              fontWeight: 600,
-                              color: '#2D3748',
-                              fontSize: '1rem',
-                              letterSpacing: '-0.2px'
-                            }}>
-                              {item.action}
-                            </Typography>
+                  {/* Список действий */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2.5,
+                    px: 3,
+                    pb: 3,
+                    flex: 1
+                  }}>
+                    {category.actions.map((item, idx) => (
+                      <Box key={idx} sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 3,
+                        borderRadius: '18px',
+                        background: '#f8f9fa',
+                        border: `1px solid ${category.color}15`,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          background: `${category.color}08`,
+                          borderColor: `${category.color}40`,
+                          transform: 'translateX(3px)',
+                          boxShadow: `0 2px 8px ${category.color}20`
+                        }
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Box sx={{ 
+                            color: category.color, 
+                            fontSize: '1.4rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            p: 1.2,
+                            borderRadius: '12px',
+                            background: `${category.color}15`,
+                            border: `1px solid ${category.color}20`
+                          }}>
+                            {item.icon}
                           </Box>
-                          <Chip 
-                            label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
-                            size="medium"
-                            sx={{
-                              background: category.gradient,
-                              color: '#fff',
-                              fontWeight: 800,
-                              fontSize: '0.9rem',
-                              height: 36,
-                              borderRadius: '18px',
-                              boxShadow: `0 4px 16px ${category.color}40`,
-                              border: '1px solid rgba(255,255,255,0.2)',
-                              minWidth: 80,
-                              '& .MuiChip-label': {
-                                px: 2
-                              }
-                            }}
-                          />
+                          <Typography variant="body1" sx={{ 
+                            fontWeight: 600,
+                            color: '#2D3748',
+                            fontSize: '1rem',
+                            letterSpacing: '-0.2px'
+                          }}>
+                            {item.action}
+                          </Typography>
                         </Box>
-                      ))}
-                    </Box>
-                  </Paper>
-                </motion.div>
+                        <Chip 
+                          label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
+                          size="medium"
+                          sx={{
+                            background: category.gradient,
+                            color: '#fff',
+                            fontWeight: 800,
+                            fontSize: '0.9rem',
+                            height: 36,
+                            borderRadius: '18px',
+                            boxShadow: `0 4px 16px ${category.color}40`,
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            minWidth: 80,
+                            '& .MuiChip-label': {
+                              px: 2
+                            }
+                          }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                </Paper>
               </Grid>
             ))}
           </Grid>

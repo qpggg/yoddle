@@ -75,7 +75,28 @@ async function checkAndUnlockAchievements(client, userId, action) {
         'INSERT INTO user_achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [userId, achievementId]
       );
-      console.log(`🏆 Достижение ${achievementId} разблокировано для пользователя ${userId}`);
+      
+      // 🏆 НАЧИСЛЯЕМ XP ЗА ДОСТИЖЕНИЕ
+      const achievementData = allAchievements.rows.find(a => a.code === achievementId);
+      if (achievementData) {
+        // Получаем награду за достижение из БД
+        const rewardResult = await client.query(
+          'SELECT xp_reward FROM achievements WHERE code = $1',
+          [achievementId]
+        );
+        
+        const xpReward = rewardResult.rows[0]?.xp_reward || 0;
+        
+        if (xpReward > 0) {
+          // Добавляем XP за достижение
+          await client.query(
+            'UPDATE user_progress SET xp = xp + $2 WHERE user_id = $1',
+            [userId, xpReward]
+          );
+          
+          console.log(`🏆 Достижение ${achievementId} разблокировано для пользователя ${userId} (+${xpReward} XP)`);
+        }
+      }
     }
     
     return achievementsToUnlock;
