@@ -21,7 +21,7 @@ const Benefits: React.FC = () => {
     {
       icon: <AutomationIcon />,
       title: 'Автоматизация HR-процессов',
-      description: 'Автоматизируем основные операции с льготами и отчетностью. Система работает круглосуточно, снижая время на рутинные задачи на 70%. Планируем дальнейшее развитие автоматизации.',
+      description: 'Автоматизируем основные операции с льготами и отчетностью. Система работает круглосуточно, снижая время на рутинные задачи на 70%.',
       stats: '70% автоматизация',
       color: '#8B0000'
     },
@@ -485,7 +485,7 @@ const Benefits: React.FC = () => {
                 },
                 { 
                   title: 'Интеграция', 
-                  desc: 'Связь с 1С и другими системами',
+                  desc: 'Экспорт данных и настройка связей',
                   icon: <IntegrationInstructionsIcon />,
                   gradient: 'linear-gradient(135deg, #A61E1E 0%, #C43D3D 100%)'
                 },
@@ -511,24 +511,28 @@ const Benefits: React.FC = () => {
                     transition: { duration: 0.3 }
                   }}
                 >
-                  <Box
+                  <Paper
+                    elevation={0}
                     sx={{
-                      position: 'relative',
+                      p: 4,
                       height: '200px',
                       borderRadius: '24px',
-                      background: 'white',
-                      border: '1px solid rgba(139, 0, 0, 0.1)',
+                      border: '1px solid rgba(0, 0, 0, 0.06)',
+                      backgroundColor: 'white',
+                      position: 'relative',
                       overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
                       transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                       cursor: 'pointer',
                       '&:hover': {
-                        boxShadow: '0 20px 60px rgba(139, 0, 0, 0.15)',
-                        transform: 'translateY(-4px)',
+                        transform: 'translateY(-12px) scale(1.02)',
+                        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.15)',
                         '&::before': {
-                          opacity: 0.05
+                          opacity: 1
                         },
-                        '& .tech-icon': {
-                          transform: 'scale(1.2) rotate(5deg)'
+                        '&::after': {
+                          opacity: 1
                         }
                       },
                       '&::before': {
@@ -537,74 +541,84 @@ const Benefits: React.FC = () => {
                         top: 0,
                         left: 0,
                         right: 0,
-                        bottom: 0,
+                        height: '4px',
                         background: item.gradient,
+                        opacity: 0.7,
+                        transition: 'opacity 0.4s ease'
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `linear-gradient(135deg, ${item.gradient}03 0%, transparent 50%)`,
                         opacity: 0,
                         transition: 'opacity 0.4s ease'
                       }
                     }}
                   >
-                    {/* Gradient Top Bar */}
                     <Box
                       sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '4px',
-                        background: item.gradient
-                      }}
-                    />
-                    
-                    {/* Content */}
-                    <Box
-                      sx={{
-                        position: 'relative',
-                        zIndex: 2,
-                        p: 4,
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '20px',
+                        background: `linear-gradient(135deg, rgba(139, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.08) 100%)`,
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: '100%',
-                        textAlign: 'center'
+                        mb: 3,
+                        position: 'relative',
+                        transition: 'all 0.3s ease',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          inset: '-2px',
+                          borderRadius: '22px',
+                          border: `2px solid rgba(139, 0, 0, 0.2)`,
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease'
+                        },
+                        '&:hover::after': {
+                          opacity: 1
+                        },
+                        '& svg': {
+                          fontSize: '36px',
+                          color: '#8B0000',
+                          transition: 'transform 0.3s ease'
+                        },
+                        '&:hover svg': {
+                          transform: 'scale(1.1) rotate(5deg)'
+                        }
                       }}
                     >
-                      <Box
-                        className="tech-icon"
-                        sx={{
-                          mb: 2,
-                          transition: 'transform 0.3s ease',
-                          '& svg': {
-                            fontSize: '3rem',
-                            color: '#8B0000'
-                          }
-                        }}
-                      >
-                        {item.icon}
-                      </Box>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 700,
-                          color: '#1A1A1A',
-                          mb: 1,
-                          fontSize: '1.1rem'
-                        }}
-                      >
-                        {item.title}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: '#666',
-                          fontSize: '0.9rem',
-                          lineHeight: 1.5
-                        }}
-                      >
-                        {item.desc}
-                      </Typography>
+                      {item.icon}
                     </Box>
-                  </Box>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1A1A1A',
+                        mb: 2,
+                        fontSize: { xs: '1.1rem', md: '1.2rem' },
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {item.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: '#666666',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.7,
+                        letterSpacing: '0.01em',
+                        flex: 1
+                      }}
+                    >
+                      {item.desc}
+                    </Typography>
+                  </Paper>
                 </motion.div>
               ))}
             </Box>
