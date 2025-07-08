@@ -3,32 +3,33 @@ import FacebookIcon from '@mui/icons-material/Facebook'
 import TwitterIcon from '@mui/icons-material/Twitter'
 import LinkedInIcon from '@mui/icons-material/LinkedIn'
 import InstagramIcon from '@mui/icons-material/Instagram'
+import { Link as RouterLink } from 'react-router-dom'
 
 const footerLinks = {
   product: {
     title: 'Продукт',
     items: [
-      { name: 'Возможности', href: '#features' },
-      { name: 'Преимущества', href: '#benefits' },
-      { name: 'Как это работает', href: '#how-it-works' },
-      { name: 'Тарифы', href: '#pricing' },
+      { name: 'Возможности', href: '/services' },
+      { name: 'Преимущества', href: '/benefits' },
+      { name: 'Как это работает', href: '/about' },
+      { name: 'Тарифы', href: '/pricing' },
     ],
   },
   company: {
     title: 'Компания',
     items: [
-      { name: 'О нас', href: '#about' },
-      { name: 'Блог', href: '#blog' },
-      { name: 'Карьера', href: '#careers' },
-      { name: 'Контакты', href: '#contact' },
+      { name: 'О нас', href: '/about' },
+      { name: 'Блог', href: '/about' },
+      { name: 'Карьера', href: '/about' },
+      { name: 'Контакты', href: '/contacts' },
     ],
   },
   legal: {
     title: 'Правовая информация',
     items: [
-      { name: 'Условия использования', href: '#terms' },
-      { name: 'Политика конфиденциальности', href: '#privacy' },
-      { name: 'Правовые документы', href: '#legal' },
+      { name: 'Условия использования', href: '/about' },
+      { name: 'Политика конфиденциальности', href: '/about' },
+      { name: 'Правовые документы', href: '/about' },
     ],
   },
 }
@@ -55,7 +56,7 @@ export const Footer = () => {
               </Typography>
               <Box sx={{ mt: 2 }}>
                 <IconButton
-                  href="#"
+                  href="https://facebook.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
@@ -63,7 +64,7 @@ export const Footer = () => {
                   <FacebookIcon />
                 </IconButton>
                 <IconButton
-                  href="#"
+                  href="https://twitter.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
@@ -71,7 +72,7 @@ export const Footer = () => {
                   <TwitterIcon />
                 </IconButton>
                 <IconButton
-                  href="#"
+                  href="https://linkedin.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
@@ -79,7 +80,7 @@ export const Footer = () => {
                   <LinkedInIcon />
                 </IconButton>
                 <IconButton
-                  href="#"
+                  href="https://instagram.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
@@ -99,7 +100,8 @@ export const Footer = () => {
                 {section.items.map((item) => (
                   <Box component="li" key={item.name} sx={{ mb: 1 }}>
                     <Link
-                      href={item.href}
+                      component={RouterLink}
+                      to={item.href}
                       sx={{
                         color: 'rgba(255, 255, 255, 0.7)',
                         textDecoration: 'none',
@@ -140,7 +142,8 @@ export const Footer = () => {
             }}
           >
             <Link
-              href="#terms"
+              component={RouterLink}
+              to="/about"
               sx={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 textDecoration: 'none',
@@ -152,7 +155,8 @@ export const Footer = () => {
               Условия
             </Link>
             <Link
-              href="#privacy"
+              component={RouterLink}
+              to="/about"
               sx={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 textDecoration: 'none',

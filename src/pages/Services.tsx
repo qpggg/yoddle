@@ -1,10 +1,10 @@
 import React from 'react';
 import { Container, Typography, Box, Grid } from '@mui/material';
 import { motion } from 'framer-motion';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import SportsIcon from '@mui/icons-material/Sports';
-import SchoolIcon from '@mui/icons-material/School';
 import { useTheme } from '@mui/material/styles';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import AutomationIcon from '@mui/icons-material/AutoFixHigh';
 
 const Services: React.FC = () => {
   const theme = useTheme();
@@ -14,314 +14,614 @@ const Services: React.FC = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.3
+        staggerChildren: 0.25,
+        delayChildren: 0.2
       }
     }
   };
 
   const sectionVariants = {
-    hidden: { opacity: 0, x: -50 },
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
     visible: {
       opacity: 1,
-      x: 0,
+      y: 0,
+      scale: 1,
       transition: {
         duration: 0.8,
-        ease: "easeOut"
+        ease: [0.25, 0.46, 0.45, 0.94]
       }
     }
   };
 
-  return (
-    <Container maxWidth="lg" sx={{ mt: 12, mb: 8 }}>
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        <Typography
-          variant="h2"
-          component="h1"
-          align="center"
-          sx={{
-            mb: 8,
-            fontSize: { xs: '2.5rem', md: '3rem' },
-            fontWeight: 700,
-            fontFamily: "'Montserrat', sans-serif",
-            color: '#8B0000',
-            position: 'relative',
-            textAlign: 'center',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              bottom: '-16px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '80px',
-              height: '4px',
-              background: '#8B0000',
-              borderRadius: '2px'
-            }
-          }}
-        >
-          Наши услуги
-        </Typography>
+  const floatingVariants = {
+    animate: {
+      y: [0, -12, 0],
+      rotate: [0, 5, 0],
+      transition: {
+        duration: 8,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    }
+  };
 
+  const services = [
+    {
+      icon: PsychologyIcon,
+      title: 'Smart Wellness Solutions',
+      subtitle: 'Интеллектуальное управление благополучием',
+      items: [
+        'Умный анализ стресс-паттернов сотрудников',
+        'Предиктивные модели выгорания на базе данных',
+        'Персонализированные wellness-программы',
+        'Real-time мониторинг well-being метрик',
+        'Автоматизированная поддержка ментального здоровья',
+        'Data-driven рекомендации по питанию'
+      ],
+      color: '#8B0000',
+      stats: '89% снижение стресса'
+    },
+    {
+      icon: AnalyticsIcon,
+      title: 'Smart Fitness & Sports',
+      subtitle: 'Гамификация и data science в спорте',
+      items: [
+        'Персональные умные тренировки',
+        'Командные challenge с smart алгоритмами',
+        'Биометрическая аналитика в real-time',
+        'Прогнозирование травм на основе данных',
+        'Smart рекомендации оборудования',
+        'Performance optimization через аналитику'
+      ],
+      color: '#FF6B35',
+      stats: '+156% активность команды'
+    },
+    {
+      icon: AutomationIcon,
+      title: 'Learning & Development 2.0',
+      subtitle: 'Автоматизированное развитие талантов',
+      items: [
+        'Адаптивные пути обучения',
+        'Smart-ментор для развития навыков',
+        'Micro-learning через умные алгоритмы',
+        'Автоматизированное отслеживание прогресса',
+        'Планирование карьеры на основе данных',
+        'Real-time анализ пробелов в навыках'
+      ],
+      color: '#4ECDC4',
+      stats: '94% улучшение навыков'
+    }
+  ];
+
+  return (
+    <Box
+      component="main"
+      sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
+        pt: { xs: theme.spacing(10), md: theme.spacing(15) },
+        pb: { xs: theme.spacing(8), md: theme.spacing(12) }
+      }}
+    >
+      {/* Enhanced Background Decorations */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '8%',
+          right: '-20%',
+          width: '800px',
+          height: '800px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.02) 0%, rgba(139, 0, 0, 0.005) 50%, transparent 100%)',
+          zIndex: 1,
+          display: { xs: 'none', lg: 'block' }
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '15%',
+          left: '-25%',
+          width: '700px',
+          height: '700px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(76, 236, 196, 0.015) 0%, transparent 70%)',
+          zIndex: 1,
+          display: { xs: 'none', lg: 'block' }
+        }}
+      />
+      
+      {/* Floating Elements */}
+      <motion.div
+        variants={floatingVariants}
+        animate="animate"
+        style={{
+          position: 'absolute',
+          top: '25%',
+          left: '3%',
+          zIndex: 1
+        }}
+      >
         <Box
           sx={{
-            border: '3px solid #8B0000',
-            borderRadius: '40px',
-            p: { xs: 2, md: 6 },
-            background: '#fff',
-            mb: 8,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4
+            width: '80px',
+            height: '80px',
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.05) 100%)',
+            display: { xs: 'none', xl: 'block' }
           }}
+        />
+      </motion.div>
+      
+      <motion.div
+        variants={{
+          animate: {
+            y: [0, 18, 0],
+            rotate: [0, -8, 0],
+            transition: {
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }
+          }
+        }}
+        animate="animate"
+        style={{
+          position: 'absolute',
+          bottom: '20%',
+          right: '5%',
+          zIndex: 1
+        }}
+      >
+        <Box
+          sx={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.12) 0%, rgba(255, 107, 53, 0.04) 100%)',
+            display: { xs: 'none', xl: 'block' }
+          }}
+        />
+      </motion.div>
+
+      <motion.div
+        variants={{
+          animate: {
+            y: [0, -8, 0],
+            x: [0, 4, 0],
+            transition: {
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }
+          }
+        }}
+        animate="animate"
+        style={{
+          position: 'absolute',
+          top: '60%',
+          left: '85%',
+          zIndex: 1
+        }}
+      >
+        <Box
+          sx={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(76, 236, 196, 0.15) 0%, rgba(76, 236, 196, 0.08) 100%)',
+            display: { xs: 'none', xl: 'block' }
+          }}
+        />
+      </motion.div>
+      <Container maxWidth="lg">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
         >
-          {/* Верхняя половина — Здоровье */}
-          <motion.div
-            variants={sectionVariants}
-            whileHover={{ 
-              scale: 1.01,
-              transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-            }}
-            initial={{ scale: 1 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-            style={{ width: '100%' }}
-          >
-            <Box
+          {/* Hero Section */}
+          <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 }, position: 'relative', zIndex: 2 }}>
+            <Typography
+              variant="h1"
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                mb: 2
+                fontSize: { xs: theme.typography.pxToRem(40), md: theme.typography.pxToRem(56) },
+                fontWeight: 800,
+                lineHeight: 1.2,
+                mb: { xs: 2, md: 3 },
+                color: '#1A1A1A',
+                letterSpacing: '-0.02em'
               }}
             >
-              <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
-                <FavoriteIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
+              Smart-решения для{' '}
+              <Box component="span" sx={{ color: theme.palette.primary.main }}>
+                HR будущего
               </Box>
-              <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
-                Здоровье
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
-                Комплексная поддержка физического и психологического состояния сотрудников
-              </Typography>
-            </Box>
-            <Grid container spacing={2} columns={12} sx={{ mb: 2 }}>
-              {[
-                'Профилактика выгорания',
-                'Режим дня и баланс работы/отдыха',
-                'Правильное питание и нутрициология',
-                'Психологическая поддержка',
-                'Мониторинг самочувствия',
-                'Здоровые привычки'
-              ].map((item, idx) => (
-                <Grid item xs={12} sm={6} md={4} key={idx}>
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                fontSize: { xs: theme.typography.pxToRem(18), md: theme.typography.pxToRem(22) },
+                fontWeight: 400,
+                color: '#666',
+                maxWidth: '800px',
+                mx: 'auto',
+                lineHeight: 1.6
+              }}
+            >
+              Полный стек автоматизированных HR-сервисов с умными алгоритмами, которые трансформируют employee experience через данные и персонализацию
+            </Typography>
+          </Box>
+
+          {/* Services Grid */}
+          <Box sx={{ position: 'relative', zIndex: 2 }}>
+            <Grid container spacing={6}>
+              {services.map((service, index) => (
+                <Grid item xs={12} lg={4} key={index}>
+                  <motion.div
+                    variants={sectionVariants}
+                    whileHover={{ 
+                      scale: 1.03,
+                      transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }
+                    }}
+                    style={{ height: '100%' }}
+                  >
                   <Box
                     sx={{
-                      p: 2,
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(139, 0, 0, 0.02)',
-                      transform: 'translateZ(0)',
-                      willChange: 'transform, background-color',
-                      transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                      mb: 1.5,
+                      p: 5,
+                      borderRadius: '28px',
+                      background: 'white',
+                      border: '1px solid rgba(0, 0, 0, 0.08)',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
                       '&:hover': {
-                        backgroundColor: 'rgba(139, 0, 0, 0.05)',
-                        transform: 'translateX(8px) translateZ(0)',
-                        boxShadow: '0 4px 12px rgba(139, 0, 0, 0.06)'
+                        transform: 'translateY(-12px)',
+                        boxShadow: '0 24px 64px rgba(0, 0, 0, 0.12)',
+                        '&::before': {
+                          opacity: 1,
+                          transform: 'translateX(100%)'
+                        }
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: `linear-gradient(90deg, transparent, ${service.color}08, transparent)`,
+                        opacity: 0,
+                        transition: 'all 0.6s ease',
+                        transform: 'translateX(-100%)'
                       }
                     }}
                   >
-                    <Typography
-                      variant="body1"
+                    {/* Header */}
+                    <Box sx={{ mb: 4, position: 'relative', zIndex: 2 }}>
+                      <Box
+                        sx={{
+                          width: 72,
+                          height: 72,
+                          borderRadius: '20px',
+                          background: `linear-gradient(135deg, ${service.color}15 0%, ${service.color}08 100%)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 3,
+                          position: 'relative',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            inset: 0,
+                            borderRadius: '20px',
+                            border: `2px solid ${service.color}20`,
+                          }
+                        }}
+                      >
+                        <service.icon sx={{ fontSize: 36, color: service.color }} />
+                      </Box>
+                      
+                      <Typography 
+                        variant="h4" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          color: '#1A1A1A',
+                          mb: 1,
+                          fontSize: { xs: '1.5rem', md: '1.75rem' },
+                          lineHeight: 1.3
+                        }}
+                      >
+                        {service.title}
+                      </Typography>
+                      
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          color: '#666',
+                          fontSize: '1rem',
+                          lineHeight: 1.6,
+                          letterSpacing: '0.01em'
+                        }}
+                      >
+                        {service.subtitle}
+                      </Typography>
+                    </Box>
+
+                    {/* Features List */}
+                    <Box sx={{ flex: 1, mb: 4, position: 'relative', zIndex: 2 }}>
+                      <Grid container spacing={2}>
+                        {service.items.map((item, idx) => (
+                          <Grid item xs={12} key={idx}>
+                            <motion.div
+                              initial={{ opacity: 0, x: -20 }}
+                              whileInView={{ opacity: 1, x: 0 }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 0.5, delay: idx * 0.1 }}
+                            >
+                              <Box
+                                sx={{
+                                  p: 2.5,
+                                  borderRadius: '16px',
+                                  backgroundColor: `${service.color}04`,
+                                  border: `1px solid ${service.color}10`,
+                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  position: 'relative',
+                                  overflow: 'hidden',
+                                  '&:hover': {
+                                    backgroundColor: `${service.color}08`,
+                                    transform: 'translateX(8px)',
+                                    boxShadow: `0 6px 20px ${service.color}15`
+                                  },
+                                  '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: '4px',
+                                    height: '60%',
+                                    borderRadius: '2px',
+                                    backgroundColor: service.color,
+                                    opacity: 0.6,
+                                    transition: 'opacity 0.3s ease'
+                                  },
+                                  '&:hover::before': {
+                                    opacity: 1
+                                  }
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: '#333',
+                                    fontWeight: 500,
+                                    fontSize: '0.95rem',
+                                    lineHeight: 1.5,
+                                    pl: 2
+                                  }}
+                                >
+                                  {item}
+                                </Typography>
+                              </Box>
+                            </motion.div>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+
+                    {/* Stats Badge */}
+                    <Box
                       sx={{
-                        color: 'rgba(0, 0, 0, 0.8)',
+                        alignSelf: 'flex-start',
                         position: 'relative',
-                        pl: 2,
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          left: 0,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          width: '4px',
-                          height: '4px',
-                          borderRadius: '50%',
-                          backgroundColor: theme.palette.primary.main
-                        }
+                        zIndex: 2
                       }}
                     >
-                      {item}
-                    </Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-
-          {/* Нижняя половина — Спорт и Обучение */}
-          <Grid container spacing={2} columns={12}>
-            {/* Спорт */}
-            <Grid item xs={12} md={6}>
-              <motion.div
-                variants={sectionVariants}
-                whileHover={{ 
-                  scale: 1.01,
-                  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-                }}
-                initial={{ scale: 1 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                style={{ height: '100%' }}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    height: '100%'
-                  }}
-                >
-                  <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
-                    <SportsIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
-                  </Box>
-                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
-                    Спорт
-                  </Typography>
-                  <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
-                    Разнообразные спортивные активности для команд и индивидуально
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-                    {[
-                      'Командные виды спорта',
-                      'Фитнес-программы',
-                      'Тимбилдинг через спорт'
-                    ].map((item, idx) => (
                       <Box
-                        key={idx}
                         sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          backgroundColor: 'rgba(139, 0, 0, 0.02)',
-                          transform: 'translateZ(0)',
-                          willChange: 'transform, background-color',
-                          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(139, 0, 0, 0.05)',
-                            transform: 'translateX(8px) translateZ(0)',
-                            boxShadow: '0 4px 12px rgba(139, 0, 0, 0.06)'
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          px: 4,
+                          py: 2,
+                          borderRadius: '20px',
+                          background: `linear-gradient(135deg, ${service.color} 0%, ${service.color}CC 100%)`,
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          boxShadow: `0 8px 24px ${service.color}40`,
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+                            transform: 'translateX(-100%)',
+                            transition: 'transform 2s ease',
+                          },
+                          '&:hover::before': {
+                            transform: 'translateX(100%)'
                           }
                         }}
                       >
                         <Typography
-                          variant="body1"
                           sx={{
-                            color: 'rgba(0, 0, 0, 0.8)',
+                            color: 'white',
+                            fontWeight: 700,
+                            fontSize: '1rem',
                             position: 'relative',
-                            pl: 2,
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              left: 0,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              width: '4px',
-                              height: '4px',
-                              borderRadius: '50%',
-                              backgroundColor: theme.palette.primary.main
-                            }
+                            zIndex: 1
                           }}
                         >
-                          {item}
+                          {service.stats}
                         </Typography>
                       </Box>
-                    ))}
+                    </Box>
                   </Box>
-                </Box>
-              </motion.div>
-            </Grid>
-            {/* Обучение */}
-            <Grid item xs={12} md={6}>
-              <motion.div
-                variants={sectionVariants}
-                whileHover={{ 
-                  scale: 1.01,
-                  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-                }}
-                initial={{ scale: 1 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                style={{ height: '100%' }}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    height: '100%'
-                  }}
-                >
-                  <Box sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(139, 0, 0, 0.05)', display: 'inline-flex', mb: 2 }}>
-                    <SchoolIcon sx={{ fontSize: 48, color: theme.palette.primary.main }} />
-                  </Box>
-                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600, color: theme.palette.primary.main, textAlign: 'center', mb: 1 }}>
-                    Обучение
-                  </Typography>
-                  <Typography variant="body1" sx={{ color: 'rgba(0, 0, 0, 0.7)', textAlign: 'center', mb: 3 }}>
-                    Развитие профессиональных и личных компетенций, улучшение социальных навыков
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-                    {['Soft-skills тренинги'].map((item, idx) => (
-                      <Box
-                        key={idx}
-                        sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          backgroundColor: 'rgba(139, 0, 0, 0.02)',
-                          transform: 'translateZ(0)',
-                          willChange: 'transform, background-color',
-                          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(139, 0, 0, 0.05)',
-                            transform: 'translateX(8px) translateZ(0)',
-                            boxShadow: '0 4px 12px rgba(139, 0, 0, 0.06)'
-                          }
-                        }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            color: 'rgba(0, 0, 0, 0.8)',
-                            position: 'relative',
-                            pl: 2,
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              left: 0,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              width: '4px',
-                              height: '4px',
-                              borderRadius: '50%',
-                              backgroundColor: theme.palette.primary.main
-                            }
-                          }}
-                        >
-                          {item}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              </motion.div>
-            </Grid>
+                </motion.div>
+              </Grid>
+            ))}
           </Grid>
+          </Box>
+
+          {/* Enhanced Technology Integration Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
+            <Box
+              sx={{
+                mt: { xs: 8, md: 12 },
+                p: { xs: 4, md: 6 },
+                borderRadius: '32px',
+                background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.04) 0%, rgba(255, 107, 53, 0.02) 100%)',
+                border: '1px solid rgba(139, 0, 0, 0.08)',
+                textAlign: 'center',
+                position: 'relative',
+                zIndex: 2,
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'radial-gradient(circle at 30% 70%, rgba(139, 0, 0, 0.02) 0%, transparent 50%)',
+                  zIndex: -1
+                }
+              }}
+            >
+              <Typography
+                variant="h3"
+                sx={{
+                  fontSize: { xs: theme.typography.pxToRem(28), md: theme.typography.pxToRem(40) },
+                  fontWeight: 800,
+                  mb: 2,
+                  color: '#1A1A1A',
+                  letterSpacing: '-0.02em'
+                }}
+              >
+                Smart Technology Integration
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontSize: { xs: theme.typography.pxToRem(16), md: theme.typography.pxToRem(18) },
+                  color: '#666',
+                  mb: 6,
+                  maxWidth: '800px',
+                  mx: 'auto',
+                  lineHeight: 1.6
+                }}
+              >
+                API-first архитектура с интеллектуальными алгоритмами для безшовной интеграции с любыми HR-системами и data sources
+              </Typography>
+              <Grid container spacing={4}>
+                {[
+                  { name: 'REST API', desc: 'Полная интеграция', color: '#8B0000' },
+                  { name: 'Webhooks', desc: 'Real-time события', color: '#FF6B35' },
+                  { name: 'Smart Analytics', desc: 'Data insights', color: '#4ECDC4' },
+                  { name: 'Auto-sync', desc: 'Умная синхронизация', color: '#45B7D1' },
+                  { name: 'Cloud-ready', desc: '99.9% uptime', color: '#96CEB4' },
+                  { name: 'Security First', desc: 'Enterprise-grade', color: '#8B0000' }
+                ].map((tech, index) => (
+                  <Grid item xs={6} md={4} key={index}>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ 
+                        duration: 0.5, 
+                        delay: index * 0.1,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <Box
+                        sx={{
+                          p: 4,
+                          borderRadius: '20px',
+                          bgcolor: 'white',
+                          textAlign: 'center',
+                          transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+                          '&:hover': {
+                            transform: 'translateY(-8px)',
+                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
+                            '&::before': {
+                              opacity: 1
+                            }
+                          },
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '4px',
+                            background: `linear-gradient(90deg, ${tech.color} 0%, ${tech.color}80 100%)`,
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease'
+                          }
+                        }}
+                      >
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: tech.color, mb: 1, fontSize: '1.2rem' }}>
+                          {tech.name}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.5 }}>
+                          {tech.desc}
+                        </Typography>
+                      </Box>
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </motion.div>
+        </motion.div>
+
+        {/* Background Element */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '10%',
+            left: '-20%',
+            zIndex: 1,
+            display: { xs: 'none', lg: 'block' }
+          }}
+        >
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: theme.typography.pxToRem(380),
+              fontWeight: 900,
+              color: 'rgba(139, 0, 0, 0.012)',
+              whiteSpace: 'nowrap',
+              userSelect: 'none',
+              transform: 'rotate(-15deg)',
+              letterSpacing: '-0.05em'
+            }}
+          >
+            SMART·TECH
+          </Typography>
         </Box>
-      </motion.div>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
