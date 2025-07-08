@@ -17,10 +17,7 @@ import {
   FaBook, 
   FaLeaf, 
   FaUsers, 
-  FaHandHoldingHeart,
-  FaTrophy,
-  FaCalendarAlt,
-  FaChartLine
+  FaHandHoldingHeart
 } from 'react-icons/fa';
 import { GiBrain } from "react-icons/gi";
 
@@ -120,7 +117,7 @@ const Profile: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
+      background: '#f8f9fa',
       padding: '2rem 0'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
@@ -135,11 +132,10 @@ const Profile: React.FC = () => {
             textAlign: 'center',
             marginBottom: '3rem',
             padding: '3rem 2rem',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%)',
+            background: '#fff',
             borderRadius: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
+            boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+            border: '1px solid #eee'
           }}
         >
           <div style={{
@@ -148,27 +144,17 @@ const Profile: React.FC = () => {
             justifyContent: 'center',
             width: '80px',
             height: '80px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: '#8B0000',
             borderRadius: '20px',
             marginBottom: '1.5rem',
-            boxShadow: '0 15px 35px rgba(102, 126, 234, 0.4)',
-            position: 'relative'
+            boxShadow: '0 8px 32px rgba(139, 0, 0, 0.15)'
           }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%)',
-              borderRadius: '20px'
-            }} />
-            <FaHeart size={32} style={{ color: 'white', position: 'relative', zIndex: 1 }} />
+            <FaHeart size={32} style={{ color: 'white' }} />
           </div>
           <h1 style={{
             fontSize: '3rem',
             fontWeight: 900,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: '#1A1A1A',
             marginBottom: '0.5rem',
             fontFamily: 'Inter, sans-serif'
           }}>
@@ -176,7 +162,7 @@ const Profile: React.FC = () => {
           </h1>
           <p style={{
             fontSize: '1.2rem',
-            color: '#6B7280',
+            color: '#555',
             margin: 0,
             fontWeight: 500
           }}>
@@ -193,30 +179,16 @@ const Profile: React.FC = () => {
           <motion.div
             variants={itemVariants}
             style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%)',
+              background: '#fff',
               borderRadius: '24px',
               padding: '3rem',
               marginBottom: '2rem',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+              border: '1px solid #eee',
               position: 'relative',
               overflow: 'hidden'
             }}
           >
-            {/* Декоративный элемент */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '200px',
-              height: '200px',
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-              borderRadius: '50%',
-              transform: 'translate(50%, -50%)',
-              zIndex: 0
-            }} />
-            
             {/* Заголовок профиля с аватаром */}
             <div style={{
               display: 'flex',
@@ -238,43 +210,26 @@ const Profile: React.FC = () => {
                         height: '120px',
                         borderRadius: '50%',
                         objectFit: 'cover',
-                        border: '4px solid rgba(102, 126, 234, 0.3)',
-                        boxShadow: '0 15px 35px rgba(102, 126, 234, 0.3)'
+                        border: '4px solid #8B0000',
+                        boxShadow: '0 8px 32px rgba(139, 0, 0, 0.15)'
                       }}
                     />
-                    <div style={{
-                      position: 'absolute',
-                      inset: '-4px',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      borderRadius: '50%',
-                      zIndex: -1,
-                      padding: '4px'
-                    }} />
                   </div>
                 ) : (
                   <div style={{
                     width: '120px',
                     height: '120px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#8B0000',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
                     fontSize: '2.5rem',
                     fontWeight: 'bold',
-                    boxShadow: '0 15px 35px rgba(102, 126, 234, 0.4)',
-                    position: 'relative'
+                    boxShadow: '0 8px 32px rgba(139, 0, 0, 0.15)'
                   }}>
-                    <div style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-                      borderRadius: '50%'
-                    }} />
-                    <span style={{ position: 'relative', zIndex: 1 }}>
-                      {user.name?.charAt(0)?.toUpperCase()}
-                    </span>
+                    {user.name?.charAt(0)?.toUpperCase()}
                   </div>
                 )}
                 
@@ -285,10 +240,10 @@ const Profile: React.FC = () => {
                   right: '8px',
                   width: '24px',
                   height: '24px',
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  background: '#34C759',
                   borderRadius: '50%',
                   border: '3px solid white',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+                  boxShadow: '0 4px 12px rgba(52, 199, 89, 0.4)'
                 }} />
               </div>
               
@@ -296,10 +251,7 @@ const Profile: React.FC = () => {
                 <h2 style={{
                   fontSize: '2.5rem',
                   fontWeight: 900,
-                  background: 'linear-gradient(135deg, #1F2937 0%, #374151 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: '#1A1A1A',
                   margin: '0 0 0.5rem 0',
                   fontFamily: 'Inter, sans-serif'
                 }}>
@@ -307,65 +259,62 @@ const Profile: React.FC = () => {
                 </h2>
                 <p style={{
                   fontSize: '1.2rem',
-                  color: '#6B7280',
+                  color: '#555',
                   margin: '0 0 1rem 0',
                   fontWeight: 500
                 }}>
                   {user.position || 'CEO'}
                 </p>
                 
-                {/* Статистика профиля */}
+                {/* Статистика профиля - без иконок, стильные карточки */}
                 <div style={{
                   display: 'flex',
-                  gap: '1.5rem',
+                  gap: '1rem',
                   flexWrap: 'wrap',
                   marginTop: '1rem'
                 }}>
                   {userProgress && (
                     <>
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(102, 126, 234, 0.2)'
+                        padding: '0.75rem 1.25rem',
+                        background: '#F2F2F7',
+                        borderRadius: '16px',
+                        border: '1px solid #eee'
                       }}>
-                        <FaTrophy style={{ color: '#F59E0B' }} />
-                        <span style={{ color: '#374151', fontWeight: 600 }}>
-                          Уровень {userProgress.level}
-                        </span>
+                        <div style={{ fontSize: '0.8rem', color: '#8E8E93', fontWeight: 600, marginBottom: '0.25rem' }}>
+                          УРОВЕНЬ
+                        </div>
+                        <div style={{ fontSize: '1.2rem', color: '#1A1A1A', fontWeight: 700 }}>
+                          {userProgress.level}
+                        </div>
                       </div>
                       
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(16, 185, 129, 0.2)'
+                        padding: '0.75rem 1.25rem',
+                        background: '#E8F5E8',
+                        borderRadius: '16px',
+                        border: '1px solid #34C759'
                       }}>
-                        <FaChartLine style={{ color: '#10B981' }} />
-                        <span style={{ color: '#374151', fontWeight: 600 }}>
+                        <div style={{ fontSize: '0.8rem', color: '#34C759', fontWeight: 600, marginBottom: '0.25rem' }}>
+                          ОПЫТ
+                        </div>
+                        <div style={{ fontSize: '1.2rem', color: '#1A1A1A', fontWeight: 700 }}>
                           {userProgress.xp} XP
-                        </span>
+                        </div>
                       </div>
                       
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(239, 68, 68, 0.2)'
+                        padding: '0.75rem 1.25rem',
+                        background: '#FFF4E6',
+                        borderRadius: '16px',
+                        border: '1px solid #FF9500'
                       }}>
-                        <FaCalendarAlt style={{ color: '#EF4444' }} />
-                        <span style={{ color: '#374151', fontWeight: 600 }}>
-                          {userProgress.login_streak} дней подряд
-                        </span>
+                        <div style={{ fontSize: '0.8rem', color: '#FF9500', fontWeight: 600, marginBottom: '0.25rem' }}>
+                          АКТИВНОСТЬ
+                        </div>
+                        <div style={{ fontSize: '1.2rem', color: '#1A1A1A', fontWeight: 700 }}>
+                          {userProgress.login_streak} дней
+                        </div>
                       </div>
                     </>
                   )}
@@ -379,35 +328,27 @@ const Profile: React.FC = () => {
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '1rem 1.5rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: '#8B0000',
                   color: 'white',
                   border: 'none',
                   borderRadius: '16px',
                   cursor: 'pointer',
                   fontSize: '1rem',
                   fontWeight: 600,
-                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden'
+                  boxShadow: '0 8px 32px rgba(139, 0, 0, 0.15)',
+                  transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(139, 0, 0, 0.25)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(139, 0, 0, 0.15)';
                 }}
               >
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-                  borderRadius: '16px'
-                }} />
-                <FaEdit style={{ position: 'relative', zIndex: 1 }} />
-                <span style={{ position: 'relative', zIndex: 1 }}>Редактировать</span>
+                <FaEdit />
+                <span>Редактировать</span>
               </button>
             </div>
 
@@ -416,21 +357,19 @@ const Profile: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
               gap: '1.5rem',
-              marginBottom: '2rem',
-              position: 'relative',
-              zIndex: 1
+              marginBottom: '2rem'
             }}>
               <div style={{
                 padding: '1.5rem',
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                background: '#f8f9fa',
                 borderRadius: '16px',
-                border: '1px solid rgba(239, 68, 68, 0.1)',
+                border: '1px solid #eee',
                 transition: 'all 0.3s ease',
                 cursor: 'pointer'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.15)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.08)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
@@ -439,15 +378,15 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                   <div style={{
                     padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                    background: '#8B0000',
                     borderRadius: '12px',
-                    boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
+                    boxShadow: '0 4px 16px rgba(139, 0, 0, 0.15)'
                   }}>
                     <FaEnvelope size={20} style={{ color: 'white' }} />
                   </div>
                   <div>
-                    <h4 style={{ margin: 0, color: '#374151', fontWeight: 600, fontSize: '0.9rem' }}>EMAIL</h4>
-                    <p style={{ margin: 0, color: '#1F2937', fontSize: '1.1rem', fontWeight: 500 }}>
+                    <h4 style={{ margin: 0, color: '#8E8E93', fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase' }}>EMAIL</h4>
+                    <p style={{ margin: 0, color: '#1A1A1A', fontSize: '1.1rem', fontWeight: 500 }}>
                       {user.email || 'admin@gmail.com'}
                     </p>
                   </div>
@@ -456,15 +395,15 @@ const Profile: React.FC = () => {
 
               <div style={{
                 padding: '1.5rem',
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%)',
+                background: '#f8f9fa',
                 borderRadius: '16px',
-                border: '1px solid rgba(16, 185, 129, 0.1)',
+                border: '1px solid #eee',
                 transition: 'all 0.3s ease',
                 cursor: 'pointer'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.15)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.08)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
@@ -473,15 +412,15 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                   <div style={{
                     padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    background: '#34C759',
                     borderRadius: '12px',
-                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                    boxShadow: '0 4px 16px rgba(52, 199, 89, 0.15)'
                   }}>
                     <FaPhone size={20} style={{ color: 'white' }} />
                   </div>
                   <div>
-                    <h4 style={{ margin: 0, color: '#374151', fontWeight: 600, fontSize: '0.9rem' }}>ТЕЛЕФОН</h4>
-                    <p style={{ margin: 0, color: '#1F2937', fontSize: '1.1rem', fontWeight: 500 }}>
+                    <h4 style={{ margin: 0, color: '#8E8E93', fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase' }}>ТЕЛЕФОН</h4>
+                    <p style={{ margin: 0, color: '#1A1A1A', fontSize: '1.1rem', fontWeight: 500 }}>
                       {user.phone || '89158763458'}
                     </p>
                   </div>
@@ -494,36 +433,19 @@ const Profile: React.FC = () => {
           <motion.div
             variants={itemVariants}
             style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%)',
+              background: '#fff',
               borderRadius: '24px',
               padding: '2.5rem',
               marginBottom: '2rem',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              position: 'relative',
-              overflow: 'hidden'
+              boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+              border: '1px solid #eee'
             }}
           >
-            {/* Декоративный элемент */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '200px',
-              height: '200px',
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-              borderRadius: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 0
-            }} />
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '1rem',
-              marginBottom: '2rem',
-              position: 'relative',
-              zIndex: 1
+              marginBottom: '2rem'
             }}>
               <div style={{
                 display: 'flex',
@@ -531,18 +453,11 @@ const Profile: React.FC = () => {
                 justifyContent: 'center',
                 width: '50px',
                 height: '50px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: '#8B0000',
                 borderRadius: '12px',
-                color: 'white',
-                position: 'relative'
+                color: 'white'
               }}>
-                <FaGift size={24} style={{ position: 'relative', zIndex: 1 }} />
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-                  borderRadius: '12px'
-                }} />
+                <FaGift size={24} />
               </div>
               <div>
                 <h3 style={{
@@ -556,7 +471,7 @@ const Profile: React.FC = () => {
                 </h3>
                 <p style={{
                   fontSize: '1rem',
-                  color: '#6B7280',
+                  color: '#555',
                   margin: 0
                 }}>
                   {benefitsLoading ? 'Загрузка...' : `Доступно ${userBenefits.length} льгот`}
@@ -573,7 +488,7 @@ const Profile: React.FC = () => {
                 <div style={{
                   width: '40px',
                   height: '40px',
-                  border: '4px solid rgba(139, 0, 0, 0.1)',
+                  border: '4px solid #f8f9fa',
                   borderTop: '4px solid #8B0000',
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
@@ -589,34 +504,18 @@ const Profile: React.FC = () => {
                   <div
                     key={benefit.id}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                      background: '#f8f9fa',
                       borderRadius: '16px',
                       padding: '1.5rem',
-                      border: '1px solid rgba(139, 0, 0, 0.1)',
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                      overflow: 'hidden'
+                      border: '1px solid #eee',
+                      transition: 'all 0.3s ease'
                     }}
                   >
-                    {/* Декоративный элемент */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      right: 0,
-                      width: '100px',
-                      height: '100px',
-                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-                      borderRadius: '50%',
-                      transform: 'translate(50%, -50%)',
-                      zIndex: 0
-                    }} />
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.75rem',
-                      marginBottom: '0.75rem',
-                      position: 'relative',
-                      zIndex: 1
+                      marginBottom: '0.75rem'
                     }}>
                       {categoryIcons[benefit.category] || categoryIcons['Default']}
                       <h4 style={{
@@ -630,25 +529,21 @@ const Profile: React.FC = () => {
                     </div>
                     <p style={{
                       fontSize: '0.9rem',
-                      color: '#6B7280',
+                      color: '#555',
                       margin: '0 0 0.75rem 0',
-                      lineHeight: 1.5,
-                      position: 'relative',
-                      zIndex: 1
+                      lineHeight: 1.5
                     }}>
                       {benefit.description}
                     </p>
                     {benefit.category && (
                       <div style={{
                         display: 'inline-block',
-                        background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                        color: '#8B0000',
+                        background: '#F2F2F7',
+                        color: '#8E8E93',
                         padding: '0.25rem 0.75rem',
                         borderRadius: '8px',
                         fontSize: '0.8rem',
-                        fontWeight: 600,
-                        position: 'relative',
-                        zIndex: 1
+                        fontWeight: 600
                       }}>
                         {benefit.category}
                       </div>
@@ -660,7 +555,7 @@ const Profile: React.FC = () => {
               <div style={{
                 textAlign: 'center',
                 padding: '3rem 1rem',
-                color: '#6B7280'
+                color: '#8E8E93'
               }}>
                 <FaGift size={48} style={{ color: '#ddd', marginBottom: '1rem' }} />
                 <h4 style={{ margin: '0 0 0.5rem 0', color: '#1A1A1A' }}>Нет льгот</h4>
@@ -672,7 +567,7 @@ const Profile: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/my-benefits')}
                   style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#8B0000',
                     color: 'white',
                     border: 'none',
                     borderRadius: '16px',
@@ -681,27 +576,19 @@ const Profile: React.FC = () => {
                     fontWeight: 600,
                     cursor: 'pointer',
                     marginTop: '1rem',
-                    boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    boxShadow: '0 8px 32px rgba(139, 0, 0, 0.15)',
+                    transition: 'all 0.3s ease'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 12px 40px rgba(139, 0, 0, 0.25)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(139, 0, 0, 0.15)';
                   }}
                 >
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-                    borderRadius: '16px'
-                  }} />
-                  <span style={{ position: 'relative', zIndex: 1 }}>Выбрать льготы</span>
+                  Выбрать льготы
                 </motion.button>
               </div>
             )}
@@ -717,7 +604,7 @@ const Profile: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleLogout}
               style={{
-                background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                background: '#dc2626',
                 color: 'white',
                 border: 'none',
                 borderRadius: '16px',
@@ -729,7 +616,7 @@ const Profile: React.FC = () => {
                 alignItems: 'center',
                 gap: '0.75rem',
                 margin: '0 auto',
-                boxShadow: '0 8px 24px rgba(220, 38, 38, 0.3)',
+                boxShadow: '0 8px 32px rgba(220, 38, 38, 0.15)',
                 transition: 'all 0.3s ease'
               }}
             >
