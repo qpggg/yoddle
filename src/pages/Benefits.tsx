@@ -6,6 +6,12 @@ import PersonalizationIcon from '@mui/icons-material/PersonOutline';
 import AnalyticsIcon from '@mui/icons-material/QueryStats';
 import SupportIcon from '@mui/icons-material/Support';
 import SavingsIcon from '@mui/icons-material/Savings';
+import ComputerIcon from '@mui/icons-material/Computer';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import CloudIcon from '@mui/icons-material/Cloud';
+import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
+import SecurityIcon from '@mui/icons-material/Security';
 import { useTheme } from '@mui/material/styles';
 
 const Benefits: React.FC = () => {
@@ -14,38 +20,38 @@ const Benefits: React.FC = () => {
   const benefits = [
     {
       icon: <AutomationIcon />,
-      title: 'Гиперавтоматизация HR-процессов',
-      description: 'Умные алгоритмы автоматизируют 95% рутинных операций. Продвинутые системы управляют распределением льгот, бюджетированием и отчетностью без участия человека. Smart algorithms оптимизируют процессы в режиме 24/7.',
-      stats: '95% автоматизация',
+      title: 'Автоматизация HR-процессов',
+      description: 'Автоматизируем основные операции с льготами и отчетностью. Система работает круглосуточно, снижая время на рутинные задачи на 70%. Планируем дальнейшее развитие автоматизации.',
+      stats: '70% автоматизация',
       color: '#8B0000'
     },
     {
       icon: <PersonalizationIcon />,
-      title: 'Data-driven персонализация',
-      description: 'Интеллектуальные алгоритмы анализируют 200+ параметров поведения сотрудников и предлагают оптимальные льготы с высокой точностью. Каждый получает персональный опыт, основанный на данных.',
-      stats: '200+ параметров анализа',
-      color: '#FF6B35'
+      title: 'Персонализация льгот',
+      description: 'Анализируем предпочтения сотрудников и предлагаем подходящие льготы на основе их профиля и истории использования. Каждый получает персональные рекомендации.',
+      stats: 'Персональный подход',
+      color: '#A61E1E'
     },
     {
       icon: <AnalyticsIcon />,
-      title: 'Real-time аналитика и insights',
-      description: 'Продвинутая BI-система с live дашбордами. Smart analytics прогнозирует тренды удовлетворенности и retention rate. Каждое решение подкреплено данными и готово к ML-интеграции.',
-      stats: 'Live данные 24/7',
-      color: '#4ECDC4'
+      title: 'Аналитика и отчеты',
+      description: 'Подробная аналитика использования льгот с понятными графиками и отчетами. Отслеживаем тренды удовлетворенности и помогаем принимать обоснованные решения.',
+      stats: 'Данные в реальном времени',
+      color: '#C43D3D'
     },
     {
       icon: <SupportIcon />,
-      title: 'Умная система поддержки',
-      description: 'Автоматизированная поддержка решает 89% запросов мгновенно. Для сложных кейсов — команда экспертов с гарантированным SLA 15 минут. Система постоянно совершенствуется.',
-      stats: '89% автоматизация',
-      color: '#45B7D1'
+      title: 'Техническая поддержка',
+      description: 'Быстрая поддержка через чат и email. Решаем большинство вопросов в течение 30 минут. Система самообслуживания покрывает типовые запросы пользователей.',
+      stats: '30 мин среднее время ответа',
+      color: '#8B0000'
     },
     {
       icon: <SavingsIcon />,
-      title: 'Максимизация ROI через данные',
-      description: 'Продвинутая аналитика оптимизирует каждый рубль бюджета льгот. Cost-per-engagement снижается на 67%, а satisfaction score растет на 156%. Data-driven подход к каждому решению.',
-      stats: '+156% satisfaction',
-      color: '#96CEB4'
+      title: 'Оптимизация бюджета',
+      description: 'Помогаем эффективно распределять бюджет на льготы через детальную аналитику. Отслеживаем популярность льгот и их влияние на удовлетворенность команды.',
+      stats: 'Прозрачность трат',
+      color: '#A61E1E'
     }
   ];
 
@@ -121,7 +127,7 @@ const Benefits: React.FC = () => {
           width: '600px',
           height: '600px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 107, 53, 0.02) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.02) 0%, transparent 70%)',
           zIndex: 1,
           display: { xs: 'none', lg: 'block' }
         }}
@@ -173,7 +179,7 @@ const Benefits: React.FC = () => {
             width: '40px',
             height: '40px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(76, 236, 196, 0.15) 0%, rgba(76, 236, 196, 0.05) 100%)',
+            background: 'linear-gradient(135deg, rgba(196, 61, 61, 0.15) 0%, rgba(196, 61, 61, 0.05) 100%)',
             display: { xs: 'none', xl: 'block' }
           }}
         />
@@ -223,7 +229,7 @@ const Benefits: React.FC = () => {
                 letterSpacing: '-0.02em'
               }}
             >
-              Smart-преимущества{' '}
+              Преимущества{' '}
               <Box component="span" sx={{ color: theme.palette.primary.main }}>
                 Yoddle
               </Box>
@@ -239,7 +245,7 @@ const Benefits: React.FC = () => {
                 lineHeight: 1.6
               }}
             >
-              Умная платформа с продвинутыми алгоритмами, которая трансформирует HR через automation, personalization и data science
+              Современная платформа для управления льготами с автоматизацией, персонализацией и удобной аналитикой
             </Typography>
           </Box>
         </motion.div>
@@ -259,11 +265,14 @@ const Benefits: React.FC = () => {
                     sx={{
                       p: 4,
                       height: '100%',
+                      minHeight: '380px',
                       borderRadius: '24px',
                       border: '1px solid rgba(0, 0, 0, 0.06)',
                       backgroundColor: 'white',
                       position: 'relative',
                       overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
                       transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                       cursor: 'pointer',
                       '&:hover': {
@@ -354,7 +363,8 @@ const Benefits: React.FC = () => {
                         mb: 3,
                         fontSize: '1rem',
                         lineHeight: 1.7,
-                        letterSpacing: '0.01em'
+                        letterSpacing: '0.01em',
+                        flex: 1
                       }}
                     >
                       {benefit.description}
@@ -407,7 +417,7 @@ const Benefits: React.FC = () => {
           </Grid>
         </motion.div>
 
-        {/* Enhanced Technology Stack Section */}
+        {/* Modern Technology Stack Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -421,99 +431,183 @@ const Benefits: React.FC = () => {
                 fontWeight: 800,
                 color: '#1A1A1A',
                 mb: 2,
-                fontSize: { xs: '2rem', md: '2.8rem' },
+                fontSize: { xs: '2rem', md: '2.4rem' },
                 letterSpacing: '-0.02em'
               }}
             >
-              Технологический стек
+              Основа платформы
             </Typography>
             <Typography
               variant="h6"
               sx={{
                 color: '#666',
-                mb: 6,
-                fontSize: { xs: '1rem', md: '1.2rem' },
-                maxWidth: '600px',
-                mx: 'auto'
+                mb: 8,
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                maxWidth: '500px',
+                mx: 'auto',
+                lineHeight: 1.6
               }}
             >
-              Передовые технологии для создания интеллектуальных HR-решений
+              Надежные решения для удобной работы с льготами
             </Typography>
-            <Grid container spacing={3} sx={{ mb: 8 }}>
+            
+            {/* Modern Grid Layout */}
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
+              gap: 3,
+              mb: 6 
+            }}>
               {[
-                { tech: 'Smart Algorithms', desc: 'Intelligent automation', color: '#8B0000' },
-                { tech: 'Real-time Processing', desc: 'Live data streams', color: '#FF6B35' },
-                { tech: 'Advanced Analytics', desc: 'Data-driven insights', color: '#4ECDC4' },
-                { tech: 'Cloud Infrastructure', desc: '99.9% uptime SLA', color: '#45B7D1' },
-                { tech: 'API-first Design', desc: 'Seamless integrations', color: '#96CEB4' },
-                { tech: 'Enterprise Security', desc: 'Bank-grade protection', color: '#8B0000' }
+                { 
+                  title: 'Веб-интерфейс', 
+                  desc: 'Простой и понятный дизайн',
+                  icon: <ComputerIcon />,
+                  gradient: 'linear-gradient(135deg, #8B0000 0%, #A61E1E 100%)'
+                },
+                { 
+                  title: 'Отчеты', 
+                  desc: 'Быстрая генерация данных',
+                  icon: <BarChartIcon />,
+                  gradient: 'linear-gradient(135deg, #A61E1E 0%, #C43D3D 100%)'
+                },
+                { 
+                  title: 'Аналитика', 
+                  desc: 'Наглядные графики',
+                  icon: <TrendingUpIcon />,
+                  gradient: 'linear-gradient(135deg, #C43D3D 0%, #8B0000 100%)'
+                },
+                { 
+                  title: 'Хранение', 
+                  desc: 'Безопасность данных',
+                  icon: <CloudIcon />,
+                  gradient: 'linear-gradient(135deg, #8B0000 0%, #A61E1E 100%)'
+                },
+                { 
+                  title: 'Интеграция', 
+                  desc: 'Связь с 1С и другими системами',
+                  icon: <IntegrationInstructionsIcon />,
+                  gradient: 'linear-gradient(135deg, #A61E1E 0%, #C43D3D 100%)'
+                },
+                { 
+                  title: 'Поддержка', 
+                  desc: 'Техническое сопровождение',
+                  icon: <SecurityIcon />,
+                  gradient: 'linear-gradient(135deg, #C43D3D 0%, #8B0000 100%)'
+                }
               ].map((item, index) => (
-                <Grid item xs={6} md={4} key={index}>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ 
-                      duration: 0.5, 
-                      delay: index * 0.1,
-                      ease: [0.25, 0.46, 0.45, 0.94]
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    duration: 0.6, 
+                    delay: index * 0.1,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  whileHover={{ 
+                    y: -8,
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      height: '200px',
+                      borderRadius: '24px',
+                      background: 'white',
+                      border: '1px solid rgba(139, 0, 0, 0.1)',
+                      overflow: 'hidden',
+                      transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: '0 20px 60px rgba(139, 0, 0, 0.15)',
+                        transform: 'translateY(-4px)',
+                        '&::before': {
+                          opacity: 0.05
+                        },
+                        '& .tech-icon': {
+                          transform: 'scale(1.2) rotate(5deg)'
+                        }
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: item.gradient,
+                        opacity: 0,
+                        transition: 'opacity 0.4s ease'
+                      }
                     }}
-                    whileHover={{ scale: 1.05 }}
                   >
+                    {/* Gradient Top Bar */}
                     <Box
                       sx={{
-                        p: 4,
-                        borderRadius: '20px',
-                        backgroundColor: 'white',
-                        border: '1px solid rgba(0, 0, 0, 0.06)',
-                        transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '4px',
+                        background: item.gradient
+                      }}
+                    />
+                    
+                    {/* Content */}
+                    <Box
+                      sx={{
                         position: 'relative',
-                        overflow: 'hidden',
-                        '&:hover': {
-                          transform: 'translateY(-8px)',
-                          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                          '&::before': {
-                            opacity: 1
-                          }
-                        },
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '3px',
-                          background: `linear-gradient(90deg, ${item.color} 0%, ${item.color}80 100%)`,
-                          opacity: 0,
-                          transition: 'opacity 0.3s ease'
-                        }
+                        zIndex: 2,
+                        p: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        textAlign: 'center'
                       }}
                     >
+                      <Box
+                        className="tech-icon"
+                        sx={{
+                          mb: 2,
+                          transition: 'transform 0.3s ease',
+                          '& svg': {
+                            fontSize: '3rem',
+                            color: '#8B0000'
+                          }
+                        }}
+                      >
+                        {item.icon}
+                      </Box>
                       <Typography
                         variant="h6"
                         sx={{
                           fontWeight: 700,
-                          color: item.color,
+                          color: '#1A1A1A',
                           mb: 1,
-                          fontSize: '1.2rem'
+                          fontSize: '1.1rem'
                         }}
                       >
-                        {item.tech}
+                        {item.title}
                       </Typography>
                       <Typography
                         sx={{
                           color: '#666',
-                          fontSize: '0.95rem',
+                          fontSize: '0.9rem',
                           lineHeight: 1.5
                         }}
                       >
                         {item.desc}
                       </Typography>
                     </Box>
-                  </motion.div>
-                </Grid>
+                  </Box>
+                </motion.div>
               ))}
-            </Grid>
+            </Box>
           </Box>
         </motion.div>
       </Container>
