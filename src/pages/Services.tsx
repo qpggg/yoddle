@@ -48,48 +48,48 @@ const Services: React.FC = () => {
   const services = [
     {
       icon: PsychologyIcon,
-      title: 'Smart Wellness Solutions',
-      subtitle: 'Интеллектуальное управление благополучием',
+      title: 'Здоровье и благополучие',
+      subtitle: 'Комплексная поддержка физического и психологического состояния сотрудников',
       items: [
-        'Умный анализ стресс-паттернов сотрудников',
-        'Предиктивные модели выгорания на базе данных',
-        'Персонализированные wellness-программы',
-        'Real-time мониторинг well-being метрик',
-        'Автоматизированная поддержка ментального здоровья',
-        'Data-driven рекомендации по питанию'
+        'Профилактика выгорания и стресса',
+        'Консультации по режиму дня и балансу работы/отдыха',
+        'Правильное питание и нутрициология',
+        'Психологическая поддержка и консультации',
+        'Мониторинг самочувствия команды',
+        'Программы формирования здоровых привычек'
       ],
       color: '#8B0000',
-      stats: '89% снижение стресса'
+      stats: 'Забота о здоровье'
     },
     {
       icon: AnalyticsIcon,
-      title: 'Smart Fitness & Sports',
-      subtitle: 'Гамификация и data science в спорте',
+      title: 'Спорт и активность',
+      subtitle: 'Разнообразные спортивные активности для команд и индивидуально',
       items: [
-        'Персональные умные тренировки',
-        'Командные challenge с smart алгоритмами',
-        'Биометрическая аналитика в real-time',
-        'Прогнозирование травм на основе данных',
-        'Smart рекомендации оборудования',
-        'Performance optimization через аналитику'
+        'Командные виды спорта для сплочения',
+        'Индивидуальные фитнес-программы',
+        'Тимбилдинг через спортивные активности',
+        'Корпоративные спортивные турниры',
+        'Абонементы в спортзалы и бассейны',
+        'Программы здорового образа жизни'
       ],
-      color: '#FF6B35',
-      stats: '+156% активность команды'
+      color: '#A61E1E',
+      stats: 'Активная команда'
     },
     {
       icon: AutomationIcon,
-      title: 'Learning & Development 2.0',
-      subtitle: 'Автоматизированное развитие талантов',
+      title: 'Обучение и развитие',
+      subtitle: 'Развитие профессиональных и личных компетенций, улучшение социальных навыков',
       items: [
-        'Адаптивные пути обучения',
-        'Smart-ментор для развития навыков',
-        'Micro-learning через умные алгоритмы',
-        'Автоматизированное отслеживание прогресса',
-        'Планирование карьеры на основе данных',
-        'Real-time анализ пробелов в навыках'
+        'Профессиональные курсы и тренинги',
+        'Развитие лидерских качеств',
+        'Soft-skills тренинги и мастер-классы',
+        'Корпоративное обучение и менторство',
+        'Конференции и образовательные мероприятия',
+        'Программы карьерного роста'
       ],
-      color: '#4ECDC4',
-      stats: '94% улучшение навыков'
+      color: '#C43D3D',
+      stats: 'Рост компетенций'
     }
   ];
 
@@ -127,7 +127,7 @@ const Services: React.FC = () => {
           width: '700px',
           height: '700px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(76, 236, 196, 0.015) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.015) 0%, transparent 70%)',
           zIndex: 1,
           display: { xs: 'none', lg: 'block' }
         }}
@@ -180,7 +180,7 @@ const Services: React.FC = () => {
             width: '60px',
             height: '60px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.12) 0%, rgba(255, 107, 53, 0.04) 100%)',
+            background: 'linear-gradient(135deg, rgba(196, 61, 61, 0.12) 0%, rgba(196, 61, 61, 0.04) 100%)',
             display: { xs: 'none', xl: 'block' }
           }}
         />
@@ -211,7 +211,7 @@ const Services: React.FC = () => {
             width: '40px',
             height: '40px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(76, 236, 196, 0.15) 0%, rgba(76, 236, 196, 0.08) 100%)',
+            background: 'linear-gradient(135deg, rgba(166, 30, 30, 0.15) 0%, rgba(166, 30, 30, 0.08) 100%)',
             display: { xs: 'none', xl: 'block' }
           }}
         />
@@ -235,9 +235,9 @@ const Services: React.FC = () => {
                 letterSpacing: '-0.02em'
               }}
             >
-              Smart-решения для{' '}
+              Льготы для{' '}
               <Box component="span" sx={{ color: theme.palette.primary.main }}>
-                HR будущего
+                вашей команды
               </Box>
             </Typography>
             <Typography
@@ -251,7 +251,7 @@ const Services: React.FC = () => {
                 lineHeight: 1.6
               }}
             >
-              Полный стек автоматизированных HR-сервисов с умными алгоритмами, которые трансформируют employee experience через данные и персонализацию
+              Комплексные программы поддержки сотрудников: здоровье, спорт, обучение с персонализацией и геймификацией для повышения вовлеченности
             </Typography>
           </Box>
 
@@ -471,10 +471,10 @@ const Services: React.FC = () => {
                 </motion.div>
               </Grid>
             ))}
-          </Grid>
+                    </Grid>
           </Box>
 
-          {/* Enhanced Technology Integration Section */}
+          {/* Gamification & Personalization Section */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -486,7 +486,7 @@ const Services: React.FC = () => {
                 mt: { xs: 8, md: 12 },
                 p: { xs: 4, md: 6 },
                 borderRadius: '32px',
-                background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.04) 0%, rgba(255, 107, 53, 0.02) 100%)',
+                background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.04) 0%, rgba(166, 30, 30, 0.02) 100%)',
                 border: '1px solid rgba(139, 0, 0, 0.08)',
                 textAlign: 'center',
                 position: 'relative',
@@ -507,14 +507,14 @@ const Services: React.FC = () => {
               <Typography
                 variant="h3"
                 sx={{
-                  fontSize: { xs: theme.typography.pxToRem(28), md: theme.typography.pxToRem(40) },
+                  fontSize: { xs: theme.typography.pxToRem(28), md: theme.typography.pxToRem(36) },
                   fontWeight: 800,
                   mb: 2,
                   color: '#1A1A1A',
                   letterSpacing: '-0.02em'
                 }}
               >
-                Smart Technology Integration
+                Персонализация и геймификация
               </Typography>
               <Typography
                 variant="h6"
@@ -522,22 +522,22 @@ const Services: React.FC = () => {
                   fontSize: { xs: theme.typography.pxToRem(16), md: theme.typography.pxToRem(18) },
                   color: '#666',
                   mb: 6,
-                  maxWidth: '800px',
+                  maxWidth: '700px',
                   mx: 'auto',
                   lineHeight: 1.6
                 }}
               >
-                API-first архитектура с интеллектуальными алгоритмами для безшовной интеграции с любыми HR-системами и data sources
+                Индивидуальный подход к каждому сотруднику с элементами игры для повышения мотивации и вовлеченности
               </Typography>
               <Grid container spacing={4}>
                 {[
-                  { name: 'REST API', desc: 'Полная интеграция', color: '#8B0000' },
-                  { name: 'Webhooks', desc: 'Real-time события', color: '#FF6B35' },
-                  { name: 'Smart Analytics', desc: 'Data insights', color: '#4ECDC4' },
-                  { name: 'Auto-sync', desc: 'Умная синхронизация', color: '#45B7D1' },
-                  { name: 'Cloud-ready', desc: '99.9% uptime', color: '#96CEB4' },
-                  { name: 'Security First', desc: 'Enterprise-grade', color: '#8B0000' }
-                ].map((tech, index) => (
+                  { name: 'Персональные рекомендации', desc: 'Подбор льгот по интересам', color: '#8B0000' },
+                  { name: 'Система достижений', desc: 'Награды за активность', color: '#A61E1E' },
+                  { name: 'Рейтинги команд', desc: 'Здоровая конкуренция', color: '#C43D3D' },
+                  { name: 'Трекинг прогресса', desc: 'Отслеживание результатов', color: '#8B0000' },
+                  { name: 'Социальные функции', desc: 'Общение и взаимодействие', color: '#A61E1E' },
+                  { name: 'Гибкие настройки', desc: 'Адаптация под потребности', color: '#C43D3D' }
+                ].map((feature, index) => (
                   <Grid item xs={6} md={4} key={index}>
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -574,17 +574,17 @@ const Services: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: '4px',
-                            background: `linear-gradient(90deg, ${tech.color} 0%, ${tech.color}80 100%)`,
+                            background: `linear-gradient(90deg, ${feature.color} 0%, ${feature.color}80 100%)`,
                             opacity: 0,
                             transition: 'opacity 0.3s ease'
                           }
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: tech.color, mb: 1, fontSize: '1.2rem' }}>
-                          {tech.name}
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: feature.color, mb: 1, fontSize: '1.1rem' }}>
+                          {feature.name}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.5 }}>
-                          {tech.desc}
+                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem' }}>
+                          {feature.desc}
                         </Typography>
                       </Box>
                     </motion.div>
@@ -593,6 +593,7 @@ const Services: React.FC = () => {
               </Grid>
             </Box>
           </motion.div>
+
         </motion.div>
 
         {/* Background Element */}
@@ -617,7 +618,7 @@ const Services: React.FC = () => {
               letterSpacing: '-0.05em'
             }}
           >
-            SMART·TECH
+            ЛЬГОТЫ·YODDLE
           </Typography>
         </Box>
       </Container>
