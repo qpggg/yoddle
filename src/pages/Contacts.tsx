@@ -130,7 +130,7 @@ const Contacts: React.FC = () => {
       title: 'Поддержка',
       value: 'support@yoddle.ru',
       description: 'Техническая поддержка',
-      color: '#0066CC'
+      color: '#FF6B35'
     }
   ];
 
