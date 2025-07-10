@@ -50,10 +50,7 @@ export const Footer = () => {
                 Платформа для управления корпоративными льготами, которая помогает компаниям заботиться о сотрудниках
               </Typography>
               <Typography variant="body2" sx={{ mt: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
-                📧 info@yoddle.ru
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                📱 +7 (999) 123-45-67
+              info@yoddle.ru
               </Typography>
             </Box>
           </Grid>

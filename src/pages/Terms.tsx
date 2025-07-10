@@ -184,7 +184,7 @@ const Terms: React.FC = React.memo(() => {
                 fontSize: theme.typography.pxToRem(14)
               }}
             >
-              Последнее обновление: 07 января 2025 г.
+              Последнее обновление: 10 июля 2025 г.
             </Typography>
           </Box>
         </motion.div>

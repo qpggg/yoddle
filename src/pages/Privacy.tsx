@@ -212,7 +212,7 @@ const Privacy: React.FC = React.memo(() => {
                 fontSize: theme.typography.pxToRem(14)
               }}
             >
-              Последнее обновление: 07 января 2025 г.
+              Последнее обновление: 10 июля 2025 г.
             </Typography>
           </Box>
         </motion.div>
@@ -330,7 +330,7 @@ const Privacy: React.FC = React.memo(() => {
                 color: '#888'
               }}
             >
-              📧 privacy@yoddle.ru  •  📱 +7 (999) 123-45-67  •  🔒 DPO: dpo@yoddle.ru
+              📧 info@yoddle.ru 
             </Typography>
           </Paper>
         </motion.div>
