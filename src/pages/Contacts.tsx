@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Typography, Box, TextField, Button, Grid, Paper, Snackbar, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useTheme } from '@mui/material/styles';
-import { Phone, Mail, User, UserCheck } from 'lucide-react';
+import { User, UserCheck } from 'lucide-react';
 
 const Contacts: React.FC = () => {
   const theme = useTheme();
