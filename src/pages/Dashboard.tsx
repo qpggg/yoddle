@@ -223,8 +223,8 @@ const Dashboard: React.FC = () => {
   const [userProgress, setUserProgress] = useState<any>(null);
   const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
-  const { user, setUser } = useUser();
-  const { userBenefits, isLoading: benefitsLoading } = useUserBenefits();
+  const { user, setUser, isLoading: userLoading, error: userError } = useUser();
+  const { userBenefits, isLoading: benefitsLoading, error: benefitsError } = useUserBenefits();
   const { unreadCount } = useNotifications({ userId: user?.id });
   
   // Логирование уведомлений для отладки
@@ -316,6 +316,44 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Показываем loading пока загружается пользователь
+  if (userLoading) {
+    return (
+      <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🔄</div>
+          <div>Загрузка данных пользователя...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Показываем ошибку если не удалось загрузить пользователя
+  if (userError && !user) {
+    return (
+      <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <div style={{ textAlign: 'center', color: '#e74c3c' }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>❌</div>
+          <div>Ошибка загрузки: {userError}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              marginTop: '16px', 
+              padding: '8px 16px', 
+              background: '#750000', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Перезагрузить
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       <motion.div 
@@ -364,6 +402,11 @@ const Dashboard: React.FC = () => {
               <div className="benefit-item">
                 <Gift size={20} />
                 <span>Загрузка...</span>
+              </div>
+            ) : benefitsError ? (
+              <div className="benefit-item" style={{ color: '#e74c3c' }}>
+                <Gift size={20} />
+                <span>Ошибка: {benefitsError}</span>
               </div>
             ) : userBenefits.length > 0 ? (
               userBenefits.map((benefit) => (

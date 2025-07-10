@@ -1,8 +1,5 @@
 import { Box, Container, Grid, Typography, Link, IconButton, Divider } from '@mui/material'
-import FacebookIcon from '@mui/icons-material/Facebook'
-import TwitterIcon from '@mui/icons-material/Twitter'
 import LinkedInIcon from '@mui/icons-material/LinkedIn'
-import InstagramIcon from '@mui/icons-material/Instagram'
 import { Link as RouterLink } from 'react-router-dom'
 
 const footerLinks = {
@@ -11,7 +8,7 @@ const footerLinks = {
     items: [
       { name: 'Возможности', href: '/services' },
       { name: 'Преимущества', href: '/benefits' },
-      { name: 'Как это работает', href: '/about' },
+      { name: 'О платформе', href: '/about' },
       { name: 'Тарифы', href: '/pricing' },
     ],
   },
@@ -19,9 +16,8 @@ const footerLinks = {
     title: 'Компания',
     items: [
       { name: 'О нас', href: '/about' },
-      { name: 'Блог', href: '/about' },
-      { name: 'Карьера', href: '/about' },
-      { name: 'Контакты', href: '/contacts' },
+      { name: 'Войти в систему', href: '/login' },
+      { name: 'Демо', href: '/dashboard' },
     ],
   },
   legal: {
@@ -29,7 +25,6 @@ const footerLinks = {
     items: [
       { name: 'Условия использования', href: '/about' },
       { name: 'Политика конфиденциальности', href: '/about' },
-      { name: 'Правовые документы', href: '/about' },
     ],
   },
 }
@@ -54,38 +49,21 @@ export const Footer = () => {
               <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
                 Платформа для управления корпоративными льготами, которая помогает компаниям заботиться о сотрудниках
               </Typography>
+              <Typography variant="body2" sx={{ mt: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+                📧 info@yoddle.ru
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                📱 +7 (999) 123-45-67
+              </Typography>
               <Box sx={{ mt: 2 }}>
                 <IconButton
-                  href="https://facebook.com"
+                  href="https://t.me/yoddle_hr"
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
-                >
-                  <FacebookIcon />
-                </IconButton>
-                <IconButton
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
-                >
-                  <TwitterIcon />
-                </IconButton>
-                <IconButton
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
+                  title="Telegram канал"
                 >
                   <LinkedInIcon />
-                </IconButton>
-                <IconButton
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
-                >
-                  <InstagramIcon />
                 </IconButton>
               </Box>
             </Box>

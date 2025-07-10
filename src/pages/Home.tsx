@@ -4,20 +4,51 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 
-const Home: React.FC = () => {
+// 🚀 ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ С МЕМОИЗАЦИЕЙ
+const Home: React.FC = React.memo(() => {
   const theme = useTheme();
 
+  // 🚀 МЕМОИЗИРОВАННЫЕ АНИМАЦИИ (оптимизированные)
+  const fadeInUp = React.useMemo(() => ({
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, ease: "easeOut" } // Упрощенный easing, ускорил с 0.8
+  }), []);
+
+  const fadeInUpDelayed = React.useMemo(() => ({
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, delay: 0.1, ease: "easeOut" } // Уменьшил delay с 0.2
+  }), []);
+
+  const fadeInUpButton = React.useMemo(() => ({
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, delay: 0.2, ease: "easeOut" } // Уменьшил delay с 0.4
+  }), []);
+
   return (
-    <Box component="main">
+    <Box 
+      component="main"
+      sx={{
+        // 🚀 HARDWARE ACCELERATION
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        perspective: 1000
+      }}
+    >
       <Box
         component="section"
         sx={{
-            position: 'relative',
-            overflow: 'hidden',
+          position: 'relative',
+          overflow: 'hidden',
           background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
           pt: { xs: theme.spacing(10), md: theme.spacing(15) },
           pb: { xs: theme.spacing(8), md: theme.spacing(15) },
-          minHeight: { xs: 'calc(100vh - 64px)', md: '100vh' }
+          minHeight: { xs: 'calc(100vh - 64px)', md: '100vh' },
+          // 🚀 HARDWARE ACCELERATION ДЛЯ СЕКЦИИ
+          willChange: 'transform',
+          backfaceVisibility: 'hidden'
         }}
       >
         <Container maxWidth="lg">
@@ -31,14 +62,14 @@ const Home: React.FC = () => {
               zIndex: 2
             }}
           >
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
+            <motion.div
+              initial={fadeInUp.initial}
+              animate={fadeInUp.animate}
+              transition={fadeInUp.transition}
             >
-                      <Typography 
-                        variant="h1" 
-                        sx={{
+              <Typography 
+                variant="h1" 
+                sx={{
                   fontSize: { xs: theme.typography.pxToRem(32), md: theme.typography.pxToRem(64) },
                   fontWeight: 700,
                   lineHeight: 1.2,
@@ -46,25 +77,25 @@ const Home: React.FC = () => {
                 }}
               >
                 <Box component="span" sx={{ color: '#000' }}>
-                        Yoddle —
+                  Yoddle —
                 </Box>{' '}
                 <Box component="span" sx={{ color: theme.palette.primary.main }}>
-                        персонализированные
+                  персонализированные
                 </Box>{' '}
                 <Box component="span" sx={{ color: '#000' }}>
-                        льготы для вашего бизнеса
-                  </Box>
-                  </Typography>
-                </motion.div>
+                  льготы для вашего бизнеса
+                </Box>
+              </Typography>
+            </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+            <motion.div
+              initial={fadeInUpDelayed.initial}
+              animate={fadeInUpDelayed.animate}
+              transition={fadeInUpDelayed.transition}
             >
-            <Typography 
-              variant="h2" 
-              sx={{ 
+              <Typography 
+                variant="h2" 
+                sx={{ 
                   fontSize: { xs: theme.typography.pxToRem(18), md: theme.typography.pxToRem(24) },
                   fontWeight: 400,
                   color: '#666',
@@ -78,13 +109,13 @@ const Home: React.FC = () => {
                   повышение лояльности
                 </Box>{' '}
                 сотрудников
-            </Typography>
+              </Typography>
             </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+            <motion.div
+              initial={fadeInUpButton.initial}
+              animate={fadeInUpButton.animate}
+              transition={fadeInUpButton.transition}
             >
               <Button
                 component={Link}
@@ -100,9 +131,12 @@ const Home: React.FC = () => {
                   textTransform: 'none',
                   borderRadius: 2,
                   boxShadow: '0 4px 6px rgba(139, 0, 0, 0.2)',
+                  // 🚀 ОПТИМИЗИРОВАННЫЕ HOVER ЭФФЕКТЫ
+                  transition: 'all 0.2s ease', // Ускорил transition
                   '&:hover': {
                     backgroundColor: theme.palette.primary.dark,
                     boxShadow: '0 6px 8px rgba(139, 0, 0, 0.3)',
+                    transform: 'translateY(-2px)' // Добавил hover lift
                   },
                   '&:focus': {
                     boxShadow: `0 0 0 3px ${theme.palette.primary.main}33`,
@@ -117,50 +151,59 @@ const Home: React.FC = () => {
             </motion.div>
           </Box>
 
-                  <Box
-                    sx={{
+          {/* 🎨 ОПТИМИЗИРОВАННЫЙ ФОНОВЫЙ ТЕКСТ */}
+          <Box
+            sx={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
               zIndex: 1,
-              display: { xs: 'none', md: 'block' }
-                    }}
-                  >
-                    <Typography
+              display: { xs: 'none', md: 'block' },
+              // 🚀 HARDWARE ACCELERATION
+              willChange: 'transform',
+              backfaceVisibility: 'hidden'
+            }}
+          >
+            <Typography
               variant="h1"
-                      sx={{
-                fontSize: theme.typography.pxToRem(400),
+              sx={{
+                fontSize: theme.typography.pxToRem(300), // Уменьшил с 400
                 fontWeight: 800,
-                color: 'rgba(139, 0, 0, 0.03)',
+                color: 'rgba(139, 0, 0, 0.02)', // Уменьшил opacity с 0.03
                 whiteSpace: 'nowrap',
-                userSelect: 'none'
+                userSelect: 'none',
+                pointerEvents: 'none' // Оптимизация для производительности
               }}
             >
               YODDLE
             </Typography>
           </Box>
         </Container>
-              </Box>
+      </Box>
 
-      {/* CTA Section */}
+      {/* CTA Section - Оптимизированная */}
       <Box
         id="cta"
         component="section"
-              sx={{
-                position: 'relative',
-                overflow: 'hidden',
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
           background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(139, 0, 0, 0.8) 100%)',
           py: { xs: 8, md: 12 },
           mt: { xs: 4, md: 6 },
-          scrollMarginTop: '64px', // Точная компенсация высоты навбара
-          scrollPaddingTop: '64px', // Дополнительная поддержка для старых браузеров
-          scrollBehavior: 'smooth', // Обеспечиваем плавность на уровне элемента
+          scrollMarginTop: '64px',
+          scrollPaddingTop: '64px',
+          scrollBehavior: 'smooth',
+          // 🚀 HARDWARE ACCELERATION ДЛЯ CTA
+          willChange: 'transform',
+          backfaceVisibility: 'hidden'
         }}
       >
-              </Box>
-            </Box>
+        {/* CTA контент можно добавить здесь если нужно */}
+      </Box>
+    </Box>
   );
-};
+});
 
 export default Home; 

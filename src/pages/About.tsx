@@ -9,15 +9,18 @@ import { Link } from 'react-router-dom';
 import { PlayArrow, InfoOutlined } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 
-const About: React.FC = () => {
+// 🚀 ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ С МЕМОИЗАЦИЕЙ
+const About: React.FC = React.memo(() => {
   const theme = useTheme();
   const [tabValue, setTabValue] = React.useState(0);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  // 🚀 МЕМОИЗИРОВАННЫЙ ОБРАБОТЧИК ТАБОВ
+  const handleTabChange = React.useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-  };
+  }, []);
 
-  const fadeInUp = {
+  // 🚀 ОПТИМИЗИРОВАННЫЕ АНИМАЦИИ (упрощенные настройки)
+  const fadeInUp = React.useMemo(() => ({
     initial: { 
       opacity: 0, 
       y: 20 
@@ -25,61 +28,61 @@ const About: React.FC = () => {
     animate: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.8 }
+      transition: { duration: 0.4, ease: "easeOut" } // Упрощенный easing
     }
-  };
+  }), []);
 
-  const containerVariants = {
+  const containerVariants = React.useMemo(() => ({
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.3
+        staggerChildren: 0.1, // Уменьшил с 0.15
+        delayChildren: 0.1    // Уменьшил с 0.3
       }
     }
-  };
+  }), []);
 
-  const itemVariants = {
+  const itemVariants = React.useMemo(() => ({
     hidden: {
       opacity: 0,
-      y: 30,
-      scale: 0.95
+      y: 20, // Уменьшил с 30
+      scale: 0.98 // Уменьшил с 0.95
     },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        duration: 0.6,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        duration: 0.4, // Уменьшил с 0.6
+        ease: "easeOut" // Упрощенный easing
       }
     }
-  };
+  }), []);
 
-  const tabContentVariants = {
+  const tabContentVariants = React.useMemo(() => ({
     hidden: {
       opacity: 0,
-      x: -20,
-      scale: 0.98
+      x: -10, // Уменьшил с -20
+      scale: 0.99 // Уменьшил с 0.98
     },
     visible: {
       opacity: 1,
       x: 0,
       scale: 1,
       transition: {
-        duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        duration: 0.3, // Уменьшил с 0.5
+        ease: "easeOut"
       }
     },
     exit: {
       opacity: 0,
-      x: 20,
-      scale: 0.98,
+      x: 10, // Уменьшил с 20
+      scale: 0.99,
       transition: {
-        duration: 0.3
+        duration: 0.2 // Уменьшил с 0.3
       }
     }
-  };
+  }), []);
 
   const stats = [
     { value: '95%', label: 'Автоматизация HR-процессов' },
@@ -97,60 +100,28 @@ const About: React.FC = () => {
         minHeight: '100vh',
         background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
         pt: { xs: theme.spacing(10), md: theme.spacing(15) },
-        pb: { xs: theme.spacing(8), md: theme.spacing(12) }
+        pb: { xs: theme.spacing(8), md: theme.spacing(12) },
+        // 🚀 HARDWARE ACCELERATION
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        perspective: 1000
       }}
     >
-      {/* Beautiful Background Decorations */}
+      {/* 🎨 УПРОЩЕННЫЕ ФОНОВЫЕ ДЕКОРАЦИИ (оптимизированные) */}
       <Box
         sx={{
           position: 'absolute',
           top: '10%',
-          right: '-10%',
-          width: '600px',
-          height: '600px',
+          right: '-5%',
+          width: '300px', // Уменьшил с 600px
+          height: '300px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.03) 0%, rgba(139, 0, 0, 0.01) 70%, transparent 100%)',
+          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.02) 0%, transparent 70%)', // Упростил градиент
           zIndex: 1,
-          display: { xs: 'none', lg: 'block' }
+          display: { xs: 'none', lg: 'block' },
+          willChange: 'transform' // Hardware acceleration
         }}
       />
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: '20%',
-          left: '-15%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(139, 0, 0, 0.02) 0%, transparent 70%)',
-          zIndex: 1,
-          display: { xs: 'none', lg: 'block' }
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '30%',
-          left: '80%',
-          zIndex: 1,
-          display: { xs: 'none', xl: 'block' }
-        }}
-      >
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: theme.typography.pxToRem(200),
-            fontWeight: 900,
-            color: 'rgba(139, 0, 0, 0.02)',
-            whiteSpace: 'nowrap',
-            userSelect: 'none',
-            transform: 'rotate(15deg)',
-            letterSpacing: '-0.1em'
-          }}
-        >
-          SMART
-        </Typography>
-      </Box>
 
       <Container maxWidth="lg">
         {/* Hero Section */}
@@ -757,6 +728,6 @@ const About: React.FC = () => {
       </Container>
     </Box>
   );
-};
+});
 
 export default About; 

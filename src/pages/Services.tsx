@@ -6,44 +6,37 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import AutomationIcon from '@mui/icons-material/AutoFixHigh';
 
-const Services: React.FC = () => {
+// 🚀 ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ С МЕМОИЗАЦИЕЙ
+const Services: React.FC = React.memo(() => {
   const theme = useTheme();
 
-  const containerVariants = {
+  // 🚀 ОПТИМИЗИРОВАННЫЕ АНИМАЦИИ (мемоизированные и упрощенные)
+  const containerVariants = React.useMemo(() => ({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.25,
-        delayChildren: 0.2
+        staggerChildren: 0.1, // Уменьшил с 0.25
+        delayChildren: 0.1    // Уменьшил с 0.2
       }
     }
-  };
+  }), []);
 
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 40, scale: 0.95 },
+  const sectionVariants = React.useMemo(() => ({
+    hidden: { opacity: 0, y: 20, scale: 0.98 }, // Уменьшил значения
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        duration: 0.8,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        duration: 0.4, // Уменьшил с 0.8
+        ease: "easeOut" // Упрощенный easing
       }
     }
-  };
+  }), []);
 
-  const floatingVariants = {
-    animate: {
-      y: [0, -12, 0],
-      rotate: [0, 5, 0],
-      transition: {
-        duration: 8,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  };
+  // 🎯 УБРАЛ БЕСКОНЕЧНЫЕ АНИМАЦИИ (они лагают)
+  // const floatingVariants = ...
 
   const services = [
     {
@@ -102,7 +95,11 @@ const Services: React.FC = () => {
         minHeight: '100vh',
         background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
         pt: { xs: theme.spacing(10), md: theme.spacing(15) },
-        pb: { xs: theme.spacing(8), md: theme.spacing(12) }
+        pb: { xs: theme.spacing(8), md: theme.spacing(12) },
+        // 🚀 HARDWARE ACCELERATION
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        perspective: 1000
       }}
     >
       {/* Enhanced Background Decorations */}
@@ -133,89 +130,7 @@ const Services: React.FC = () => {
         }}
       />
       
-      {/* Floating Elements */}
-      <motion.div
-        variants={floatingVariants}
-        animate="animate"
-        style={{
-          position: 'absolute',
-          top: '25%',
-          left: '3%',
-          zIndex: 1
-        }}
-      >
-        <Box
-          sx={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '24px',
-            background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.05) 100%)',
-            display: { xs: 'none', xl: 'block' }
-          }}
-        />
-      </motion.div>
-      
-      <motion.div
-        variants={{
-          animate: {
-            y: [0, 18, 0],
-            rotate: [0, -8, 0],
-            transition: {
-              duration: 10,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }
-          }
-        }}
-        animate="animate"
-        style={{
-          position: 'absolute',
-          bottom: '20%',
-          right: '5%',
-          zIndex: 1
-        }}
-      >
-        <Box
-          sx={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(196, 61, 61, 0.12) 0%, rgba(196, 61, 61, 0.04) 100%)',
-            display: { xs: 'none', xl: 'block' }
-          }}
-        />
-      </motion.div>
-
-      <motion.div
-        variants={{
-          animate: {
-            y: [0, -8, 0],
-            x: [0, 4, 0],
-            transition: {
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }
-          }
-        }}
-        animate="animate"
-        style={{
-          position: 'absolute',
-          top: '60%',
-          left: '85%',
-          zIndex: 1
-        }}
-      >
-        <Box
-          sx={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(166, 30, 30, 0.15) 0%, rgba(166, 30, 30, 0.08) 100%)',
-            display: { xs: 'none', xl: 'block' }
-          }}
-        />
-      </motion.div>
+      {/* 🎯 УДАЛИЛ ВСЕ ТЯЖЕЛЫЕ FLOATING ЭЛЕМЕНТЫ (они лагают) */}
       <Container maxWidth="lg">
         <motion.div
           initial="hidden"
@@ -531,7 +446,7 @@ const Services: React.FC = () => {
               </Typography>
               <Grid container spacing={4}>
                 {[
-                  { name: 'Персональные рекомендации', desc: 'Подбор льгот по интересам', color: '#8B0000' },
+                  { name: 'Рекомендации', desc: 'Подбор льгот по интересам', color: '#8B0000' },
                   { name: 'Система достижений', desc: 'Награды за активность', color: '#A61E1E' },
                   { name: 'Рейтинги команд', desc: 'Здоровая конкуренция', color: '#C43D3D' },
                   { name: 'Трекинг прогресса', desc: 'Отслеживание результатов', color: '#8B0000' },
@@ -624,6 +539,6 @@ const Services: React.FC = () => {
       </Container>
     </Box>
   );
-};
+});
 
 export default Services; 
