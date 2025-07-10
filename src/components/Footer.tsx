@@ -1,5 +1,4 @@
-import { Box, Container, Grid, Typography, Link, IconButton, Divider } from '@mui/material'
-import LinkedInIcon from '@mui/icons-material/LinkedIn'
+import { Box, Container, Grid, Typography, Link, Divider } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 
 const footerLinks = {
@@ -16,6 +15,7 @@ const footerLinks = {
     title: 'Компания',
     items: [
       { name: 'О нас', href: '/about' },
+      { name: 'Контакты', href: '/contacts' },
       { name: 'Войти в систему', href: '/login' },
       { name: 'Демо', href: '/dashboard' },
     ],
@@ -23,8 +23,8 @@ const footerLinks = {
   legal: {
     title: 'Правовая информация',
     items: [
-      { name: 'Условия использования', href: '/about' },
-      { name: 'Политика конфиденциальности', href: '/about' },
+      { name: 'Условия использования', href: '/terms' },
+      { name: 'Политика конфиденциальности', href: '/privacy' },
     ],
   },
 }
@@ -55,17 +55,6 @@ export const Footer = () => {
               <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 📱 +7 (999) 123-45-67
               </Typography>
-              <Box sx={{ mt: 2 }}>
-                <IconButton
-                  href="https://t.me/yoddle_hr"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ color: 'white', '&:hover': { color: '#8B0000' } }}
-                  title="Telegram канал"
-                >
-                  <LinkedInIcon />
-                </IconButton>
-              </Box>
             </Box>
           </Grid>
 
@@ -121,7 +110,7 @@ export const Footer = () => {
           >
             <Link
               component={RouterLink}
-              to="/about"
+              to="/terms"
               sx={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 textDecoration: 'none',
@@ -134,7 +123,7 @@ export const Footer = () => {
             </Link>
             <Link
               component={RouterLink}
-              to="/about"
+              to="/privacy"
               sx={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 textDecoration: 'none',

@@ -23,6 +23,9 @@ import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
+import ContactsPage from './pages/Contacts';
+import TermsPage from './pages/Terms';
+import PrivacyPage from './pages/Privacy';
 import ToastNotification, { useToast } from './components/ToastNotification';
 import React, { createContext, useContext } from 'react';
 
@@ -78,6 +81,9 @@ const App = () => {
               <Route path="/benefits" element={<BenefitsPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/services" element={<ServicesPage />} />
+              <Route path="/contacts" element={<ContactsPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
