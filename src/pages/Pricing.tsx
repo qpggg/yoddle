@@ -1,5 +1,6 @@
 import { Box, Container, Typography, Card, CardContent, CardHeader, Button, List, ListItem, ListItemIcon, ListItemText, Grid, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BusinessIcon from '@mui/icons-material/Business';
 import GroupIcon from '@mui/icons-material/Group';
@@ -611,6 +612,8 @@ const PricingPage = () => {
                           {plan.savings}
                         </Typography>
                         <Button 
+                          component={Link}
+                          to={`/contacts?plan=${encodeURIComponent(plan.title)}`}
                           variant="contained" 
                           size="large"
                           fullWidth

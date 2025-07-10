@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, TextField, Button, Grid, Paper, Snackbar, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useTheme } from '@mui/material/styles';
+import { useSearchParams } from 'react-router-dom';
 import { User, UserCheck } from 'lucide-react';
+
+// Примеры других доступных иконок для контактов:
+// import { 
+//   Phone, PhoneCall, Mail, MailOpen, MapPin, Globe, 
+//   Building, Building2, Briefcase, Calendar, Clock,
+//   Linkedin, Twitter, Facebook, Instagram, Github,
+//   MessageCircle, Send, ExternalLink, Share2, Users,
+//   UserPlus, UserMinus, Crown, Shield, Award, Star
+// } from 'lucide-react';
 
 const Contacts: React.FC = () => {
   const theme = useTheme();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,6 +24,17 @@ const Contacts: React.FC = () => {
     message: ''
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  // Автозаполнение поля message при наличии параметра plan в URL
+  useEffect(() => {
+    const planParam = searchParams.get('plan');
+    if (planParam) {
+      setFormData(prev => ({
+        ...prev,
+        message: `Выбран план: ${planParam}`
+      }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +133,22 @@ const Contacts: React.FC = () => {
       color: '#FF6B35'
     }
   ];
+
+  // Примеры других вариантов contactInfo с разными иконками:
+  // const contactInfoExtended = [
+  //   { icon: Phone, title: 'Телефон', value: '+7 915 876 34 58', description: 'Основной номер', color: '#8B0000' },
+  //   { icon: Mail, title: 'Email', value: 'info@yoddle.ru', description: 'Общие вопросы', color: '#0066CC' },
+  //   { icon: MapPin, title: 'Адрес', value: 'Москва, Россия', description: 'Офис', color: '#28A745' },
+  //   { icon: Globe, title: 'Сайт', value: 'www.yoddle.ru', description: 'Официальный сайт', color: '#17A2B8' },
+  //   { icon: Building, title: 'Офис', value: 'БЦ Технопарк', description: 'Головной офис', color: '#6C757D' },
+  //   { icon: Calendar, title: 'Режим работы', value: 'Пн-Пт 9:00-18:00', description: 'Московское время', color: '#FFC107' },
+  //   { icon: Crown, title: 'CEO', value: 'Михаил Полшков', description: 'Руководитель', color: '#8B0000' },
+  //   { icon: Shield, title: 'CTO', value: 'Иван Иванов', description: 'Технический директор', color: '#6F42C1' },
+  //   { icon: Award, title: 'CMO', value: 'Леонид Чумаков', description: 'Маркетинг', color: '#FF6B35' },
+  //   { icon: MessageCircle, title: 'Поддержка', value: 'support@yoddle.ru', description: 'Техподдержка', color: '#20C997' },
+  //   { icon: Linkedin, title: 'LinkedIn', value: '/company/yoddle', description: 'Корпоративная страница', color: '#0077B5' },
+  //   { icon: Github, title: 'GitHub', value: '/yoddle-team', description: 'Открытый код', color: '#333' }
+  // ];
 
   return (
     <Box

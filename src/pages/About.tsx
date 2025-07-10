@@ -602,7 +602,7 @@ const About: React.FC = React.memo(() => {
                   letterSpacing: '0.01em'
                 }}
               >
-                Станьте частью HR-революции. 500+ компаний уже используют Yoddle для автоматизации управления льготами
+                Станьте частью HR-революции. Вы получите конкурентные преимущества в построении империи только с Yoddle!
               </Typography>
               <Box 
                 sx={{ 
@@ -636,7 +636,7 @@ const About: React.FC = React.memo(() => {
                 >
                   <Button
                     component={Link}
-                    to="/#cta"
+                    to="/contacts"
                     variant="contained"
                     size="large"
                     startIcon={<PlayArrow sx={{ fontSize: '1.5rem' }} />}
