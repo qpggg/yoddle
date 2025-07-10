@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS user_benefits (
     UNIQUE(user_id, benefit_id)
 );
 
+-- Создание таблицы контактных заявок
+CREATE TABLE IF NOT EXISTS clients (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    company VARCHAR(255),
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Добавление данных о льготах
 INSERT INTO benefits (name, description, category) VALUES
 ('Льготы на проезд', 'Скидки на общественный транспорт для пенсионеров и инвалидов', 'Транспорт'),
@@ -48,4 +58,6 @@ INSERT INTO benefits (name, description, category) VALUES
 -- Создание индексов для оптимизации
 CREATE INDEX IF NOT EXISTS idx_user_benefits_user_id ON user_benefits(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_benefits_benefit_id ON user_benefits(benefit_id);
-CREATE INDEX IF NOT EXISTS idx_benefits_category ON benefits(category); 
+CREATE INDEX IF NOT EXISTS idx_benefits_category ON benefits(category);
+CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);
+CREATE INDEX IF NOT EXISTS idx_clients_created_at ON clients(created_at); 

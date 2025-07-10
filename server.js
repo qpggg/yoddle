@@ -390,6 +390,30 @@ app.post('/api/user-benefits', async (req, res) => {
   }
 });
 
+// POST /api/clients - точно как в api/clients.js
+app.post('/api/clients', async (req, res) => {
+  const { name, email, company, message } = req.body;
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Имя, email и сообщение обязательны' });
+  }
+
+  const client = createDbClient();
+
+  try {
+    await client.connect();
+    await client.query(
+      'INSERT INTO clients (name, email, company, message) VALUES ($1, $2, $3, $4)',
+      [name, email, company, message]
+    );
+    await client.end();
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Ошибка базы данных:', error);
+    await client.end();
+    return res.status(500).json({ error: 'Ошибка базы данных' });
+  }
+});
+
 // Подключаем API новостей
 app.use('/api/news', newsRouter);
 

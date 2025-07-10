@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Typography, Box, TextField, Button, Grid, Paper, Snackbar, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useTheme } from '@mui/material/styles';
-import { Phone, Mail, MapPin, Clock } from 'lucide-react';
+import { Phone, Mail, User, UserCheck } from 'lucide-react';
 
 const Contacts: React.FC = () => {
   const theme = useTheme();
@@ -17,22 +17,33 @@ const Contacts: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Имитация отправки формы
     try {
-      // Здесь будет реальная отправка на сервер
-      console.log('Отправка формы:', formData);
-      
-      setSnackbar({
-        open: true,
-        message: 'Сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.',
-        severity: 'success'
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
-      
-      setFormData({ name: '', email: '', company: '', message: '' });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSnackbar({
+          open: true,
+          message: 'Сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.',
+          severity: 'success'
+        });
+        
+        setFormData({ name: '', email: '', company: '', message: '' });
+      } else {
+        throw new Error(data.error || 'Ошибка сервера');
+      }
     } catch (error) {
+      console.error('Ошибка отправки формы:', error);
       setSnackbar({
         open: true,
-        message: 'Произошла ошибка при отправке. Попробуйте еще раз.',
+        message: error instanceof Error ? error.message : 'Произошла ошибка при отправке. Попробуйте еще раз.',
         severity: 'error'
       });
     }
@@ -86,32 +97,18 @@ const Contacts: React.FC = () => {
 
   const contactInfo = [
     {
-      icon: Phone,
-      title: 'Телефон',
-      value: '+7 (999) 123-45-67',
-      description: 'Пн-Пт с 9:00 до 18:00',
+      icon: User,
+      title: 'Михаил Полшков',
+      value: '+7 915 876 34 58',
+      description: 'Founder & CEO',
       color: '#8B0000'
     },
     {
-      icon: Mail,
-      title: 'Email',
-      value: 'hello@yoddle.ru',
-      description: 'Ответим в течение 24 часов',
+      icon: UserCheck,
+      title: 'Леонид Чумаков',
+      value: '+7 906 419 46 44',
+      description: 'Co-Founder & CMO',
       color: '#FF6B35'
-    },
-    {
-      icon: MapPin,
-      title: 'Офис',
-      value: 'Москва, ул. Примерная, 123',
-      description: 'Приезжайте к нам на кофе',
-      color: '#4ECDC4'
-    },
-    {
-      icon: Clock,
-      title: 'Поддержка',
-      value: '24/7',
-      description: 'Всегда готовы помочь',
-      color: '#45B7D1'
     }
   ];
 
