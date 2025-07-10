@@ -1,8 +1,7 @@
 import { Box, Container, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import React, { useState } from 'react';
 
 export const Contact = () => {
@@ -303,42 +302,23 @@ export const Contact = () => {
                         justifyContent: 'center',
                       }}
                     >
-                      <PhoneIcon sx={{ color: '#750000' }} />
+                      <AccessTimeIcon sx={{ color: '#750000' }} />
                     </Box>
-                    <Typography
-                      component="a"
-                      href="tel:+74951234567"
-                      sx={{
-                        color: '#2C3E50',
-                        textDecoration: 'none',
-                        '&:hover': {
-                          color: '#750000',
-                        },
-                        transition: 'color 0.2s ease',
-                      }}
-                    >
-                      +7 (915) 876-34-58
-                    </Typography>
+                                          <Typography
+                        sx={{
+                          color: '#2C3E50',
+                          textDecoration: 'none',
+                          '&:hover': {
+                            color: '#750000',
+                          },
+                          transition: 'color 0.2s ease',
+                        }}
+                      >
+                        Ответ в течение 30-60 минут
+                      </Typography>
                   </Box>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '12px',
-                        backgroundColor: 'rgba(117, 0, 0, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <LocationOnIcon sx={{ color: '#750000' }} />
-                    </Box>
-                    <Typography sx={{ color: '#2C3E50' }}>
-                      Москва, Ботаническая 11
-                    </Typography>
-                  </Box>
+
                 </Box>
               </Box>
             </motion.div>

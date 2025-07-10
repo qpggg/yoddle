@@ -3,7 +3,7 @@ import { Container, Typography, Box, TextField, Button, Grid, Paper, Snackbar, A
 import { motion } from 'framer-motion';
 import { useTheme } from '@mui/material/styles';
 import { useSearchParams } from 'react-router-dom';
-import { Mail, MessageCircle, MapPin, Clock } from 'lucide-react';
+import { Mail, MessageCircle } from 'lucide-react';
 
 // Примеры других доступных иконок для контактов:
 // import { 
@@ -131,20 +131,6 @@ const Contacts: React.FC = () => {
       value: 'support@yoddle.ru',
       description: 'Техническая поддержка',
       color: '#0066CC'
-    },
-    {
-      icon: MapPin,
-      title: 'Адрес',
-      value: 'Москва, Россия',
-      description: 'Головной офис',
-      color: '#28A745'
-    },
-    {
-      icon: Clock,
-      title: 'Режим работы',
-      value: 'Пн-Пт 9:00-18:00',
-      description: 'Московское время',
-      color: '#FFC107'
     }
   ];
 
@@ -664,92 +650,7 @@ const Contacts: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* Команда - для доверия без личных контактов */}
-        <Box sx={{ mt: 8, position: 'relative', zIndex: 2 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            <Typography
-              variant="h4"
-              align="center"
-              sx={{
-                fontWeight: 700,
-                mb: 6,
-                color: '#1A1A1A'
-              }}
-            >
-              Наша команда
-            </Typography>
-            
-            <Grid container spacing={4} justifyContent="center">
-              {[
-                { name: 'Михаил Полшков', role: 'Founder & CEO', description: 'Стратегия и развитие' },
-                { name: 'Леонид Чумаков', role: 'Co-Founder & CMO', description: 'Маркетинг и продвижение' }
-              ].map((member, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
-                  >
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 4,
-                        borderRadius: '24px',
-                        backgroundColor: 'white',
-                        border: '1px solid rgba(0, 0, 0, 0.06)',
-                        textAlign: 'center',
-                        transition: 'all 0.4s ease',
-                        '&:hover': {
-                          transform: 'translateY(-8px)',
-                          boxShadow: '0 20px 40px rgba(139, 0, 0, 0.1)',
-                        }
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: '50%',
-                          backgroundColor: '#8B0000',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          mx: 'auto',
-                          mb: 3,
-                          color: 'white',
-                          fontSize: '2rem',
-                          fontWeight: 700
-                        }}
-                      >
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </Box>
-                      <Typography
-                        variant="h6"
-                        sx={{ fontWeight: 600, mb: 1, color: '#1A1A1A' }}
-                      >
-                        {member.name}
-                      </Typography>
-                      <Typography
-                        sx={{ color: '#8B0000', fontWeight: 600, mb: 1 }}
-                      >
-                        {member.role}
-                      </Typography>
-                      <Typography
-                        sx={{ color: '#666', fontSize: '0.9rem' }}
-                      >
-                        {member.description}
-                      </Typography>
-                    </Paper>
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-        </Box>
+
       </Container>
 
       {/* Snackbar для уведомлений */}
