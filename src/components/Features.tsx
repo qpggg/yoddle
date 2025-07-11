@@ -184,16 +184,16 @@ export const Features = () => {
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ pt: 0 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {feature.items.map((item, itemIndex) => (
-                        <Box
-                          key={item}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 2,
-                          }}
-                        >
+                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                       {feature.items.map((item, _itemIndex) => (
+                         <Box
+                           key={item}
+                           sx={{
+                             display: 'flex',
+                             alignItems: 'flex-start',
+                             gap: 2,
+                           }}
+                         >
                           <Box
                             sx={{
                               display: 'flex',
