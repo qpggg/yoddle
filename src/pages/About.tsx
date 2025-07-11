@@ -176,7 +176,7 @@ const About: React.FC = React.memo(() => {
                   <Box
                     sx={{
                       textAlign: 'center',
-                      p: 3,
+                      p: { xs: 2, md: 3 },
                       borderRadius: '20px',
                       bgcolor: 'white',
                       border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -184,6 +184,10 @@ const About: React.FC = React.memo(() => {
                       transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                       position: 'relative',
                       overflow: 'hidden',
+                      height: { xs: '120px', md: '140px' }, // Фиксированная высота
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
                       '&:hover': {
                         transform: 'translateY(-12px)',
                         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.15)',
@@ -207,10 +211,10 @@ const About: React.FC = React.memo(() => {
                     <Typography
                       variant="h3"
                       sx={{
-                        fontSize: { xs: '2rem', md: '2.5rem' },
+                        fontSize: { xs: '1.5rem', md: '2.5rem' }, // Уменьшил шрифт для мобильных
                         fontWeight: 800,
                         color: theme.palette.primary.main,
-                        mb: 1,
+                        mb: { xs: 0.5, md: 1 },
                         background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, rgba(139, 0, 0, 0.8) 100%)`,
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
@@ -219,7 +223,16 @@ const About: React.FC = React.memo(() => {
                     >
                       {stat.value}
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#666', fontWeight: 500 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: '#666', 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.8rem', md: '1rem' }, // Уменьшил шрифт для мобильных
+                        lineHeight: 1.2,
+                        px: { xs: 0.5, md: 0 } // Небольшие отступы для мобильных
+                      }}
+                    >
                       {stat.label}
                     </Typography>
                   </Box>
@@ -577,7 +590,7 @@ const About: React.FC = React.memo(() => {
                 mb={3}
                 sx={{ 
                   color: 'white',
-                  fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                  fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' }, // Уменьшил для мобильных
                   position: 'relative',
                   zIndex: 2,
                   textShadow: '0 2px 4px rgba(0,0,0,0.1)',
