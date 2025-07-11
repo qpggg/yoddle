@@ -514,7 +514,7 @@ const Benefits: React.FC = React.memo(() => {
                 },
                 { 
                   title: 'Интеграция', 
-                  desc: 'Экспорт данных и настройка связей',
+                  desc: 'Экспорт данных и настройки',
                   icon: <IntegrationInstructionsIcon />,
                   gradient: 'linear-gradient(135deg, #A61E1E 0%, #C43D3D 100%)'
                 },
@@ -543,9 +543,9 @@ const Benefits: React.FC = React.memo(() => {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 4,
-                      height: '200px',
-                      borderRadius: '24px',
+                      p: { xs: 2.5, md: 4 },
+                      height: { xs: '180px', md: '220px' },
+                      borderRadius: { xs: '16px', md: '24px' },
                       border: '1px solid rgba(0, 0, 0, 0.06)',
                       backgroundColor: 'white',
                       position: 'relative',
@@ -590,21 +590,23 @@ const Benefits: React.FC = React.memo(() => {
                   >
                     <Box
                       sx={{
-                        width: '72px',
-                        height: '72px',
-                        borderRadius: '20px',
+                        width: { xs: '56px', md: '72px' },
+                        height: { xs: '56px', md: '72px' },
+                        borderRadius: { xs: '14px', md: '20px' },
                         background: `linear-gradient(135deg, rgba(139, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.08) 100%)`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mb: 3,
+                        mb: { xs: 2, md: 3 },
                         position: 'relative',
                         transition: 'all 0.3s ease',
+                        mx: 'auto',
+                        flexShrink: 0,
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           inset: '-2px',
-                          borderRadius: '22px',
+                          borderRadius: { xs: '16px', md: '22px' },
                           border: `2px solid rgba(139, 0, 0, 0.2)`,
                           opacity: 0,
                           transition: 'opacity 0.3s ease'
@@ -613,9 +615,11 @@ const Benefits: React.FC = React.memo(() => {
                           opacity: 1
                         },
                         '& svg': {
-                          fontSize: '36px',
+                          fontSize: { xs: '28px', md: '36px' },
                           color: '#8B0000',
-                          transition: 'transform 0.3s ease'
+                          transition: 'transform 0.3s ease',
+                          display: 'block',
+                          margin: 'auto'
                         },
                         '&:hover svg': {
                           transform: 'scale(1.1) rotate(5deg)'
@@ -629,9 +633,10 @@ const Benefits: React.FC = React.memo(() => {
                       sx={{
                         fontWeight: 700,
                         color: '#1A1A1A',
-                        mb: 2,
-                        fontSize: { xs: '1.1rem', md: '1.2rem' },
-                        lineHeight: 1.3
+                        mb: { xs: 1.5, md: 2 },
+                        fontSize: { xs: '1rem', md: '1.2rem' },
+                        lineHeight: 1.3,
+                        textAlign: 'center'
                       }}
                     >
                       {item.title}
@@ -639,10 +644,11 @@ const Benefits: React.FC = React.memo(() => {
                     <Typography
                       sx={{
                         color: '#666666',
-                        fontSize: '0.9rem',
-                        lineHeight: 1.7,
+                        fontSize: { xs: '0.8rem', md: '0.9rem' },
+                        lineHeight: 1.5,
                         letterSpacing: '0.01em',
-                        flex: 1
+                        flex: 1,
+                        textAlign: 'center'
                       }}
                     >
                       {item.desc}
