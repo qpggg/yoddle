@@ -420,7 +420,7 @@ const PricingPage = () => {
 
           <Grid container spacing={4} sx={{ mb: 8 }}>
             {features.map((feature, _index) => (
-              <Grid item xs={12} sm={6} md={3} key={feature.title}>
+              <Grid item xs={6} sm={6} md={3} key={feature.title}>
                 <motion.div variants={itemVariants}>
                   <Paper 
                     elevation={0}
