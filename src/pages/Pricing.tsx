@@ -376,7 +376,7 @@ const PricingPage = () => {
   const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
 
   // Обработчик аккордеона для мобильных
-  const handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+  const handleAccordionChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedAccordion(isExpanded ? panel : false);
   };
 
