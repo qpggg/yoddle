@@ -1,4 +1,5 @@
-import { Box, Container, Typography, Card, CardContent, CardHeader, Button, List, ListItem, ListItemIcon, ListItemText, Grid, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Container, Typography, Card, CardContent, CardHeader, Button, List, ListItem, ListItemIcon, ListItemText, Grid, Paper, Accordion, AccordionSummary, AccordionDetails, useMediaQuery, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -15,6 +16,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import BrushIcon from '@mui/icons-material/Brush';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { styled } from '@mui/system';
 
 // Updated color palette with brand colors and tariff-specific colors
@@ -55,7 +57,7 @@ const colors = {
   section: '#FBF7F7'
 };
 
-const StyledCard = styled(Card)(({ className }) => ({
+const StyledCard = styled(Card)(({ className, theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -66,6 +68,11 @@ const StyledCard = styled(Card)(({ className }) => ({
   backgroundColor: colors.background,
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
   border: '1px solid rgba(0, 0, 0, 0.08)',
+  // 📱 Мобильная адаптация
+  [theme.breakpoints.down('md')]: {
+    borderRadius: '16px',
+    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+  },
   ...(className === 'economy' && {
     '& .MuiCardHeader-root': {
       background: `linear-gradient(135deg, ${colors.tariffs.economy.main} 0%, ${colors.tariffs.economy.dark} 100%)`
@@ -111,7 +118,7 @@ const StyledCard = styled(Card)(({ className }) => ({
   }
 }));
 
-const PlanHeader = styled(CardHeader)(() => ({
+const PlanHeader = styled(CardHeader)(({ theme }) => ({
   textAlign: 'center',
   color: colors.text.light,
   borderRadius: '24px 24px 0 0',
@@ -120,6 +127,12 @@ const PlanHeader = styled(CardHeader)(() => ({
   marginBottom: '1rem',
   position: 'relative',
   overflow: 'hidden',
+  // 📱 Мобильная адаптация
+  [theme.breakpoints.down('md')]: {
+    borderRadius: '16px 16px 0 0',
+    padding: '2rem 1rem',
+    marginBottom: '0.75rem',
+  },
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -136,13 +149,17 @@ const PlanHeader = styled(CardHeader)(() => ({
   }
 }));
 
-const PriceTypography = styled(Typography)({
+const PriceTypography = styled(Typography)(({ theme }) => ({
   fontSize: '2.5rem',
   fontWeight: '700',
   marginBottom: '0.5rem',
   textAlign: 'center',
-  color: colors.primary.main
-});
+  color: colors.primary.main,
+  // 📱 Мобильная адаптация
+  [theme.breakpoints.down('md')]: {
+    fontSize: '2rem',
+  },
+}));
 
 const FeatureIcon = styled(Box)({
   width: '48px',
@@ -354,6 +371,15 @@ const getFeatureIcon = (feature: string) => {
 };
 
 const PricingPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // xs и sm - мобильные
+  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
+
+  // Обработчик аккордеона для мобильных
+  const handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+    setExpandedAccordion(isExpanded ? panel : false);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
       <motion.div
@@ -443,9 +469,9 @@ const PricingPage = () => {
         </Box>
 
         <Box sx={{ mb: 10 }}>
-          <Grid container spacing={4} alignItems="stretch">
+          <Grid container spacing={{ xs: 3, md: 4 }} alignItems="stretch">
             {subscriptionPlans.map((plan, _index) => (
-              <Grid item xs={12} md={4} key={plan.title} sx={{ display: 'flex' }}>
+              <Grid item xs={12} sm={6} md={4} key={plan.title} sx={{ display: 'flex' }}>
                 <motion.div variants={itemVariants} style={{ width: '100%' }}>
                   <StyledCard className={plan.className}>
                     {plan.popular && (
@@ -481,7 +507,7 @@ const PricingPage = () => {
                           variant="h5" 
                           sx={{ 
                             fontWeight: 700,
-                            fontSize: '1.75rem',
+                            fontSize: { xs: '1.5rem', md: '1.75rem' },
                             mb: 1
                           }}
                         >
@@ -491,7 +517,7 @@ const PricingPage = () => {
                       subheader={
                         <Typography sx={{ 
                           color: 'rgba(255, 255, 255, 0.95)',
-                          fontSize: '1.1rem',
+                          fontSize: { xs: '1rem', md: '1.1rem' },
                           lineHeight: 1.4
                         }}>
                           {plan.description}
@@ -502,7 +528,7 @@ const PricingPage = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       height: '100%',
-                      p: 4 
+                      p: { xs: 2.5, md: 4 }
                     }}>
                       <Box sx={{ mb: 3 }}>
                         <PriceTypography variant="h3">
@@ -526,57 +552,161 @@ const PricingPage = () => {
                         flexDirection: 'column',
                         justifyContent: 'flex-start'
                       }}>
-                        <List sx={{ py: 0 }}>
-                          {plan.features.map((feature, idx) => (
-                            <ListItem 
-                              key={idx} 
-                              sx={{ 
-                                py: 1.25,
-                                px: 0,
-                                minHeight: '48px',
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                  transform: 'translateX(8px)',
-                                  '& .MuiListItemIcon-root svg': {
-                                    transform: 'scale(1.2)',
-                                    color: plan.className === 'economy' 
-                                      ? colors.tariffs.economy.main 
-                                      : plan.className === 'comfort'
-                                      ? colors.tariffs.comfort.main
-                                      : colors.tariffs.premium.main
-                                  }
+                        {isMobile ? (
+                          // 📱 МОБИЛЬНАЯ ВЕРСИЯ - АККОРДЕОН
+                          <Accordion 
+                            expanded={expandedAccordion === `features-${_index}`}
+                            onChange={handleAccordionChange(`features-${_index}`)}
+                            sx={{
+                              borderRadius: '12px !important',
+                              border: `1px solid ${plan.className === 'economy' 
+                                ? colors.tariffs.economy.main + '20'
+                                : plan.className === 'comfort'
+                                ? colors.tariffs.comfort.main + '20'
+                                : colors.tariffs.premium.main + '20'}`,
+                              boxShadow: 'none',
+                              '&:before': {
+                                display: 'none',
+                              },
+                              '&.Mui-expanded': {
+                                margin: '0 !important',
+                              }
+                            }}
+                          >
+                            <AccordionSummary
+                              expandIcon={<ExpandMoreIcon sx={{ 
+                                color: plan.className === 'economy' 
+                                  ? colors.tariffs.economy.main
+                                  : plan.className === 'comfort'
+                                  ? colors.tariffs.comfort.main
+                                  : colors.tariffs.premium.main
+                              }} />}
+                              sx={{
+                                backgroundColor: plan.className === 'economy' 
+                                  ? colors.tariffs.economy.light
+                                  : plan.className === 'comfort'
+                                  ? colors.tariffs.comfort.light
+                                  : colors.tariffs.premium.light,
+                                borderRadius: '12px',
+                                '&.Mui-expanded': {
+                                  borderBottomLeftRadius: 0,
+                                  borderBottomRightRadius: 0,
+                                },
+                                '& .MuiAccordionSummary-content': {
+                                  margin: '12px 0',
+                                  alignItems: 'center'
                                 }
                               }}
                             >
-                              <ListItemIcon 
+                              <Typography
+                                variant="body1"
+                                sx={{
+                                  color: plan.className === 'economy' 
+                                    ? colors.tariffs.economy.main
+                                    : plan.className === 'comfort'
+                                    ? colors.tariffs.comfort.main
+                                    : colors.tariffs.premium.main,
+                                  fontWeight: 600,
+                                  fontSize: '0.95rem'
+                                }}
+                              >
+                                Показать функции ({plan.features.length})
+                              </Typography>
+                            </AccordionSummary>
+                            <AccordionDetails sx={{ p: 0 }}>
+                              <List sx={{ py: 1, px: 2 }}>
+                                {plan.features.map((feature, idx) => (
+                                  <ListItem 
+                                    key={idx} 
+                                    sx={{ 
+                                      py: 0.5,
+                                      px: 0,
+                                      minHeight: '36px',
+                                    }}
+                                  >
+                                    <ListItemIcon 
+                                      sx={{ 
+                                        minWidth: 32,
+                                        '& svg': {
+                                          fontSize: '1.2rem',
+                                          color: plan.className === 'economy' 
+                                            ? colors.tariffs.economy.main
+                                            : plan.className === 'comfort'
+                                            ? colors.tariffs.comfort.main
+                                            : colors.tariffs.premium.main,
+                                        }
+                                      }}
+                                    >
+                                      {getFeatureIcon(feature)}
+                                    </ListItemIcon>
+                                    <ListItemText 
+                                      primary={feature}
+                                      primaryTypographyProps={{
+                                        fontSize: '0.9rem',
+                                        lineHeight: 1.3,
+                                        fontWeight: 500,
+                                        color: colors.text.secondary
+                                      }}
+                                    />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </AccordionDetails>
+                          </Accordion>
+                        ) : (
+                          // 🖥️ ДЕСКТОПНАЯ ВЕРСИЯ - КАК РАНЬШЕ
+                          <List sx={{ py: 0 }}>
+                            {plan.features.map((feature, idx) => (
+                              <ListItem 
+                                key={idx} 
                                 sx={{ 
-                                  minWidth: 36,
-                                  '& svg': {
-                                    transition: 'all 0.3s ease',
-                                    fontSize: '1.4rem',
-                                    color: plan.className === 'economy' 
-                                      ? colors.tariffs.economy.main 
-                                      : plan.className === 'comfort'
-                                      ? colors.tariffs.comfort.main
-                                      : colors.tariffs.premium.main,
-                                    filter: 'drop-shadow(0 2px 4px rgba(139, 0, 0, 0.2))'
+                                  py: { xs: 0.75, md: 1.25 },
+                                  px: 0,
+                                  minHeight: { xs: '40px', md: '48px' },
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    transform: 'translateX(8px)',
+                                    '& .MuiListItemIcon-root svg': {
+                                      transform: 'scale(1.2)',
+                                      color: plan.className === 'economy' 
+                                        ? colors.tariffs.economy.main 
+                                        : plan.className === 'comfort'
+                                        ? colors.tariffs.comfort.main
+                                        : colors.tariffs.premium.main
+                                    }
                                   }
                                 }}
                               >
-                                {getFeatureIcon(feature)}
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary={feature}
-                                primaryTypographyProps={{
-                                  fontSize: '1.1rem',
-                                  lineHeight: 1.4,
-                                  fontWeight: 500,
-                                  color: colors.text.secondary
-                                }}
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
+                                <ListItemIcon 
+                                  sx={{ 
+                                    minWidth: 36,
+                                    '& svg': {
+                                      transition: 'all 0.3s ease',
+                                      fontSize: '1.4rem',
+                                      color: plan.className === 'economy' 
+                                        ? colors.tariffs.economy.main 
+                                        : plan.className === 'comfort'
+                                        ? colors.tariffs.comfort.main
+                                        : colors.tariffs.premium.main,
+                                      filter: 'drop-shadow(0 2px 4px rgba(139, 0, 0, 0.2))'
+                                    }
+                                  }}
+                                >
+                                  {getFeatureIcon(feature)}
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={feature}
+                                  primaryTypographyProps={{
+                                    fontSize: { xs: '0.95rem', md: '1.1rem' },
+                                    lineHeight: 1.4,
+                                    fontWeight: 500,
+                                    color: colors.text.secondary
+                                  }}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        )}
                       </Box>
 
                       <Box sx={{ mt: 3 }}>

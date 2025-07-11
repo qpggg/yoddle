@@ -178,17 +178,17 @@ const Benefits: React.FC = React.memo(() => {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <Grid container spacing={4} sx={{ position: 'relative', zIndex: 2 }}>
+          <Grid container spacing={{ xs: 3, md: 4 }} sx={{ position: 'relative', zIndex: 2 }}>
             {benefits.map((benefit, index) => (
-              <Grid item xs={12} md={6} lg={4} key={index}>
+              <Grid item xs={6} md={6} lg={4} key={index}>
                 <motion.div variants={itemVariants}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 4,
+                      p: { xs: 2, md: 4 },
                       height: '100%',
-                      minHeight: '380px',
-                      borderRadius: '24px',
+                      minHeight: { xs: '240px', md: '380px' },
+                      borderRadius: { xs: '16px', md: '24px' },
                       border: '1px solid rgba(0, 0, 0, 0.06)',
                       backgroundColor: 'white',
                       position: 'relative',
@@ -233,21 +233,21 @@ const Benefits: React.FC = React.memo(() => {
                   >
                     <Box
                       sx={{
-                        width: '72px',
-                        height: '72px',
-                        borderRadius: '20px',
+                        width: { xs: '48px', md: '72px' },
+                        height: { xs: '48px', md: '72px' },
+                        borderRadius: { xs: '12px', md: '20px' },
                         background: `linear-gradient(135deg, ${benefit.color}15 0%, ${benefit.color}08 100%)`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mb: 3,
+                        mb: { xs: 1.5, md: 3 },
                         position: 'relative',
                         transition: 'all 0.3s ease',
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           inset: '-2px',
-                          borderRadius: '22px',
+                          borderRadius: { xs: '18px', md: '22px' },
                           border: `2px solid ${benefit.color}20`,
                           opacity: 0,
                           transition: 'opacity 0.3s ease'
@@ -256,7 +256,7 @@ const Benefits: React.FC = React.memo(() => {
                           opacity: 1
                         },
                         '& svg': {
-                          fontSize: '36px',
+                          fontSize: { xs: '28px', md: '36px' },
                           color: benefit.color,
                           transition: 'transform 0.3s ease'
                         },
@@ -272,8 +272,8 @@ const Benefits: React.FC = React.memo(() => {
                       sx={{
                         fontWeight: 700,
                         color: '#1A1A1A',
-                        mb: 2,
-                        fontSize: { xs: '1.4rem', md: '1.6rem' },
+                        mb: { xs: 1.5, md: 2 },
+                        fontSize: { xs: '1.1rem', md: '1.6rem' },
                         lineHeight: 1.3
                       }}
                     >
@@ -282,9 +282,9 @@ const Benefits: React.FC = React.memo(() => {
                     <Typography
                       sx={{
                         color: '#666666',
-                        mb: 3,
-                        fontSize: '1rem',
-                        lineHeight: 1.7,
+                        mb: { xs: 2, md: 3 },
+                        fontSize: { xs: '0.85rem', md: '1rem' },
+                        lineHeight: { xs: 1.5, md: 1.7 },
                         letterSpacing: '0.01em',
                         flex: 1
                       }}
@@ -295,9 +295,9 @@ const Benefits: React.FC = React.memo(() => {
                       sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        px: 3,
-                        py: 1.5,
-                        borderRadius: '20px',
+                        px: { xs: 2, md: 3 },
+                        py: { xs: 1, md: 1.5 },
+                        borderRadius: { xs: '16px', md: '20px' },
                         background: `linear-gradient(135deg, ${benefit.color}12 0%, ${benefit.color}06 100%)`,
                         border: `1px solid ${benefit.color}20`,
                         position: 'relative',
@@ -324,7 +324,7 @@ const Benefits: React.FC = React.memo(() => {
                         sx={{
                           color: benefit.color,
                           fontWeight: 700,
-                          fontSize: '1rem',
+                          fontSize: { xs: '0.85rem', md: '1rem' },
                           position: 'relative',
                           zIndex: 2
                         }}

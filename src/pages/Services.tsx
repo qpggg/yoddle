@@ -1,14 +1,32 @@
 import React from 'react';
-import { Container, Typography, Box, Grid } from '@mui/material';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Grid, 
+  useTheme,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  useMediaQuery
+} from '@mui/material';
 import { motion } from 'framer-motion';
-import { useTheme } from '@mui/material/styles';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import AutomationIcon from '@mui/icons-material/AutoFixHigh';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useState } from 'react';
 
 // 🚀 ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ С МЕМОИЗАЦИЕЙ
 const Services: React.FC = React.memo(() => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // xs и sm - мобильные
+  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
+
+  // Обработчик аккордеона для мобильных
+  const handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+    setExpandedAccordion(isExpanded ? panel : false);
+  };
 
   // 🚀 ОПТИМИЗИРОВАННЫЕ АНИМАЦИИ (мемоизированные и упрощенные)
   const containerVariants = React.useMemo(() => ({
@@ -269,66 +287,155 @@ const Services: React.FC = React.memo(() => {
                       </Typography>
                     </Box>
 
-                    {/* Features List */}
+                    {/* Features List - Responsive: Accordion на мобильных, Grid на десктопе */}
                     <Box sx={{ flex: 1, mb: 4, position: 'relative', zIndex: 2 }}>
-                      <Grid container spacing={2}>
-                        {service.items.map((item, idx) => (
-                          <Grid item xs={12} key={idx}>
-                            <motion.div
-                              initial={{ opacity: 0, x: -20 }}
-                              whileInView={{ opacity: 1, x: 0 }}
-                              viewport={{ once: true }}
-                              transition={{ duration: 0.5, delay: idx * 0.1 }}
+                      {isMobile ? (
+                        // 📱 МОБИЛЬНАЯ ВЕРСИЯ - АККОРДЕОН
+                        <Accordion 
+                          expanded={expandedAccordion === `panel-${index}`}
+                          onChange={handleAccordionChange(`panel-${index}`)}
+                          sx={{
+                            borderRadius: '16px !important',
+                            border: `1px solid ${service.color}20`,
+                            boxShadow: 'none',
+                            '&:before': {
+                              display: 'none',
+                            },
+                            '&.Mui-expanded': {
+                              margin: '0 !important',
+                            }
+                          }}
+                        >
+                          <AccordionSummary
+                            expandIcon={<ExpandMoreIcon sx={{ color: service.color }} />}
+                            sx={{
+                              backgroundColor: `${service.color}04`,
+                              borderRadius: '16px',
+                              '&.Mui-expanded': {
+                                borderBottomLeftRadius: 0,
+                                borderBottomRightRadius: 0,
+                              },
+                              '& .MuiAccordionSummary-content': {
+                                margin: '12px 0',
+                                alignItems: 'center'
+                              }
+                            }}
+                          >
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                color: service.color,
+                                fontWeight: 600,
+                                fontSize: '1rem'
+                              }}
                             >
-                              <Box
-                                sx={{
-                                  p: 2.5,
-                                  borderRadius: '16px',
-                                  backgroundColor: `${service.color}04`,
-                                  border: `1px solid ${service.color}10`,
-                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  position: 'relative',
-                                  overflow: 'hidden',
-                                  '&:hover': {
-                                    backgroundColor: `${service.color}08`,
-                                    transform: 'translateX(8px)',
-                                    boxShadow: `0 6px 20px ${service.color}15`
-                                  },
-                                  '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    width: '4px',
-                                    height: '60%',
-                                    borderRadius: '2px',
-                                    backgroundColor: service.color,
-                                    opacity: 0.6,
-                                    transition: 'opacity 0.3s ease'
-                                  },
-                                  '&:hover::before': {
-                                    opacity: 1
-                                  }
-                                }}
+                              Показать все льготы ({service.items.length})
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 0 }}>
+                            <Grid container spacing={2} sx={{ p: 2 }}>
+                              {service.items.map((item, idx) => (
+                                <Grid item xs={12} key={idx}>
+                                  <Box
+                                    sx={{
+                                      p: 2,
+                                      borderRadius: '12px',
+                                      backgroundColor: `${service.color}04`,
+                                      border: `1px solid ${service.color}10`,
+                                      position: 'relative',
+                                      '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: '3px',
+                                        height: '60%',
+                                        borderRadius: '2px',
+                                        backgroundColor: service.color,
+                                        opacity: 0.6,
+                                      }
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        color: '#333',
+                                        fontWeight: 500,
+                                        fontSize: '0.9rem',
+                                        lineHeight: 1.4,
+                                        pl: 1.5
+                                      }}
+                                    >
+                                      {item}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </AccordionDetails>
+                        </Accordion>
+                      ) : (
+                        // 🖥️ ДЕСКТОПНАЯ ВЕРСИЯ - КАК РАНЬШЕ
+                        <Grid container spacing={2}>
+                          {service.items.map((item, idx) => (
+                            <Grid item xs={12} key={idx}>
+                              <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: idx * 0.1 }}
                               >
-                                <Typography
-                                  variant="body2"
+                                <Box
                                   sx={{
-                                    color: '#333',
-                                    fontWeight: 500,
-                                    fontSize: '0.95rem',
-                                    lineHeight: 1.5,
-                                    pl: 2
+                                    p: 2.5,
+                                    borderRadius: '16px',
+                                    backgroundColor: `${service.color}04`,
+                                    border: `1px solid ${service.color}10`,
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    '&:hover': {
+                                      backgroundColor: `${service.color}08`,
+                                      transform: 'translateX(8px)',
+                                      boxShadow: `0 6px 20px ${service.color}15`
+                                    },
+                                    '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      left: 0,
+                                      top: '50%',
+                                      transform: 'translateY(-50%)',
+                                      width: '4px',
+                                      height: '60%',
+                                      borderRadius: '2px',
+                                      backgroundColor: service.color,
+                                      opacity: 0.6,
+                                      transition: 'opacity 0.3s ease'
+                                    },
+                                    '&:hover::before': {
+                                      opacity: 1
+                                    }
                                   }}
                                 >
-                                  {item}
-                                </Typography>
-                              </Box>
-                            </motion.div>
-                          </Grid>
-                        ))}
-                      </Grid>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: '#333',
+                                      fontWeight: 500,
+                                      fontSize: '0.95rem',
+                                      lineHeight: 1.5,
+                                      pl: 2
+                                    }}
+                                  >
+                                    {item}
+                                  </Typography>
+                                </Box>
+                              </motion.div>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      )}
                     </Box>
 
                     {/* Stats Badge */}
