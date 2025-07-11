@@ -614,7 +614,7 @@ const PricingPage = () => {
                               </Typography>
                             </AccordionSummary>
                             <AccordionDetails sx={{ p: 2 }}>
-                              <Grid container spacing={1}>
+                              <Grid container spacing={2}>
                                 {plan.features.map((feature, idx) => (
                                   <Grid item xs={6} key={idx}>
                                     <Box
@@ -845,63 +845,161 @@ const PricingPage = () => {
 
           <Grid container spacing={4}>
             {benefits.map((benefit, index) => (
-              <Grid item xs={6} md={6} key={index}>
+              <Grid item xs={12} md={6} key={index}>
                 <motion.div 
                   variants={itemVariants}
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <BenefitCard elevation={0}>
-                    <BenefitIcon>
-                      {benefit.icon}
-                    </BenefitIcon>
-                    <Typography 
-                      variant="h5" 
-                      gutterBottom
-                      sx={{ 
-                        fontWeight: 700,
-                        color: colors.text.primary,
-                        fontSize: '1.75rem',
-                        mb: 3,
-                        background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
+                  {isMobile ? (
+                    // 📱 МОБИЛЬНАЯ ВЕРСИЯ - АККОРДЕОН
+                    <Accordion 
+                      expanded={expandedAccordion === `benefit-${index}`}
+                      onChange={handleAccordionChange(`benefit-${index}`)}
+                      sx={{
+                        borderRadius: '16px !important',
+                        border: `1px solid ${colors.primary.main}20`,
+                        boxShadow: 'none',
+                        '&:before': {
+                          display: 'none',
+                        },
+                        '&.Mui-expanded': {
+                          margin: '0 !important',
+                        }
                       }}
                     >
-                      {benefit.title}
-                    </Typography>
-                    <List>
-                      {benefit.items.map((item, idx) => (
-                        <ListItem 
-                          key={idx} 
-                          sx={{ 
-                            px: 0, 
-                            py: 1.5,
-                            transition: 'all 0.3s ease',
-                          }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            <CheckCircleIcon 
-                              sx={{ 
-                                color: colors.primary.main,
-                                fontSize: '1.4rem',
-                                filter: 'drop-shadow(0 2px 4px rgba(139, 0, 0, 0.2))'
-                              }} 
-                            />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={item}
-                            primaryTypographyProps={{
-                              fontSize: '1.1rem',
-                              lineHeight: 1.5,
-                              fontWeight: 500,
-                              color: colors.text.secondary
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon sx={{ color: colors.primary.main }} />}
+                        sx={{
+                          backgroundColor: `${colors.primary.main}04`,
+                          borderRadius: '16px',
+                          '&.Mui-expanded': {
+                            borderBottomLeftRadius: 0,
+                            borderBottomRightRadius: 0,
+                          },
+                          '& .MuiAccordionSummary-content': {
+                            margin: '12px 0',
+                            alignItems: 'center'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              width: '48px',
+                              height: '48px',
+                              borderRadius: '16px',
+                              background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              '& svg': {
+                                fontSize: '24px',
+                                color: colors.text.light
+                              }
                             }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </BenefitCard>
+                          >
+                            {benefit.icon}
+                          </Box>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              color: colors.primary.main,
+                              fontWeight: 600,
+                              fontSize: '1.1rem'
+                            }}
+                          >
+                            {benefit.title}
+                          </Typography>
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 3 }}>
+                        <List>
+                          {benefit.items.map((item, idx) => (
+                            <ListItem 
+                              key={idx} 
+                              sx={{ 
+                                px: 0, 
+                                py: 1,
+                                transition: 'all 0.3s ease',
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 32 }}>
+                                <CheckCircleIcon 
+                                  sx={{ 
+                                    color: colors.primary.main,
+                                    fontSize: '1.2rem'
+                                  }} 
+                                />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={item}
+                                primaryTypographyProps={{
+                                  fontSize: '0.95rem',
+                                  lineHeight: 1.4,
+                                  fontWeight: 500,
+                                  color: colors.text.secondary
+                                }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </AccordionDetails>
+                    </Accordion>
+                  ) : (
+                    // 🖥️ ДЕСКТОПНАЯ ВЕРСИЯ - КАК РАНЬШЕ
+                    <BenefitCard elevation={0}>
+                      <BenefitIcon>
+                        {benefit.icon}
+                      </BenefitIcon>
+                      <Typography 
+                        variant="h5" 
+                        gutterBottom
+                        sx={{ 
+                          fontWeight: 700,
+                          color: colors.text.primary,
+                          fontSize: '1.75rem',
+                          mb: 3,
+                          background: `linear-gradient(135deg, ${colors.primary.main} 0%, ${colors.primary.dark} 100%)`,
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                        }}
+                      >
+                        {benefit.title}
+                      </Typography>
+                      <List>
+                        {benefit.items.map((item, idx) => (
+                          <ListItem 
+                            key={idx} 
+                            sx={{ 
+                              px: 0, 
+                              py: 1.5,
+                              transition: 'all 0.3s ease',
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 36 }}>
+                              <CheckCircleIcon 
+                                sx={{ 
+                                  color: colors.primary.main,
+                                  fontSize: '1.4rem',
+                                  filter: 'drop-shadow(0 2px 4px rgba(139, 0, 0, 0.2))'
+                                }} 
+                              />
+                            </ListItemIcon>
+                            <ListItemText 
+                              primary={item}
+                              primaryTypographyProps={{
+                                fontSize: '1.1rem',
+                                lineHeight: 1.5,
+                                fontWeight: 500,
+                                color: colors.text.secondary
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </BenefitCard>
+                  )}
                 </motion.div>
               </Grid>
             ))}
