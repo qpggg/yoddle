@@ -554,13 +554,13 @@ const Services: React.FC = React.memo(() => {
               <Grid container spacing={4}>
                 {[
                   { name: 'Рекомендации', desc: 'Подбор льгот по интересам', color: '#8B0000' },
-                  { name: 'Система достижений', desc: 'Награды за активность', color: '#A61E1E' },
-                  { name: 'Рейтинги команд', desc: 'Здоровая конкуренция', color: '#C43D3D' },
-                  { name: 'Трекинг прогресса', desc: 'Отслеживание результатов', color: '#8B0000' },
-                  { name: 'Социальные функции', desc: 'Общение и взаимодействие', color: '#A61E1E' },
-                  { name: 'Гибкие настройки', desc: 'Адаптация под потребности', color: '#C43D3D' }
+                  { name: 'Достижения', desc: 'Награды за активность', color: '#A61E1E' },
+                  { name: 'Рейтинги', desc: 'Здоровая конкуренция', color: '#C43D3D' },
+                  { name: 'Прогресс', desc: 'Отслеживание результатов', color: '#8B0000' },
+                  { name: 'Социальность', desc: 'Общение команды', color: '#A61E1E' },
+                  { name: 'Настройки', desc: 'Адаптация под нужды', color: '#C43D3D' }
                 ].map((feature, index) => (
-                  <Grid item xs={6} md={4} key={index}>
+                  <Grid item xs={12} sm={6} md={4} key={index}>
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
                       whileInView={{ opacity: 1, scale: 1, y: 0 }}
@@ -574,8 +574,8 @@ const Services: React.FC = React.memo(() => {
                     >
                       <Box
                         sx={{
-                          p: 4,
-                          borderRadius: '20px',
+                          p: { xs: 3, md: 4 },
+                          borderRadius: { xs: '16px', md: '20px' },
                           bgcolor: 'white',
                           textAlign: 'center',
                           transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -602,10 +602,10 @@ const Services: React.FC = React.memo(() => {
                           }
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: feature.color, mb: 1, fontSize: '1.1rem' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: feature.color, mb: 1, fontSize: { xs: '1rem', md: '1.1rem' } }}>
                           {feature.name}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem' }}>
+                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.5, fontSize: { xs: '0.9rem', md: '0.95rem' } }}>
                           {feature.desc}
                         </Typography>
                       </Box>

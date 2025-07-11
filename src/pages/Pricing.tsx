@@ -261,7 +261,7 @@ const features = [
   {
     icon: <AnalyticsIcon />,
     title: 'Аналитика',
-    description: 'Детальные отчеты и статистика использования'
+    description: 'Детальные отчеты и статистика'
   },
   {
     icon: <LocalOfferIcon />,
