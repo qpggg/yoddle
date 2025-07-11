@@ -613,44 +613,49 @@ const PricingPage = () => {
                                 Показать функции ({plan.features.length})
                               </Typography>
                             </AccordionSummary>
-                            <AccordionDetails sx={{ p: 0 }}>
-                              <List sx={{ py: 1, px: 2 }}>
+                            <AccordionDetails sx={{ p: 2 }}>
+                              <Grid container spacing={1}>
                                 {plan.features.map((feature, idx) => (
-                                  <ListItem 
-                                    key={idx} 
-                                    sx={{ 
-                                      py: 0.5,
-                                      px: 0,
-                                      minHeight: '36px',
-                                    }}
-                                  >
-                                    <ListItemIcon 
+                                  <Grid item xs={6} key={idx}>
+                                    <Box
                                       sx={{ 
-                                        minWidth: 32,
-                                        '& svg': {
-                                          fontSize: '1.2rem',
-                                          color: plan.className === 'economy' 
-                                            ? colors.tariffs.economy.main
-                                            : plan.className === 'comfort'
-                                            ? colors.tariffs.comfort.main
-                                            : colors.tariffs.premium.main,
-                                        }
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        py: 0.5,
+                                        minHeight: '36px',
                                       }}
                                     >
-                                      {getFeatureIcon(feature)}
-                                    </ListItemIcon>
-                                    <ListItemText 
-                                      primary={feature}
-                                      primaryTypographyProps={{
-                                        fontSize: '0.9rem',
-                                        lineHeight: 1.3,
-                                        fontWeight: 500,
-                                        color: colors.text.secondary
-                                      }}
-                                    />
-                                  </ListItem>
+                                      <Box
+                                        sx={{ 
+                                          minWidth: 28,
+                                          mt: 0.2,
+                                          '& svg': {
+                                            fontSize: '1.1rem',
+                                            color: plan.className === 'economy' 
+                                              ? colors.tariffs.economy.main
+                                              : plan.className === 'comfort'
+                                              ? colors.tariffs.comfort.main
+                                              : colors.tariffs.premium.main,
+                                          }
+                                        }}
+                                      >
+                                        {getFeatureIcon(feature)}
+                                      </Box>
+                                      <Typography
+                                        sx={{
+                                          fontSize: '0.85rem',
+                                          lineHeight: 1.3,
+                                          fontWeight: 500,
+                                          color: colors.text.secondary,
+                                          ml: 1
+                                        }}
+                                      >
+                                        {feature}
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
                                 ))}
-                              </List>
+                              </Grid>
                             </AccordionDetails>
                           </Accordion>
                         ) : (
@@ -840,7 +845,7 @@ const PricingPage = () => {
 
           <Grid container spacing={4}>
             {benefits.map((benefit, index) => (
-              <Grid item xs={12} md={6} key={index}>
+              <Grid item xs={6} md={6} key={index}>
                 <motion.div 
                   variants={itemVariants}
                   whileHover={{ scale: 1.02 }}
