@@ -18,6 +18,15 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+// === Раздача статики фронта ===
+import path from 'path';
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Для SPA: отдавать index.html на все не-API запросы
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 // Базовая функция для создания клиента БД - хардкод для избежания проблем с .env
 function createDbClient() {
   const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
