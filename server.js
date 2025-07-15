@@ -423,6 +423,222 @@ app.post('/api/clients', async (req, res) => {
   }
 });
 
+// GET/PATCH /api/profile - точно как в api/profile.js
+app.get('/api/profile', async (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'id required' });
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    const result = await client.query(
+      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE id = $1',
+      [id]
+    );
+    await client.end();
+    return res.status(200).json({ user: result.rows[0] });
+  } catch (error) {
+    await client.end();
+    console.error('Profile GET error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+app.patch('/api/profile', async (req, res) => {
+  const { id, name, email, phone, position, avatar } = req.body;
+  if (!id) return res.status(400).json({ error: 'id required' });
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    await client.query(
+      'UPDATE enter SET name = $2, login = $3, phone = $4, position = $5, avatar_url = $6 WHERE id = $1',
+      [id, name, email, phone, position, avatar]
+    );
+    const result = await client.query(
+      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE id = $1',
+      [id]
+    );
+    await client.end();
+    return res.status(200).json({ user: result.rows[0] });
+  } catch (error) {
+    await client.end();
+    console.error('Profile PATCH error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// GET /api/notifications - система уведомлений
+app.get('/api/notifications', async (req, res) => {
+  const { action, user_id, limit } = req.query;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id required' });
+  }
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    
+    if (action === 'count') {
+      const result = await client.query(
+        `SELECT COUNT(*) as count 
+         FROM notifications 
+         WHERE (user_id = $1 OR is_global = true) AND is_read = false`,
+        [user_id]
+      );
+      await client.end();
+      return res.status(200).json({
+        success: true,
+        count: parseInt(result.rows[0].count)
+      });
+    }
+    
+    if (action === 'unread') {
+      const result = await client.query(
+        `SELECT * FROM notifications 
+         WHERE (user_id = $1 OR is_global = true) AND is_read = false
+         ORDER BY created_at DESC`,
+        [user_id]
+      );
+      await client.end();
+      return res.status(200).json({
+        success: true,
+        data: result.rows,
+        count: result.rows.length
+      });
+    }
+    
+    // recent notifications
+    const limitValue = parseInt(limit) || 10;
+    const result = await client.query(
+      `SELECT * FROM notifications
+       WHERE (user_id = $1 OR is_global = true)
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [user_id, limitValue]
+    );
+    await client.end();
+    return res.status(200).json({
+      success: true,
+      data: result.rows
+    });
+    
+  } catch (error) {
+    await client.end();
+    console.error('Notifications error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// GET/POST/DELETE /api/user-recommendations
+app.get('/api/user-recommendations', async (req, res) => {
+  const { user_id } = req.query;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    
+    const result = await client.query(`
+      SELECT br.benefit_id, br.priority, b.name, b.description, b.category
+      FROM benefit_recommendations br
+      JOIN benefits b ON br.benefit_id = b.id
+      WHERE br.user_id = $1
+      ORDER BY br.priority ASC
+    `, [user_id]);
+    
+    await client.end();
+    
+    console.log('Loaded recommendations for user', user_id, ':', result.rows);
+    
+    res.status(200).json({ 
+      recommendations: result.rows,
+      hasRecommendations: result.rows.length > 0 
+    });
+  } catch (error) {
+    await client.end();
+    console.error('Error fetching recommendations:', error);
+    res.status(500).json({ error: 'Database error: ' + error.message });
+  }
+});
+
+app.post('/api/user-recommendations', async (req, res) => {
+  const { user_id, benefit_ids, answers } = req.body;
+  
+  if (!user_id || !benefit_ids || !Array.isArray(benefit_ids)) {
+    return res.status(400).json({ error: 'Invalid data format. Expected user_id and benefit_ids array.' });
+  }
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    
+    // Удаляем старые рекомендации пользователя
+    await client.query(
+      'DELETE FROM benefit_recommendations WHERE user_id = $1',
+      [user_id]
+    );
+    
+    // Сохраняем новые рекомендации
+    console.log('Saving benefit recommendations for user:', user_id);
+    console.log('Benefit IDs array:', benefit_ids);
+    
+    for (let i = 0; i < benefit_ids.length; i++) {
+      const benefitId = benefit_ids[i];
+      
+      console.log(`Saving recommendation ${i + 1}: benefit_id=${benefitId}, priority=${i + 1}`);
+      
+      await client.query(
+        'INSERT INTO benefit_recommendations (user_id, benefit_id, priority, answers) VALUES ($1, $2, $3, $4)',
+        [user_id, benefitId, i + 1, JSON.stringify(answers)]
+      );
+    }
+    
+    await client.end();
+    console.log('All benefit recommendations saved successfully');
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    await client.end();
+    console.error('Error saving benefit recommendations:', error);
+    res.status(500).json({ error: 'Database error: ' + error.message });
+  }
+});
+
+app.delete('/api/user-recommendations', async (req, res) => {
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  const client = createDbClient();
+  
+  try {
+    await client.connect();
+    await client.query(
+      'DELETE FROM benefit_recommendations WHERE user_id = $1',
+      [user_id]
+    );
+    await client.end();
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    await client.end();
+    console.error('Error deleting benefit recommendations:', error);
+    res.status(500).json({ error: 'Database error: ' + error.message });
+  }
+});
+
 // Подключаем API новостей
 app.use('/api/news', newsRouter);
 
@@ -431,4 +647,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   console.log(`📊 Database: Connected to Supabase`);
   console.log(`📰 News API: Available at /api/news`);
+  console.log(`👤 Profile API: Available at /api/profile`);
+  console.log(`📢 Notifications API: Available at /api/notifications`);
+  console.log(`🎯 Recommendations API: Available at /api/user-recommendations`);
 }); 
