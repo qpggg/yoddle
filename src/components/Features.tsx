@@ -89,45 +89,46 @@ export const Features = () => {
       </motion.div>
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ 
-            duration: 0.8,
-            type: "spring",
-            stiffness: 100,
-            damping: 20
-          }}
-        >
-          <Typography
-            variant="h2"
-            align="center"
-            sx={{
-              color: '#1A1A1A',
-              mb: 2,
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: '-16px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '80px',
-                height: '4px',
-                backgroundColor: '#750000',
-                borderRadius: '2px',
-              },
-            }}
-          >
-            Возможности платформы
-          </Typography>
-        </motion.div>
-
-        {/* Секция скрыта на мобильных устройствах */}
+        {/* Секция полностью скрыта на мобильных устройствах */}
         {!isMobile && (
-          /* Десктопная версия с карточками */
-          <Grid container spacing={4} sx={{ mt: { xs: 6, md: 8 } }}>
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ 
+                duration: 0.8,
+                type: "spring",
+                stiffness: 100,
+                damping: 20
+              }}
+            >
+              <Typography
+                variant="h2"
+                align="center"
+                sx={{
+                  color: '#1A1A1A',
+                  mb: 2,
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: '-16px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '80px',
+                    height: '4px',
+                    backgroundColor: '#750000',
+                    borderRadius: '2px',
+                  },
+                }}
+              >
+                Возможности платформы
+              </Typography>
+            </motion.div>
+
+            {/* Десктопная версия с карточками */}
+            <Grid container spacing={4} sx={{ mt: { xs: 6, md: 8 } }}>
             {features.map((feature, index) => (
               <Grid item xs={12} md={4} key={feature.title}>
                 <motion.div
@@ -261,6 +262,7 @@ export const Features = () => {
               </Grid>
             ))}
           </Grid>
+          </>
         )}
       </Container>
     </Box>
