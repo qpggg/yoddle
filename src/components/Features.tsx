@@ -132,93 +132,83 @@ export const Features = () => {
           </Typography>
         </motion.div>
 
-        {/* Мобильная версия с аккордеоном */}
+        {/* Мобильная версия с простым аккордеоном */}
         {isMobile ? (
           <Box sx={{ mt: { xs: 6, md: 8 } }}>
             {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
+              <Box key={feature.title} sx={{ mb: 2 }}>
                 <Accordion
                   expanded={expandedAccordion === `panel${index}`}
                   onChange={handleAccordionChange(`panel${index}`)}
                   sx={{
-                    mb: 2,
-                    borderRadius: '16px !important',
+                    borderRadius: '12px !important',
                     border: '1px solid rgba(0, 0, 0, 0.08)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+                    boxShadow: 'none',
                     '&:before': {
                       display: 'none',
                     },
                     '&.Mui-expanded': {
-                      margin: '0 0 16px 0',
-                    },
+                      margin: '0 !important',
+                    }
                   }}
                 >
                   <AccordionSummary
                     expandIcon={<ExpandMoreIcon sx={{ color: '#750000' }} />}
                     sx={{
+                      backgroundColor: 'rgba(117, 0, 0, 0.05)',
+                      borderRadius: '12px',
+                      '&.Mui-expanded': {
+                        borderBottomLeftRadius: 0,
+                        borderBottomRightRadius: 0,
+                      },
                       '& .MuiAccordionSummary-content': {
                         margin: '12px 0',
-                      },
-                      '&.Mui-expanded': {
-                        minHeight: 56,
-                      },
-                      '&.Mui-expanded .MuiAccordionSummary-content': {
-                        margin: '12px 0',
-                      },
+                        alignItems: 'center'
+                      }
                     }}
                   >
                     <Typography
                       variant="h6"
                       sx={{
-                        color: '#1A1A1A',
+                        color: '#750000',
                         fontWeight: 600,
+                        fontSize: '0.95rem'
                       }}
                     >
                       {feature.title}
                     </Typography>
                   </AccordionSummary>
-                  <AccordionDetails sx={{ pt: 0 }}>
-                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                       {feature.items.map((item, _itemIndex) => (
-                         <Box
-                           key={item}
-                           sx={{
-                             display: 'flex',
-                             alignItems: 'flex-start',
-                             gap: 2,
-                           }}
-                         >
+                  <AccordionDetails sx={{ p: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {feature.items.map((item) => (
+                        <Box
+                          key={item}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            py: 0.5,
+                            minHeight: '36px',
+                          }}
+                        >
                           <Box
                             sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              backgroundColor: 'rgba(117, 0, 0, 0.1)',
-                              flexShrink: 0,
+                              minWidth: 28,
+                              mt: 0.2,
+                              '& svg': {
+                                fontSize: '1.1rem',
+                                color: '#750000',
+                              }
                             }}
                           >
-                            <CheckCircleIcon
-                              sx={{
-                                fontSize: 16,
-                                color: '#750000',
-                              }}
-                            />
+                            <CheckCircleIcon />
                           </Box>
                           <Typography
-                            variant="body2"
                             sx={{
+                              fontSize: '0.85rem',
+                              lineHeight: 1.3,
+                              fontWeight: 500,
                               color: '#1A1A1A',
-                              mt: 0.25,
-                              fontSize: '0.9rem',
+                              ml: 1
                             }}
                           >
                             {item}
@@ -228,7 +218,7 @@ export const Features = () => {
                     </Box>
                   </AccordionDetails>
                 </Accordion>
-              </motion.div>
+              </Box>
             ))}
           </Box>
         ) : (
