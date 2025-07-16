@@ -40,9 +40,10 @@ export const Features = () => {
       component="section"
       sx={{
         position: 'relative',
-        py: { xs: 8, md: 12 },
+        py: { xs: 0, md: 12 }, // Убираем padding на мобильных
         backgroundColor: '#FFFFFF',
         overflow: 'hidden',
+        display: { xs: 'none', md: 'block' }, // Полностью скрываем на мобильных
       }}
     >
       {/* Decorative background elements */}
