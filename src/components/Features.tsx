@@ -132,7 +132,7 @@ export const Features = () => {
           </Typography>
         </motion.div>
 
-        {/* Мобильная версия с простым аккордеоном */}
+        {/* Мобильная версия - БЕЗ АНИМАЦИЙ */}
         {isMobile ? (
           <Box sx={{ mt: { xs: 6, md: 8 } }}>
             {features.map((feature, index) => (
@@ -141,22 +141,28 @@ export const Features = () => {
                   expanded={expandedAccordion === `panel${index}`}
                   onChange={handleAccordionChange(`panel${index}`)}
                   sx={{
-                    borderRadius: '12px !important',
-                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    borderRadius: '8px !important',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
                     boxShadow: 'none',
                     '&:before': {
                       display: 'none',
                     },
                     '&.Mui-expanded': {
                       margin: '0 !important',
-                    }
+                    },
+                    // Простейшая анимация только для аккордеона
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ color: '#750000' }} />}
+                    expandIcon={<ExpandMoreIcon sx={{ 
+                      color: '#750000',
+                      transition: 'transform 0.15s ease',
+                      transform: expandedAccordion === `panel${index}` ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }} />}
                     sx={{
-                      backgroundColor: 'rgba(117, 0, 0, 0.05)',
-                      borderRadius: '12px',
+                      backgroundColor: 'rgba(117, 0, 0, 0.03)',
+                      borderRadius: '8px',
                       '&.Mui-expanded': {
                         borderBottomLeftRadius: 0,
                         borderBottomRightRadius: 0,
@@ -172,14 +178,14 @@ export const Features = () => {
                       sx={{
                         color: '#750000',
                         fontWeight: 600,
-                        fontSize: '0.95rem'
+                        fontSize: '0.9rem'
                       }}
                     >
                       {feature.title}
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {feature.items.map((item) => (
                         <Box
                           key={item}
@@ -187,15 +193,15 @@ export const Features = () => {
                             display: 'flex',
                             alignItems: 'flex-start',
                             py: 0.5,
-                            minHeight: '36px',
+                            minHeight: '32px',
                           }}
                         >
                           <Box
                             sx={{
-                              minWidth: 28,
+                              minWidth: 24,
                               mt: 0.2,
                               '& svg': {
-                                fontSize: '1.1rem',
+                                fontSize: '1rem',
                                 color: '#750000',
                               }
                             }}
@@ -204,8 +210,8 @@ export const Features = () => {
                           </Box>
                           <Typography
                             sx={{
-                              fontSize: '0.85rem',
-                              lineHeight: 1.3,
+                              fontSize: '0.8rem',
+                              lineHeight: 1.2,
                               fontWeight: 500,
                               color: '#1A1A1A',
                               ml: 1
