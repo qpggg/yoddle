@@ -1,8 +1,6 @@
-import { Box, Container, Typography, Grid, Paper, Accordion, AccordionSummary, AccordionDetails, useMediaQuery, useTheme } from '@mui/material'
+import { Box, Container, Typography, Grid, Paper, useMediaQuery, useTheme } from '@mui/material'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 const features = [
   {
@@ -36,12 +34,6 @@ const features = [
 export const Features = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [expandedAccordion, setExpandedAccordion] = useState<string | false>(false);
-
-  // Обработчик аккордеона для мобильных
-  const handleAccordionChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedAccordion(isExpanded ? panel : false);
-  };
 
   return (
     <Box
@@ -132,102 +124,8 @@ export const Features = () => {
           </Typography>
         </motion.div>
 
-        {/* Мобильная версия - БЕЗ АНИМАЦИЙ */}
-        {isMobile ? (
-          <Box sx={{ mt: { xs: 6, md: 8 } }}>
-            {features.map((feature, index) => (
-              <Box key={feature.title} sx={{ mb: 2 }}>
-                <Accordion
-                  expanded={expandedAccordion === `panel${index}`}
-                  onChange={handleAccordionChange(`panel${index}`)}
-                  sx={{
-                    borderRadius: '8px !important',
-                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                    boxShadow: 'none',
-                    '&:before': {
-                      display: 'none',
-                    },
-                    '&.Mui-expanded': {
-                      margin: '0 !important',
-                    },
-                    // Простейшая анимация только для аккордеона
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ 
-                      color: '#750000',
-                      transition: 'transform 0.15s ease',
-                      transform: expandedAccordion === `panel${index}` ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }} />}
-                    sx={{
-                      backgroundColor: 'rgba(117, 0, 0, 0.03)',
-                      borderRadius: '8px',
-                      '&.Mui-expanded': {
-                        borderBottomLeftRadius: 0,
-                        borderBottomRightRadius: 0,
-                      },
-                      '& .MuiAccordionSummary-content': {
-                        margin: '12px 0',
-                        alignItems: 'center'
-                      }
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color: '#750000',
-                        fontWeight: 600,
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      {feature.title}
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {feature.items.map((item) => (
-                        <Box
-                          key={item}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            py: 0.5,
-                            minHeight: '32px',
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              minWidth: 24,
-                              mt: 0.2,
-                              '& svg': {
-                                fontSize: '1rem',
-                                color: '#750000',
-                              }
-                            }}
-                          >
-                            <CheckCircleIcon />
-                          </Box>
-                          <Typography
-                            sx={{
-                              fontSize: '0.8rem',
-                              lineHeight: 1.2,
-                              fontWeight: 500,
-                              color: '#1A1A1A',
-                              ml: 1
-                            }}
-                          >
-                            {item}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            ))}
-          </Box>
-        ) : (
+        {/* Секция скрыта на мобильных устройствах */}
+        {!isMobile && (
           /* Десктопная версия с карточками */
           <Grid container spacing={4} sx={{ mt: { xs: 6, md: 8 } }}>
             {features.map((feature, index) => (
