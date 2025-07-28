@@ -200,7 +200,7 @@ const Navbar: React.FC = () => {
                       <Box component="img" src={user.avatar} alt={user.name} sx={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #8B0000' }} />
                     ) : (
                       <Box sx={{ width: 40, height: 40, borderRadius: '50%', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #8B0000' }}>
-                        <span style={{ fontSize: 24, color: '#8B0000' }}>{user.name[0]}</span>
+                        <span style={{ fontSize: 24, color: '#8B0000' }}>{user.name ? user.name[0] : 'U'}</span>
                       </Box>
                     )}
                   </IconButton>

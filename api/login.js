@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,17 +18,43 @@ export default async function handler(req, res) {
 
   try {
     await client.connect();
-    const result = await client.query(
-      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE login = $1 AND password = $2',
-      [login, password]
+    
+    // Сначала получаем пользователя по логину
+    const userResult = await client.query(
+      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar, password FROM enter WHERE login = $1',
+      [login]
     );
+    
     await client.end();
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid login or password' });
     }
 
-    return res.status(200).json({ success: true, user: result.rows[0] });
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+    
+    // Проверяем пароль (если он хеширован) или сравниваем напрямую (временно)
+    let passwordValid = false;
+    
+    if (user.password && user.password.startsWith('$2')) {
+      // Пароль хеширован с bcrypt
+      passwordValid = await bcrypt.compare(password, user.password);
+    } else {
+      // Пароль в открытом виде (временно для совместимости)
+      passwordValid = password === user.password;
+    }
+
+    if (!passwordValid) {
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+
+    // Удаляем пароль из ответа
+    delete user.password;
+    
+    return res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Database connection error:', error);
     return res.status(500).json({ error: 'Database connection error' });
