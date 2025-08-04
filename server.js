@@ -123,6 +123,82 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   }
 });
 
+// POST /api/gamification/login - оптимизированная геймификация входа
+app.post('/api/gamification/login', async (req, res) => {
+  const { user_id } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id required' });
+  }
+
+  const client = createDbClient();
+
+  try {
+    const now = new Date();
+    const hour = now.getHours();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    
+    // Создаем все действия для геймификации
+    const actions = [
+      {
+        action: 'login',
+        xp_earned: 10,
+        description: 'Вход в систему'
+      }
+    ];
+    
+    // Добавляем бонусы
+    if (hour < 9) {
+      actions.push({
+        action: 'early_bird',
+        xp_earned: 30,
+        description: '🌅 Ранний пташка'
+      });
+    }
+    
+    if (isWeekend) {
+      actions.push({
+        action: 'weekend_activity',
+        xp_earned: 40,
+        description: '⚔️ Воин выходных'
+      });
+    }
+    
+    // 🚀 ВЫПОЛНЯЕМ ВСЕ ПАРАЛЛЕЛЬНО
+    const promises = actions.map(action =>
+      client.query(
+        'INSERT INTO activity_log (user_id, action, xp_earned, description) VALUES ($1, $2, $3, $4)',
+        [user_id, action.action, action.xp_earned, action.description]
+      )
+    );
+    
+    // Обновляем streak параллельно
+    promises.push(
+      client.query(
+        'UPDATE user_progress SET login_streak = login_streak + 1, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1',
+        [user_id]
+      )
+    );
+    
+    // Ждем завершения всех операций
+    await Promise.all(promises);
+    
+    // Подсчитываем общий XP
+    const totalXP = actions.reduce((sum, action) => sum + action.xp_earned, 0);
+    
+    return res.status(200).json({ 
+      success: true, 
+      totalXP,
+      actions: actions.length,
+      bonuses: actions.filter(a => a.action !== 'login').length
+    });
+    
+  } catch (error) {
+    console.error('Gamification error:', error);
+    return res.status(500).json({ error: 'Gamification error' });
+  }
+});
+
 // GET /api/activity - оптимизированный endpoint
 app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => {
   const { user_id, year, month } = req.query;

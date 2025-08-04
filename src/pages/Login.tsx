@@ -33,30 +33,35 @@ const Login: React.FC = () => {
 
       const data = await response.json();
       
-      // 🚀 МГНОВЕННЫЙ ВХОД - без логирования
+      // 🚀 БЫСТРЫЙ ПЕРЕХОД + ЛОГИРОВАНИЕ ДЛЯ ГЕЙМИФИКАЦИИ
       setUser(data.user);
       navigate('/dashboard');
       
-      // 🔄 ЛОГИРОВАНИЕ В ФОНЕ (не блокирует вход)
+      // 🎮 ЛОГИРОВАНИЕ ДЛЯ ГЕЙМИФИКАЦИИ (в фоне)
       setTimeout(async () => {
         try {
-          // Только основной логин без бонусов
-          await fetch('/api/activity', {
+          // 🚀 ИСПОЛЬЗУЕМ ОПТИМИЗИРОВАННЫЙ ENDPOINT
+          const gamificationResponse = await fetch('/api/gamification/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              user_id: Number(data.user.id),
-              action: 'login',
-              xp_earned: 10,
-              description: 'Вход в систему'
+              user_id: Number(data.user.id)
             })
           });
           
-          console.log('✅ Фоновое логирование завершено');
+          if (gamificationResponse.ok) {
+            const gamificationData = await gamificationResponse.json();
+            
+            if (gamificationData.totalXP > 10) {
+              console.log(`🎮 Геймификация: +${gamificationData.totalXP} XP за вход!`);
+              console.log(`📊 Действий: ${gamificationData.actions}, Бонусов: ${gamificationData.bonuses}`);
+            }
+          }
+          
         } catch (error) {
-          console.warn('⚠️ Ошибка фонового логирования:', error);
+          console.warn('⚠️ Ошибка геймификации:', error);
         }
-      }, 1000); // Задержка 1 секунда
+      }, 500); // Задержка 500ms для плавности
       
     } catch (err) {
       setError('Ошибка соединения с сервером');

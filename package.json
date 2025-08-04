@@ -17,7 +17,8 @@
     "check-db": "node check_db_fixes.js",
     "test-login": "node test_login.js",
     "test-speed": "node test_login_speed.js",
-    "test-simple": "node test_login_simple.js"
+    "test-simple": "node test_login_simple.js",
+    "test-gamification": "node test_gamification.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
