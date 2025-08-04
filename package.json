@@ -11,7 +11,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "migrate-passwords": "node migrate_passwords.js"
+    "migrate-passwords": "node migrate_passwords.js",
+    "migrate-passwords-secure": "node migrate_passwords_secure.js",
+    "test-fixes": "node test_fixes.js",
+    "check-db": "node check_db_fixes.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -26,6 +29,7 @@
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.511.0",
     "mysql2": "^3.14.1",
+    "node-fetch": "^3.3.2",
     "pg": "^8.16.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",

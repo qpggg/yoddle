@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import newsRouter from './api/news.js';
+import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,9 +28,9 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Базовая функция для создания клиента БД - хардкод для избежания проблем с .env
+// Базовая функция для создания клиента БД - используем переменную окружения
 function createDbClient() {
-  const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
+  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
   
   return new Client({
     connectionString: connectionString,
@@ -37,8 +38,8 @@ function createDbClient() {
   });
 }
 
-// POST /api/login - точно как в api/login.js
-app.post('/api/login', async (req, res) => {
+// POST /api/login - безопасная аутентификация
+app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) {
     return res.status(400).json({ error: 'Login and password required' });
@@ -48,25 +49,48 @@ app.post('/api/login', async (req, res) => {
 
   try {
     await client.connect();
-    const result = await client.query(
-      'SELECT * FROM enter WHERE login = $1 AND password = $2',
-      [login, password]
+    
+    // Сначала получаем пользователя по логину
+    const userResult = await client.query(
+      'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
+      [login]
     );
     await client.end();
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid login or password' });
     }
 
-    return res.status(200).json({ success: true, user: result.rows[0] });
+    const user = userResult.rows[0];
+    
+    // Проверяем пароль (поддержка как хешированных, так и открытых паролей для миграции)
+    let passwordValid = false;
+    
+    if (user.password && user.password.startsWith('$2')) {
+      // Пароль хеширован с bcrypt
+      const bcrypt = await import('bcryptjs');
+      passwordValid = await bcrypt.default.compare(password, user.password);
+    } else {
+      // Пароль в открытом виде (временно для совместимости)
+      passwordValid = password === user.password;
+    }
+
+    if (!passwordValid) {
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+
+    // Удаляем пароль из ответа
+    delete user.password;
+    
+    return res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Database connection error:', error);
     return res.status(500).json({ error: 'Database connection error' });
   }
 });
 
-// GET /api/activity - точно как в api/activity.js
-app.get('/api/activity', async (req, res) => {
+// GET /api/activity - оптимизированный endpoint
+app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => {
   const { user_id, year, month } = req.query;
 
   if (!user_id) {
@@ -94,20 +118,11 @@ app.get('/api/activity', async (req, res) => {
       actions: 0
     }));
 
-    // Получаем данные активности из базы данных
-    const query = `
-      SELECT 
-        EXTRACT(DAY FROM created_at) as day,
-        COUNT(*) as total_actions
-      FROM activity_log 
-      WHERE user_id = $1 
-        AND EXTRACT(YEAR FROM created_at) = $2 
-        AND EXTRACT(MONTH FROM created_at) = $3
-      GROUP BY EXTRACT(DAY FROM created_at)
-      ORDER BY day;
-    `;
-
-    const result = await client.query(query, [user_id, targetYear, targetMonth]);
+    // Получаем данные активности через оптимизированную функцию
+    const result = await client.query(
+      'SELECT * FROM get_user_activity($1, $2, $3)',
+      [user_id, targetYear, targetMonth]
+    );
 
     console.log('Activity API: Результат запроса:', result.rows);
 
@@ -158,8 +173,8 @@ app.get('/api/benefits', async (req, res) => {
   }
 });
 
-// GET/POST/PATCH /api/progress - точно как в api/progress.js
-app.get('/api/progress', async (req, res) => {
+// GET/POST/PATCH /api/progress - оптимизированные endpoints
+app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
   const { user_id } = req.query;
   
   if (!user_id) {
@@ -177,25 +192,11 @@ app.get('/api/progress', async (req, res) => {
       [user_id]
     );
     
-    // Получаем ВСЕ достижения из БД с информацией о том, какие разблокированы
-    const achievementsResult = await client.query(`
-      SELECT 
-        a.code as id,
-        a.name as title,
-        a.description,
-        a.icon,
-        a.xp_reward as points,
-        a.tier,
-        a.requirement_type,
-        a.requirement_value,
-        a.requirement_action,
-        CASE WHEN ua.achievement_id IS NOT NULL THEN true ELSE false END as unlocked,
-        ua.unlocked_at
-      FROM achievements a
-      LEFT JOIN user_achievements ua ON a.code = ua.achievement_id AND ua.user_id = $1
-      WHERE a.is_active = true
-      ORDER BY a.tier ASC, a.xp_reward ASC
-    `, [user_id]);
+    // Получаем достижения пользователя через оптимизированную функцию
+    const achievementsResult = await client.query(
+      'SELECT * FROM get_user_achievements($1)',
+      [user_id]
+    );
     
     // Если прогресса нет, создаем базовый
     let progress = progressResult.rows[0];
@@ -237,7 +238,7 @@ app.get('/api/progress', async (req, res) => {
   }
 });
 
-app.post('/api/progress', async (req, res) => {
+app.post('/api/progress', rateLimit, validateProgress, async (req, res) => {
   const { user_id, xp_to_add, action } = req.body;
   
   if (!user_id || !xp_to_add) {
