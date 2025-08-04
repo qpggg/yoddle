@@ -15,157 +15,49 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Предотвращаем двойное нажатие
-    
-    setError('');
     setIsLoading(true);
+    setError('');
+
     try {
-      const res = await fetch('/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login: email, password })
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Ошибка входа');
-        setIsLoading(false);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Ошибка входа');
         return;
       }
-      const data = await res.json();
+
+      const data = await response.json();
       
-      // 🎉 АВТОЛОГИРОВАНИЕ ВХОДА (СНАЧАЛА ЛОГИРУЕМ, ПОТОМ ПЕРЕХОДИМ)
-      try {
-        // Получаем текущее время
-        const now = new Date();
-        const hours = now.getHours();
-        const isWeekend = now.getDay() === 0 || now.getDay() === 6; // 0 = Воскресенье, 6 = Суббота
-        
-        // Создаем массив всех действий для одного запроса
-        const allActions = [];
-        
-        // Основной вход
-        allActions.push({
-          action: 'login',
-          xp_earned: 10,
-          description: `Пользователь ${data.user.name || data.user.email} вошел в систему`
-        });
-        
-        // 🦉 Сова - вход после 22:00
-        if (hours >= 22 || hours < 6) {
-          allActions.push({
-            action: 'late_login',
-            xp_earned: 30,
-            description: `🦉 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Сова"`
-          });
-        }
-        
-        // 🐦 Ранняя пташка - вход до 9:00
-        if (hours >= 6 && hours < 9) {
-          allActions.push({
-            action: 'early_login', 
-            xp_earned: 30,
-            description: `🐦 Вход в систему в ${hours}:${now.getMinutes().toString().padStart(2, '0')} - заработано достижение "Ранняя пташка"`
-          });
-        }
-        
-        // ⚔️ Воин выходных - активность в выходные
-        if (isWeekend) {
-          allActions.push({
-            action: 'weekend_activity',
-            xp_earned: 40,
-            description: `⚔️ Активность в выходной день - заработано достижение "Воин выходных"`
-          });
-        }
-        
-        // Логируем все действия последовательно с небольшой задержкой
-        let allSuccess = true;
-        for (let i = 0; i < allActions.length; i++) {
-          try {
-            const actionResponse = await fetch('/api/activity', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                user_id: Number(data.user.id),
-                ...allActions[i]
-              })
-            });
-            
-            if (actionResponse.ok) {
-              console.log(`✅ Действие ${allActions[i].action} успешно записано`);
-            } else {
-              allSuccess = false;
-              console.error(`❌ Ошибка записи ${allActions[i].action}`);
-            }
-            
-            // Небольшая задержка между запросами чтобы избежать race conditions
-            if (i < allActions.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-          } catch (actionError) {
-            allSuccess = false;
-            console.error(`❌ Ошибка при записи ${allActions[i].action}:`, actionError);
-          }
-        }
-        
-        // 🔥 ОБНОВЛЯЕМ LOGIN_STREAK (серию входов)
-        try {
-          // Получаем текущий прогресс для определения streak
-          const progressResponse = await fetch(`/api/progress?user_id=${data.user.id}`);
-          if (progressResponse.ok) {
-            const progressData = await progressResponse.json();
-            const currentStreak = progressData.progress?.login_streak || 0;
-            
-            // Проверяем, был ли вход вчера через прогресс данные
-            // Пока используем простую логику - каждый вход увеличивает streak на 1
-            // В будущем можно добавить более сложную логику проверки дат
-            const wasActiveYesterday = true; // Упрощенная логика
-            
-            // Обновляем streak
-            const newStreak = wasActiveYesterday ? currentStreak + 1 : 1;
-            
-            const streakUpdateResponse = await fetch('/api/progress', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                user_id: Number(data.user.id),
-                field: 'login_streak',
-                value: newStreak
-              })
-            });
-            
-            if (streakUpdateResponse.ok) {
-              console.log(`🔥 Login streak обновлен: ${newStreak} дней`);
-              
-              // Проверяем достижения за streak отдельным запросом
-              if (newStreak >= 3) {
-                await fetch('/api/activity', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    user_id: Number(data.user.id),
-                    action: 'streak_update',
-                    xp_earned: 0,
-                    description: `Серия входов: ${newStreak} дней подряд`
-                  })
-                });
-              }
-            }
-          }
-        } catch (streakError) {
-          console.error('❌ Ошибка обновления streak:', streakError);
-        }
-        
-        if (allSuccess) {
-          console.log('✅ Логирование входа успешно');
-        } else {
-          console.error('❌ Ошибка логирования входа');
-        }
-      } catch (loginError) {
-        console.error('❌ Ошибка при логировании входа:', loginError);
-      }
-      
+      // 🚀 МГНОВЕННЫЙ ВХОД - без логирования
       setUser(data.user);
       navigate('/dashboard');
+      
+      // 🔄 ЛОГИРОВАНИЕ В ФОНЕ (не блокирует вход)
+      setTimeout(async () => {
+        try {
+          // Только основной логин без бонусов
+          await fetch('/api/activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: Number(data.user.id),
+              action: 'login',
+              xp_earned: 10,
+              description: 'Вход в систему'
+            })
+          });
+          
+          console.log('✅ Фоновое логирование завершено');
+        } catch (error) {
+          console.warn('⚠️ Ошибка фонового логирования:', error);
+        }
+      }, 1000); // Задержка 1 секунда
+      
     } catch (err) {
       setError('Ошибка соединения с сервером');
     } finally {

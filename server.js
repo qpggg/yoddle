@@ -1,9 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import { Client } from 'pg';
+import { Client, Pool } from 'pg';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 
@@ -28,14 +29,44 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// 🚀 ОПТИМИЗИРОВАННЫЙ ПУЛ СОЕДИНЕНИЙ БД
+const dbPool = new Pool({
+  connectionString: process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres',
+  ssl: { rejectUnauthorized: false },
+  max: 20, // Максимум соединений
+  idleTimeoutMillis: 30000, // Время жизни неактивного соединения
+  connectionTimeoutMillis: 2000 // Таймаут подключения
+});
+
+// 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
+const userCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
+function getUserFromCache(login) {
+  const cached = userCache.get(login);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.user;
+  }
+  return null;
+}
+
+function setUserInCache(login, user) {
+  userCache.set(login, {
+    user: { ...user },
+    timestamp: Date.now()
+  });
+}
+
+function setUserWithPasswordInCache(login, user) {
+  userCache.set(login, {
+    user: { ...user },
+    timestamp: Date.now()
+  });
+}
+
 // Базовая функция для создания клиента БД - используем переменную окружения
 function createDbClient() {
-  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  
-  return new Client({
-    connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
+  return dbPool;
 }
 
 // POST /api/login - безопасная аутентификация
@@ -48,28 +79,31 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   const client = createDbClient();
 
   try {
-    await client.connect();
+    // 🚀 Проверяем кэш сначала
+    let user = getUserFromCache(login);
     
-    // Сначала получаем пользователя по логину
-    const userResult = await client.query(
-      'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
-      [login]
-    );
-    await client.end();
+    if (!user) {
+      // Если нет в кэше, запрашиваем из БД
+      const userResult = await client.query(
+        'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
+        [login]
+      );
 
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid login or password' });
+      if (userResult.rows.length === 0) {
+        return res.status(401).json({ error: 'Invalid login or password' });
+      }
+
+      user = userResult.rows[0];
+      // Сохраняем в кэш с паролем для быстрой проверки
+      setUserWithPasswordInCache(login, user);
     }
-
-    const user = userResult.rows[0];
     
     // Проверяем пароль (поддержка как хешированных, так и открытых паролей для миграции)
     let passwordValid = false;
     
     if (user.password && user.password.startsWith('$2')) {
       // Пароль хеширован с bcrypt
-      const bcrypt = await import('bcryptjs');
-      passwordValid = await bcrypt.default.compare(password, user.password);
+      passwordValid = await bcrypt.compare(password, user.password);
     } else {
       // Пароль в открытом виде (временно для совместимости)
       passwordValid = password === user.password;
@@ -139,8 +173,6 @@ app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => 
       'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
     ];
-
-    await client.end();
 
     res.status(200).json({
       success: true,
@@ -233,7 +265,6 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
     
   } catch (error) {
     console.error('Database error:', error);
-    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -341,18 +372,23 @@ app.patch('/api/progress', async (req, res) => {
       return res.status(400).json({ error: 'Invalid field' });
     }
     
-    await client.query(
-      `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
-      [user_id, value]
-    );
-    
-    await client.end();
+    // 🚀 Поддержка increment для увеличения значения на 1
+    if (value === 'increment') {
+      await client.query(
+        `UPDATE user_progress SET ${field} = ${field} + 1, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
+        [user_id]
+      );
+    } else {
+      await client.query(
+        `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
+        [user_id, value]
+      );
+    }
     
     return res.status(200).json({ success: true });
     
   } catch (error) {
     console.error('Database error:', error);
-    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -372,10 +408,8 @@ app.get('/api/user-benefits', async (req, res) => {
        WHERE ub.user_id = $1`,
       [user_id]
     );
-    await client.end();
     return res.status(200).json({ benefits: result.rows });
   } catch (error) {
-    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -392,10 +426,8 @@ app.post('/api/user-benefits', async (req, res) => {
       'INSERT INTO user_benefits (user_id, benefit_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [user_id, benefit_id]
     );
-    await client.end();
     return res.status(200).json({ success: true });
   } catch (error) {
-    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -415,11 +447,9 @@ app.post('/api/clients', async (req, res) => {
       'INSERT INTO clients (name, email, company, message) VALUES ($1, $2, $3, $4)',
       [name, email, company, message]
     );
-    await client.end();
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Ошибка базы данных:', error);
-    await client.end();
     return res.status(500).json({ error: 'Ошибка базы данных' });
   }
 });

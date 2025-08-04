@@ -15,7 +15,9 @@
     "migrate-passwords-secure": "node migrate_passwords_secure.js",
     "test-fixes": "node test_fixes.js",
     "check-db": "node check_db_fixes.js",
-    "test-login": "node test_login.js"
+    "test-login": "node test_login.js",
+    "test-speed": "node test_login_speed.js",
+    "test-simple": "node test_login_simple.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
