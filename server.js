@@ -213,19 +213,23 @@ app.post('/api/gamification/login', async (req, res) => {
       )
     );
     
-    // Обновляем streak параллельно
-    promises.push(
-      client.query(
-        'UPDATE user_progress SET login_streak = login_streak + 1, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1',
-        [user_id]
-      )
-    );
-    
     // Ждем завершения всех операций
     await Promise.all(promises);
     
     // Подсчитываем общий XP
     const totalXP = actions.reduce((sum, action) => sum + action.xp_earned, 0);
+    
+    // Обновляем или создаем запись в user_progress
+    await client.query(
+      `INSERT INTO user_progress (user_id, login_streak, last_activity, xp) 
+       VALUES ($1, 1, CURRENT_TIMESTAMP, $2) 
+       ON CONFLICT (user_id) 
+       DO UPDATE SET 
+         login_streak = user_progress.login_streak + 1, 
+         last_activity = CURRENT_TIMESTAMP,
+         xp = user_progress.xp + $2`,
+      [user_id, totalXP]
+    );
     
     return res.status(200).json({ 
       success: true, 

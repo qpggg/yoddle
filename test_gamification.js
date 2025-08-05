@@ -29,6 +29,9 @@ async function testGamification() {
     
     console.log(`✅ Вход выполнен для пользователя: ${loginData.user.name}`);
     
+    // Небольшая задержка перед геймификацией
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Тестируем геймификацию
     const gamificationResponse = await fetch(`${BASE_URL}/api/gamification/login`, {
       method: 'POST',
@@ -81,7 +84,7 @@ async function testGamificationSpeed() {
     results.push(result);
     
     if (i < 2) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Увеличиваем задержку до 2 секунд
     }
   }
   
