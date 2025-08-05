@@ -13,6 +13,9 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
+// 🔍 ОТЛАДКА: Проверяем загрузку .env
+console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,8 +39,13 @@ function createDbPool() {
   if (!dbPool) {
     const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
     
+    // 🔍 ОТЛАДКА: Показываем какую строку подключения используем
+    console.log('🔍 DEBUG: PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
+    console.log('🔍 DEBUG: Using connection string =', connectionString);
+    
     // Для локальной БД не нужен SSL
     const isLocalDb = connectionString.includes('localhost');
+    console.log('🔍 DEBUG: isLocalDb =', isLocalDb);
     
     dbPool = new Pool({
       connectionString,
@@ -822,7 +830,13 @@ app.use('/api/news', newsRouter);
 // Запуск сервера
 app.listen(PORT, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
-  console.log(`📊 Database: Connected to Supabase`);
+  
+  // 🔍 Показываем правильную информацию о подключении к БД
+  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
+  const isLocalDb = connectionString.includes('localhost');
+  const dbName = isLocalDb ? 'Local PostgreSQL' : 'Supabase';
+  console.log(`📊 Database: Connected to ${dbName}`);
+  
   console.log(`📰 News API: Available at /api/news`);
   console.log(`👤 Profile API: Available at /api/profile`);
   console.log(`📢 Notifications API: Available at /api/notifications`);
