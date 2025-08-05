@@ -120,12 +120,44 @@ export default async function handler(req, res) {
         else if (newXP >= 301) newLevel = 3;
         else if (newXP >= 101) newLevel = 2;
         
+        // Проверяем, повысился ли уровень
+        const oldLevel = currentProgress.level;
+        const levelIncreased = newLevel > oldLevel;
+        
         await client.query(
           'UPDATE user_progress SET xp = $2, level = $3, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1',
           [user_id, newXP, newLevel]
         );
         
         currentProgress = { ...currentProgress, xp: newXP, level: newLevel };
+        
+        // 🎯 ЛОГИРОВАНИЕ ПОВЫШЕНИЯ УРОВНЯ
+        if (levelIncreased) {
+          // Получаем XP из activity_types для level_up
+          const xpResult = await client.query(
+            'SELECT xp_earned FROM activity_types WHERE action = $1',
+            ['level_up']
+          );
+          
+          const levelUpXP = xpResult.rows.length > 0 ? xpResult.rows[0].xp_earned : 100;
+          
+          // Логируем повышение уровня
+          await client.query(
+            'INSERT INTO activity_log (user_id, action, xp_earned, description) VALUES ($1, $2, $3, $4)',
+            [user_id, 'level_up', levelUpXP, `Повышение уровня: ${oldLevel} → ${newLevel}`]
+          );
+          
+          // Обновляем XP в user_progress (дополнительные XP за повышение уровня)
+          await client.query(
+            'UPDATE user_progress SET xp = xp + $2 WHERE user_id = $1',
+            [user_id, levelUpXP]
+          );
+          
+          // Обновляем currentProgress
+          currentProgress.xp += levelUpXP;
+          
+          console.log(`🎉 Уровень повышен! ${oldLevel} → ${newLevel}. Начислено ${levelUpXP} XP`);
+        }
       }
       
       // УЛУЧШЕННАЯ ЛОГИКА РАЗБЛОКИРОВКИ ДОСТИЖЕНИЙ

@@ -1,13 +1,13 @@
-import { Client } from 'pg';
+import { Pool } from 'pg';
 
 export default async function handler(req, res) {
-  const client = new Client({
+  const pool = new Pool({
     connectionString: process.env.PG_CONNECTION_STRING,
-    ssl: { rejectUnauthorized: false }
+    ssl: process.env.PG_CONNECTION_STRING?.includes('localhost') ? false : { rejectUnauthorized: false }
   });
 
   try {
-    await client.connect();
+    const client = await pool.connect();
 
     if (req.method === 'GET') {
       // Получение данных активности
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
       ];
 
-      await client.end();
+      client.release();
 
       return res.status(200).json({
         success: true,
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
         [actualUserId, action, xpEarned, details || null]
       );
 
-      await client.end();
+      client.release();
 
       return res.status(200).json({ 
         success: true, 
@@ -87,13 +87,15 @@ export default async function handler(req, res) {
       });
 
     } else {
-      await client.end();
+      client.release();
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
   } catch (error) {
     console.error('Activity API error:', error);
-    await client.end();
+    if (client) client.release();
     return res.status(500).json({ error: 'Failed to process activity request' });
+  } finally {
+    await pool.end();
   }
 } 

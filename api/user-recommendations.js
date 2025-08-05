@@ -97,6 +97,42 @@ export default async (req, res) => {
       
       console.log('All benefit recommendations saved successfully');
 
+      // 🎯 ЛОГИРОВАНИЕ ПРОХОЖДЕНИЯ ТЕСТА
+      // Проверяем, не проходил ли пользователь тест в последние 10 дней
+      const lastTestResult = await client.query(
+        'SELECT created_at FROM activity_log WHERE user_id = $1 AND action = $2 AND created_at > NOW() - INTERVAL \'10 days\'',
+        [user_id, 'preferences_test']
+      );
+
+      if (lastTestResult.rows.length === 0) {
+        // Получаем XP из activity_types для preferences_test
+        const xpResult = await client.query(
+          'SELECT xp_earned FROM activity_types WHERE action = $1',
+          ['preferences_test']
+        );
+        
+        const xpEarned = xpResult.rows.length > 0 ? xpResult.rows[0].xp_earned : 75;
+        
+        // Логируем прохождение теста
+        await client.query(
+          'INSERT INTO activity_log (user_id, action, xp_earned, description) VALUES ($1, $2, $3, $4)',
+          [user_id, 'preferences_test', xpEarned, 'Прохождение теста предпочтений']
+        );
+        
+        // Обновляем XP в user_progress
+        await client.query(
+          `INSERT INTO user_progress (user_id, xp) 
+           VALUES ($1, $2) 
+           ON CONFLICT (user_id) 
+           DO UPDATE SET xp = user_progress.xp + $2`,
+          [user_id, xpEarned]
+        );
+        
+        console.log(`✅ Тест пройден! Начислено ${xpEarned} XP`);
+      } else {
+        console.log('⚠️ Тест уже проходился в последние 10 дней');
+      }
+
       res.status(200).json({ success: true });
     } catch (error) {
       console.error('Error saving benefit recommendations:', error);
