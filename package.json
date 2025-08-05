@@ -19,6 +19,9 @@
     "test-speed": "node test_login_speed.js",
     "test-simple": "node test_login_simple.js",
     "test-gamification": "node test_gamification.js",
+    "test-production": "node test_production_gamification.js",
+    "test-supabase": "node test_supabase_gamification.cjs",
+    "test-production-web": "node test_production_web.js",
     "setup-local": "node setup_local_development.js"
   },
   "dependencies": {
