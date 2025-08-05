@@ -65,16 +65,18 @@ export default async function handler(req, res) {
 
     } else if (req.method === 'POST') {
       // Добавление новой активности
-      const { userId, action, details, xpEarned = 0 } = req.body;
+      const { userId, user_id, action, details, xpEarned = 0 } = req.body;
       
-      if (!userId || !action) {
+      const actualUserId = userId || user_id;
+      
+      if (!actualUserId || !action) {
         return res.status(400).json({ error: 'User ID and action required' });
       }
 
       // Логируем активность в существующую таблицу activity_log
       const result = await client.query(
         'INSERT INTO activity_log (user_id, action, xp_earned, description, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id',
-        [userId, action, xpEarned, details || null]
+        [actualUserId, action, xpEarned, details || null]
       );
 
       await client.end();
