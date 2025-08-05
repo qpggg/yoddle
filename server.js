@@ -30,13 +30,25 @@ app.get(/^\/(?!api).*/, (req, res) => {
 });
 
 // 🚀 ОПТИМИЗИРОВАННЫЙ ПУЛ СОЕДИНЕНИЙ БД
-const dbPool = new Pool({
-  connectionString: process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres',
-  ssl: { rejectUnauthorized: false },
-  max: 20, // Максимум соединений
-  idleTimeoutMillis: 30000, // Время жизни неактивного соединения
-  connectionTimeoutMillis: 2000 // Таймаут подключения
-});
+let dbPool = null;
+
+function createDbPool() {
+  if (!dbPool) {
+    const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
+    
+    // Для локальной БД не нужен SSL
+    const isLocalDb = connectionString.includes('localhost');
+    
+    dbPool = new Pool({
+      connectionString,
+      ssl: isLocalDb ? false : { rejectUnauthorized: false },
+      max: 20, // Максимум соединений
+      idleTimeoutMillis: 30000, // Время жизни неактивного соединения
+      connectionTimeoutMillis: 2000 // Таймаут подключения
+    });
+  }
+  return dbPool;
+}
 
 // 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
 const userCache = new Map();
@@ -66,7 +78,7 @@ function setUserWithPasswordInCache(login, user) {
 
 // Базовая функция для создания клиента БД - используем переменную окружения
 function createDbClient() {
-  return dbPool;
+  return createDbPool();
 }
 
 // POST /api/login - безопасная аутентификация
@@ -138,31 +150,52 @@ app.post('/api/gamification/login', async (req, res) => {
     const hour = now.getHours();
     const isWeekend = now.getDay() === 0 || now.getDay() === 6;
     
-    // Создаем все действия для геймификации
-    const actions = [
-      {
-        action: 'login',
-        xp_earned: 10,
-        description: 'Вход в систему'
-      }
-    ];
+    // 🎯 ПРОВЕРЯЕМ УЖЕ ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ
+    const existingAchievements = await client.query(
+      'SELECT action FROM activity_log WHERE user_id = $1 AND action IN ($2, $3, $4) AND DATE(created_at) = CURRENT_DATE',
+      [user_id, 'login', 'first_login_today', 'streak_milestone']
+    );
     
-    // Добавляем бонусы
-    if (hour < 9) {
-      actions.push({
-        action: 'early_bird',
-        xp_earned: 30,
-        description: '🌅 Ранний пташка'
-      });
-    }
+    const existingActions = existingAchievements.rows.map(row => row.action);
     
-    if (isWeekend) {
-      actions.push({
-        action: 'weekend_activity',
-        xp_earned: 40,
-        description: '⚔️ Воин выходных'
-      });
-    }
+    // Создаем действия согласно таблице
+    const actions = [];
+    
+    // 🔒 Вход в систему (10 XP) - всегда
+    actions.push({
+      action: 'login',
+      xp_earned: 10,
+      description: 'Вход в систему'
+    });
+    
+         // 🌈 Первый вход за день (15 XP) - только если еще не получено сегодня
+     const todayLogin = existingAchievements.rows.find(row => row.action === 'first_login_today');
+     if (!todayLogin) {
+       actions.push({
+         action: 'first_login_today',
+         xp_earned: 15,
+         description: 'Первый вход за день'
+       });
+     }
+    
+    // 🔥 Серия входов (50 XP) - проверяем streak
+    const progressResult = await client.query(
+      'SELECT login_streak FROM user_progress WHERE user_id = $1',
+      [user_id]
+    );
+    
+    const currentStreak = progressResult.rows[0]?.login_streak || 0;
+    const newStreak = currentStreak + 1;
+    
+         // Даем достижение за streak каждые 7 дней
+     const streakMilestone = existingAchievements.rows.find(row => row.action === 'streak_milestone');
+     if (newStreak % 7 === 0 && !streakMilestone) {
+       actions.push({
+         action: 'streak_milestone',
+         xp_earned: 50,
+         description: `Серия входов: ${newStreak} дней подряд`
+       });
+     }
     
     // 🚀 ВЫПОЛНЯЕМ ВСЕ ПАРАЛЛЕЛЬНО
     const promises = actions.map(action =>
@@ -190,7 +223,9 @@ app.post('/api/gamification/login', async (req, res) => {
       success: true, 
       totalXP,
       actions: actions.length,
-      bonuses: actions.filter(a => a.action !== 'login').length
+      bonuses: actions.filter(a => a.action !== 'login').length,
+      newStreak,
+      achievements: actions.map(a => a.action)
     });
     
   } catch (error) {
@@ -743,6 +778,41 @@ app.delete('/api/user-recommendations', async (req, res) => {
     await client.end();
     console.error('Error deleting benefit recommendations:', error);
     res.status(500).json({ error: 'Database error: ' + error.message });
+  }
+});
+
+// GET /api/check-password-hash - проверка статуса хеширования паролей
+app.get('/api/check-password-hash', async (req, res) => {
+  const { login } = req.query;
+  
+  if (!login) {
+    return res.status(400).json({ error: 'login parameter required' });
+  }
+
+  const client = createDbClient();
+
+  try {
+    const result = await client.query(
+      'SELECT password FROM enter WHERE login = $1',
+      [login]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const password = result.rows[0].password;
+    const isHashed = password && password.startsWith('$2');
+    
+    return res.status(200).json({ 
+      isHashed,
+      passwordLength: password ? password.length : 0,
+      hashType: isHashed ? 'bcrypt' : 'plaintext'
+    });
+    
+  } catch (error) {
+    console.error('Password hash check error:', error);
+    return res.status(500).json({ error: 'Database error' });
   }
 });
 

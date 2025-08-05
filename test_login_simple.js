@@ -3,8 +3,8 @@ import fetch from 'node-fetch';
 const BASE_URL = 'http://localhost:3000';
 
 async function testSimpleLogin() {
-  console.log('🚀 ТЕСТ ПРОСТОГО ВХОДА (без bcrypt)');
-  console.log('=====================================\n');
+  console.log('🚀 ТЕСТ ПРОСТОГО ВХОДА (с проверкой хеширования)');
+  console.log('================================================\n');
   
   const startTime = Date.now();
   
@@ -26,7 +26,13 @@ async function testSimpleLogin() {
       const data = await response.json();
       console.log(`✅ Простой вход: ${duration}ms`);
       console.log(`👤 Пользователь: ${data.user.name}`);
-      console.log(`🔑 Пароль хеширован: ${data.user.password ? 'Да' : 'Нет'}`);
+      
+      // Проверяем хеширование в БД
+      const dbResponse = await fetch(`${BASE_URL}/api/check-password-hash?login=test@gmail.com`);
+      if (dbResponse.ok) {
+        const hashData = await dbResponse.json();
+        console.log(`🔑 Пароль в БД: ${hashData.isHashed ? 'Хеширован ✅' : 'Не хеширован ❌'}`);
+      }
     } else {
       console.log(`❌ Ошибка входа: ${duration}ms`);
       const errorData = await response.json();
