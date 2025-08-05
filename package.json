@@ -22,6 +22,8 @@
     "test-production": "node test_production_gamification.js",
     "test-supabase": "node test_supabase_gamification.cjs",
     "test-production-web": "node test_production_web.js",
+    "test-main-server": "node test_main_server.js",
+    "test-vercel": "node test_vercel_gamification.js",
     "setup-local": "node setup_local_development.js"
   },
   "dependencies": {
