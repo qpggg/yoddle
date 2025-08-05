@@ -41,11 +41,12 @@ const Login: React.FC = () => {
       setTimeout(async () => {
         try {
           // 🚀 ИСПОЛЬЗУЕМ ОПТИМИЗИРОВАННЫЙ ENDPOINT
-          const gamificationResponse = await fetch('/api/gamification/login', {
+          const gamificationResponse = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              user_id: Number(data.user.id)
+              user_id: Number(data.user.id),
+              gamification: true
             })
           });
           
