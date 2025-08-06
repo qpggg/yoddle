@@ -314,7 +314,7 @@ const Profile: React.FC = () => {
                       }}
                       onClick={() => navigate('/wallet')}>
                         <BalanceDisplay 
-                          userId={user.id} 
+                          userId={Number(user.id)} 
                           variant="profile" 
                           onClick={() => navigate('/wallet')}
                         />

@@ -93,7 +93,7 @@ const App = () => {
               <Route path="/progress" element={<Progress />} />
               <Route path="/preferences" element={<Preferences />} />
               <Route path="/wallet" element={
-                <WalletProvider userId={JSON.parse(localStorage.getItem('user') || '{}').id || 0}>
+                <WalletProvider userId={Number(JSON.parse(localStorage.getItem('user') || '{}').id || 0)}>
                   <Wallet />
                 </WalletProvider>
               } />

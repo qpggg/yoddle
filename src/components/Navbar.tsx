@@ -198,7 +198,7 @@ const Navbar: React.FC = () => {
               {user ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <BalanceDisplay 
-                    userId={user.id} 
+                    userId={Number(user.id)} 
                     variant="navbar" 
                     onClick={() => window.location.href = '/wallet'}
                   />

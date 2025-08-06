@@ -402,7 +402,7 @@ const Dashboard: React.FC = () => {
         >
           {user && (
             <BalanceDisplay 
-              userId={user.id} 
+              userId={Number(user.id)} 
               variant="dashboard" 
               onClick={() => navigate('/wallet')}
             />

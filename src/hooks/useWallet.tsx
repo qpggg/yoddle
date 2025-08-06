@@ -113,7 +113,7 @@ export const WalletProvider: React.FC<{ children: ReactNode; userId: number }> =
         throw new Error(errorData.error || 'Ошибка списания коинов');
       }
 
-      const data = await response.json();
+      await response.json();
       
       // Обновляем баланс после успешного списания
       await refreshWallet();
