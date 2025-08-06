@@ -840,7 +840,7 @@ app.use('/api/news', newsRouter);
 
 // Запуск сервера
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
+  console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
   
   // 🔍 Показываем правильную информацию о подключении к БД
   const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
