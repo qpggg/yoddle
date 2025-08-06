@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yoddle Debug</title>
+</head>
+<body>
+    <h1>🔍 Диагностика Yoddle</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Тест API
+                console.log('🧪 Тестируем API...');
+                results.innerHTML += '<p>🧪 Тестируем API...</p>';
+                
+                const response = await fetch('http://localhost:3000/api/balance?user_id=1');
+                const data = await response.json();
+                
+                console.log('✅ API работает:', data);
+                results.innerHTML += `<p>✅ API работает: ${JSON.stringify(data)}</p>`;
+                
+                // Тест фронтенда
+                results.innerHTML += '<p>🎯 Фронтенд: http://localhost:5173</p>';
+                results.innerHTML += '<p>🔗 Попробуйте открыть главную страницу</p>';
+                
+            } catch (error) {
+                console.error('❌ Ошибка:', error);
+                results.innerHTML += `<p>❌ Ошибка: ${error.message}</p>`;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

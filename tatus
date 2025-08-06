@@ -1,0 +1,28 @@
+[33mcommit 843d39c437ca54fa840a58237c52775d13322460[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Mikhail Polskov <misapolskov9@gmail.com>
+Date:   Wed Aug 6 18:58:04 2025 +0300
+
+     Исправлены TypeScript ошибки в системе кошелька
+    
+     Исправления:
+    - Удалены неиспользуемые импорты useState, useEffect
+    - Исправлены типы user.id: string  number
+    - Убрана неиспользуемая переменная data
+    - Добавлены Number() преобразования для userId
+    
+     Файлы:
+    - BalanceDisplay.tsx
+    - useWallet.tsx
+    - Navbar.tsx
+    - Dashboard.tsx
+    - Profile.tsx
+    - App.tsx
+    
+     Готово для Vercel деплоя!
+
+src/App.tsx
+src/components/BalanceDisplay.tsx
+src/components/Navbar.tsx
+src/hooks/useWallet.tsx
+src/pages/Dashboard.tsx
+src/pages/Profile.tsx
