@@ -13,6 +13,9 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
+// ✅ Принудительно задаем строку подключения
+process.env.PG_CONNECTION_STRING = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
+
 // 🔍 ОТЛАДКА: Проверяем загрузку .env
 console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
 
@@ -50,9 +53,11 @@ function createDbPool() {
     dbPool = new Pool({
       connectionString,
       ssl: isLocalDb ? false : { rejectUnauthorized: false },
-      max: 20, // Максимум соединений
-      idleTimeoutMillis: 30000, // Время жизни неактивного соединения
-      connectionTimeoutMillis: 2000 // Таймаут подключения
+      max: 5, // Уменьшено до 5 соединений
+      min: 1, // Минимум 1 соединение
+      idleTimeoutMillis: 60000, // Увеличен до 60 секунд
+      connectionTimeoutMillis: 10000, // Увеличен до 10 секунд
+      acquireTimeoutMillis: 20000 // Увеличен до 20 секунд
     });
   }
   return dbPool;
@@ -85,8 +90,9 @@ function setUserWithPasswordInCache(login, user) {
 }
 
 // Базовая функция для создания клиента БД - используем переменную окружения
-function createDbClient() {
-  return createDbPool();
+async function createDbClient() {
+  const pool = createDbPool();
+  return await pool.connect(); // ✅ Получаем клиента из пула
 }
 
 // POST /api/login - безопасная аутентификация
@@ -96,7 +102,7 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
     return res.status(400).json({ error: 'Login and password required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
     // 🚀 Проверяем кэш сначала
@@ -151,7 +157,7 @@ app.post('/api/gamification/login', async (req, res) => {
     return res.status(400).json({ error: 'user_id required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
     const now = new Date();
@@ -254,10 +260,10 @@ app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => 
     return res.status(400).json({ error: 'user_id is required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     // Определяем текущий месяц и год, если не переданы
     const currentDate = new Date();
@@ -307,23 +313,23 @@ app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => 
 
   } catch (error) {
     console.error('Ошибка получения данных активности:', error);
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
 // GET /api/benefits - точно как в api/benefits.js
 app.get('/api/benefits', async (req, res) => {
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     const result = await client.query('SELECT id, name, description, category FROM benefits ORDER BY category, name');
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(200).json({ benefits: result.rows });
   } catch (error) {
     console.error('Database error:', error);
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -336,10 +342,10 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
     return res.status(400).json({ error: 'user_id required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     // Получаем прогресс пользователя
     const progressResult = await client.query(
@@ -378,7 +384,7 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
       };
     }
     
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     
     return res.status(200).json({ 
       progress,
@@ -399,10 +405,10 @@ app.post('/api/progress', rateLimit, validateProgress, async (req, res) => {
     return res.status(400).json({ error: 'user_id and xp_to_add required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     // Получаем текущий прогресс
     const currentProgressResult = await client.query(
@@ -462,7 +468,7 @@ app.post('/api/progress', rateLimit, validateProgress, async (req, res) => {
       );
     }
     
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     
     return res.status(200).json({ 
       success: true, 
@@ -473,7 +479,7 @@ app.post('/api/progress', rateLimit, validateProgress, async (req, res) => {
     
   } catch (error) {
     console.error('Database error:', error);
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -485,10 +491,10 @@ app.patch('/api/progress', async (req, res) => {
     return res.status(400).json({ error: 'user_id and field required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     const allowedFields = ['login_streak', 'days_active', 'benefits_used', 'profile_completion'];
     if (!allowedFields.includes(field)) {
@@ -521,10 +527,10 @@ app.get('/api/user-benefits', async (req, res) => {
   const { user_id } = req.query;
   if (!user_id) return res.status(400).json({ error: 'user_id required' });
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     const result = await client.query(
       `SELECT b.id, b.name FROM user_benefits ub
        JOIN benefits b ON ub.benefit_id = b.id
@@ -541,10 +547,10 @@ app.post('/api/user-benefits', async (req, res) => {
   const { user_id, benefit_id } = req.body;
   if (!user_id || !benefit_id) return res.status(400).json({ error: 'user_id and benefit_id required' });
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     await client.query(
       'INSERT INTO user_benefits (user_id, benefit_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [user_id, benefit_id]
@@ -562,10 +568,10 @@ app.post('/api/clients', async (req, res) => {
     return res.status(400).json({ error: 'Имя, email и сообщение обязательны' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
-    await client.connect();
+    // client уже подключен из пула
     await client.query(
       'INSERT INTO clients (name, email, company, message) VALUES ($1, $2, $3, $4)',
       [name, email, company, message]
@@ -582,18 +588,18 @@ app.get('/api/profile', async (req, res) => {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'id required' });
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     const result = await client.query(
       'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE id = $1',
       [id]
     );
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(200).json({ user: result.rows[0] });
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Profile GET error:', error);
     return res.status(500).json({ error: 'Database error' });
   }
@@ -603,10 +609,10 @@ app.patch('/api/profile', async (req, res) => {
   const { id, name, email, phone, position, avatar } = req.body;
   if (!id) return res.status(400).json({ error: 'id required' });
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     await client.query(
       'UPDATE enter SET name = $2, login = $3, phone = $4, position = $5, avatar_url = $6 WHERE id = $1',
       [id, name, email, phone, position, avatar]
@@ -615,10 +621,10 @@ app.patch('/api/profile', async (req, res) => {
       'SELECT id, name, login AS email, phone, position, avatar_url AS avatar FROM enter WHERE id = $1',
       [id]
     );
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(200).json({ user: result.rows[0] });
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Profile PATCH error:', error);
     return res.status(500).json({ error: 'Database error' });
   }
@@ -632,10 +638,10 @@ app.get('/api/notifications', async (req, res) => {
     return res.status(400).json({ error: 'user_id required' });
   }
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     if (action === 'count') {
       const result = await client.query(
@@ -644,7 +650,7 @@ app.get('/api/notifications', async (req, res) => {
          WHERE (user_id = $1 OR is_global = true) AND is_read = false`,
         [user_id]
       );
-      await client.end();
+      client.release(); // ✅ Правильное освобождение соединения
       return res.status(200).json({
         success: true,
         count: parseInt(result.rows[0].count)
@@ -658,7 +664,7 @@ app.get('/api/notifications', async (req, res) => {
          ORDER BY created_at DESC`,
         [user_id]
       );
-      await client.end();
+      client.release(); // ✅ Правильное освобождение соединения
       return res.status(200).json({
         success: true,
         data: result.rows,
@@ -675,14 +681,14 @@ app.get('/api/notifications', async (req, res) => {
        LIMIT $2`,
       [user_id, limitValue]
     );
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     return res.status(200).json({
       success: true,
       data: result.rows
     });
     
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Notifications error:', error);
     return res.status(500).json({ error: 'Database error' });
   }
@@ -696,10 +702,10 @@ app.get('/api/user-recommendations', async (req, res) => {
     return res.status(400).json({ error: 'user_id is required' });
   }
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     const result = await client.query(`
       SELECT br.benefit_id, br.priority, b.name, b.description, b.category
@@ -709,7 +715,7 @@ app.get('/api/user-recommendations', async (req, res) => {
       ORDER BY br.priority ASC
     `, [user_id]);
     
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     
     console.log('Loaded recommendations for user', user_id, ':', result.rows);
     
@@ -718,7 +724,7 @@ app.get('/api/user-recommendations', async (req, res) => {
       hasRecommendations: result.rows.length > 0 
     });
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Error fetching recommendations:', error);
     res.status(500).json({ error: 'Database error: ' + error.message });
   }
@@ -731,10 +737,10 @@ app.post('/api/user-recommendations', async (req, res) => {
     return res.status(400).json({ error: 'Invalid data format. Expected user_id and benefit_ids array.' });
   }
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     
     // Удаляем старые рекомендации пользователя
     await client.query(
@@ -757,12 +763,12 @@ app.post('/api/user-recommendations', async (req, res) => {
       );
     }
     
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.log('All benefit recommendations saved successfully');
     
     res.status(200).json({ success: true });
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Error saving benefit recommendations:', error);
     res.status(500).json({ error: 'Database error: ' + error.message });
   }
@@ -775,19 +781,19 @@ app.delete('/api/user-recommendations', async (req, res) => {
     return res.status(400).json({ error: 'user_id is required' });
   }
   
-  const client = createDbClient();
+  const client = await createDbClient();
   
   try {
-    await client.connect();
+    // client уже подключен из пула
     await client.query(
       'DELETE FROM benefit_recommendations WHERE user_id = $1',
       [user_id]
     );
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     
     res.status(200).json({ success: true });
   } catch (error) {
-    await client.end();
+    client.release(); // ✅ Правильное освобождение соединения
     console.error('Error deleting benefit recommendations:', error);
     res.status(500).json({ error: 'Database error: ' + error.message });
   }
@@ -801,7 +807,7 @@ app.get('/api/check-password-hash', async (req, res) => {
     return res.status(400).json({ error: 'login parameter required' });
   }
 
-  const client = createDbClient();
+  const client = await createDbClient();
 
   try {
     const result = await client.query(
