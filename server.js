@@ -21,6 +21,7 @@ console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', process.env.PG_CO
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0'; // Слушаем все интерфейсы
 
 // Middleware
 app.use(cors());
@@ -838,7 +839,7 @@ app.get('/api/check-password-hash', async (req, res) => {
 app.use('/api/news', newsRouter);
 
 // Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   
   // 🔍 Показываем правильную информацию о подключении к БД
