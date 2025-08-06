@@ -3,6 +3,7 @@ import { useUser } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
 import { useUserBenefits } from '../hooks/useUserBenefits';
 import { motion } from 'framer-motion';
+import BalanceDisplay from '../components/BalanceDisplay';
 import { 
   FaUser, 
   FaEnvelope, 
@@ -301,6 +302,22 @@ const Profile: React.FC = () => {
                         <div style={{ fontSize: '1.2rem', color: '#1A1A1A', fontWeight: 700 }}>
                           {userProgress.xp} XP
                         </div>
+                      </div>
+                      
+                      {/* Баланс Yoddle-коинов */}
+                      <div style={{
+                        padding: '0.75rem 1.25rem',
+                        background: '#F3E8FF',
+                        borderRadius: '16px',
+                        border: '1px solid #8B5CF6',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => navigate('/wallet')}>
+                        <BalanceDisplay 
+                          userId={user.id} 
+                          variant="profile" 
+                          onClick={() => navigate('/wallet')}
+                        />
                       </div>
                       
                       <div style={{

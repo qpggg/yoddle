@@ -6,6 +6,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material/styles';
 import { useUser } from '../hooks/useUser';
+import BalanceDisplay from './BalanceDisplay';
 
 const navItems = [
   { title: 'О платформе', path: '/about' },
@@ -15,6 +16,7 @@ const navItems = [
 ];
 
 const authNavItems = [
+  { title: 'Кошелек', path: '/wallet' },
   { title: 'Мои льготы', path: '/my-benefits' },
   { title: 'Прогресс', path: '/progress' },
   { title: 'Предпочтения', path: '/preferences' }
@@ -195,6 +197,11 @@ const Navbar: React.FC = () => {
               ))}
               {user ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BalanceDisplay 
+                    userId={user.id} 
+                    variant="navbar" 
+                    onClick={() => window.location.href = '/wallet'}
+                  />
                   <IconButton component={Link} to="/dashboard" sx={{ p: 0 }}>
                     {user.avatar ? (
                       <Box component="img" src={user.avatar} alt={user.name} sx={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #8B0000' }} />

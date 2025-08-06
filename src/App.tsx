@@ -23,9 +23,11 @@ import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
+import Wallet from './pages/Wallet';
 import ContactsPage from './pages/Contacts';
 import TermsPage from './pages/Terms';
 import PrivacyPage from './pages/Privacy';
+import { WalletProvider } from './hooks/useWallet';
 import ToastNotification, { useToast } from './components/ToastNotification';
 import React, { createContext, useContext } from 'react';
 
@@ -90,6 +92,11 @@ const App = () => {
               <Route path="/my-benefits" element={<MyBenefits />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/preferences" element={<Preferences />} />
+              <Route path="/wallet" element={
+                <WalletProvider userId={JSON.parse(localStorage.getItem('user') || '{}').id || 0}>
+                  <Wallet />
+                </WalletProvider>
+              } />
             </Routes>
             <Footer />
           </Box>

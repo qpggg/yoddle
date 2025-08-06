@@ -23,6 +23,7 @@ import SupportModal from '../components/SupportModal';
 import NotificationCenter from '../components/NotificationCenter';
 import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
+import BalanceDisplay from '../components/BalanceDisplay';
 
 // Константа с рангами (такая же как в Progress.tsx)
 const RANKS = [
@@ -386,6 +387,28 @@ const Dashboard: React.FC = () => {
         initial="hidden"
         animate="visible"
       >
+        {/* Баланс Yoddle-коинов */}
+        <motion.div 
+          className="dashboard-card"
+          variants={itemVariants}
+          whileHover={{ 
+            scale: 1.025, 
+            y: -6, 
+            boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+            transition: { duration: 0.28, ease: 'easeInOut' }
+          }}
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/wallet')}
+        >
+          {user && (
+            <BalanceDisplay 
+              userId={user.id} 
+              variant="dashboard" 
+              onClick={() => navigate('/wallet')}
+            />
+          )}
+        </motion.div>
+
         <motion.div 
           className="dashboard-card overview"
           variants={itemVariants}
