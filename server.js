@@ -54,11 +54,12 @@ function createDbPool() {
     dbPool = new Pool({
       connectionString,
       ssl: isLocalDb ? false : { rejectUnauthorized: false },
-      max: 5, // Уменьшено до 5 соединений
-      min: 1, // Минимум 1 соединение
-      idleTimeoutMillis: 60000, // Увеличен до 60 секунд
-      connectionTimeoutMillis: 10000, // Увеличен до 10 секунд
-      acquireTimeoutMillis: 20000 // Увеличен до 20 секунд
+      max: 2, // Уменьшено до 2 соединений
+      min: 0, // Минимум 0 соединений
+      idleTimeoutMillis: 30000, // Уменьшено до 30 секунд
+      connectionTimeoutMillis: 20000, // Увеличен до 20 секунд
+      acquireTimeoutMillis: 30000, // Увеличен до 30 секунд
+      keepAlive: true // Добавлен keepAlive
     });
   }
   return dbPool;
