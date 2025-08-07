@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { Client, Pool } from 'pg';
+import { Client } from 'pg';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -37,33 +37,18 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// 🚀 ОПТИМИЗИРОВАННЫЙ ПУЛ СОЕДИНЕНИЙ БД
-let dbPool = null;
-
-function createDbPool() {
-  if (!dbPool) {
-    const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-    
-    // 🔍 ОТЛАДКА: Показываем какую строку подключения используем
-    console.log('🔍 DEBUG: PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
-    console.log('🔍 DEBUG: Using connection string =', connectionString);
-    
-    // Для локальной БД не нужен SSL
-    const isLocalDb = connectionString.includes('localhost');
-    console.log('🔍 DEBUG: isLocalDb =', isLocalDb);
-    
-    dbPool = new Pool({
-      connectionString,
-      ssl: isLocalDb ? false : { rejectUnauthorized: false },
-      max: 1, // Строго 1 соединение для Supabase
-      min: 0, // Минимум 0 соединений
-      idleTimeoutMillis: 30000, // 30 секунд
-      connectionTimeoutMillis: 5000, // 5 секунд
-      acquireTimeoutMillis: 10000, // 10 секунд
-      keepAlive: true // Поддерживать соединение активным
-    });
-  }
-  return dbPool;
+// 🚀 Функция создания нового подключения к БД для каждого запроса
+async function createDbClient() {
+  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
+  const isLocalDb = connectionString.includes('localhost');
+  
+  const client = new Client({
+    connectionString,
+    ssl: isLocalDb ? false : { rejectUnauthorized: false }
+  });
+  
+  await client.connect();
+  return client;
 }
 
 // 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
@@ -104,13 +89,15 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
     return res.status(400).json({ error: 'Login and password required' });
   }
 
-  const client = createDbClient();
-
+  let client;
   try {
     // 🚀 Проверяем кэш сначала
     let user = getUserFromCache(login);
     
     if (!user) {
+      // Создаем новое подключение
+      client = await createDbClient();
+      
       // Если нет в кэше, запрашиваем из БД
       const userResult = await client.query(
         'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
@@ -148,6 +135,11 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   } catch (error) {
     console.error('Database connection error:', error);
     return res.status(500).json({ error: 'Database connection error' });
+  } finally {
+    // Закрываем соединение в блоке finally
+    if (client) {
+      await client.end();
+    }
   }
 });
 
