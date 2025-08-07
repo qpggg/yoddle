@@ -77,10 +77,7 @@ function setUserWithPasswordInCache(login, user) {
   });
 }
 
-// Базовая функция для создания клиента БД - используем переменную окружения
-function createDbClient() {
-  return createDbPool();
-}
+// Удалено дублирующееся объявление createDbClient
 
 // POST /api/login - безопасная аутентификация
 app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
