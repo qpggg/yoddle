@@ -17,10 +17,17 @@ dotenv.config();
 console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3000) : (process.env.PORT || 3001);
 
 // Middleware
-app.use(cors());
+// Настройка CORS в зависимости от окружения
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://yoddle-o1z7e1wrh-mikhails-projects-da517846.vercel.app']
+    : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // === Раздача статики фронта ===
