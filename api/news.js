@@ -1,46 +1,23 @@
-import { Client } from 'pg';
-
-// Функция для создания клиента БД
+import express from 'express';
 import { createDbClient } from '../db.js';
 
-// Остальной код
-  const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  
-  return new Client({
-    connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
-}
+// Экспресс-роутер для /api/news
+const router = express.Router();
 
-export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// GET /api/news (список новостей)
+router.get('/', async (req, res) => {
+  await getNews(req, res);
+});
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+// GET /api/news/categories
+router.get('/categories', async (req, res) => {
+  await getCategories(req, res);
+});
 
-  const { action } = req.query;
-
-  try {
-    switch (action) {
-      case 'categories':
-        return await getCategories(req, res);
-      case 'modal-data':
-        return await getModalData(req, res);
-      default:
-        return await getNews(req, res);
-    }
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Внутренняя ошибка сервера'
-    });
-  }
-}
+// GET /api/news/modal-data
+router.get('/modal-data', async (req, res) => {
+  await getModalData(req, res);
+});
 
 // Получение категорий новостей
 async function getCategories(req, res) {
@@ -91,6 +68,7 @@ async function getModalData(req, res) {
         n.author,
         n.publish_date as date,
         nc.name as category,
+        nc.icon as category_icon,
         n.image_url as image
       FROM news n
       JOIN news_categories nc ON n.category_id = nc.id
@@ -109,6 +87,7 @@ async function getModalData(req, res) {
       date: row.date ? row.date.toISOString().split('T')[0] : null,
       author: row.author,
       category: row.category,
+      categoryIcon: row.category_icon,
       image: row.image
     }));
 
@@ -233,3 +212,5 @@ async function getNews(req, res) {
     });
   }
 } 
+
+export default router;

@@ -9,6 +9,7 @@ interface NewsItem {
   date: string;
   author: string;
   category: string;
+  categoryIcon: string;
   image?: string;
 }
 
@@ -233,7 +234,9 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                 <>
                   {/* Категория */}
                   <div style={{
-                    display: 'inline-block',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     background: getCategoryColor(currentNews.category),
                     color: 'white',
                     padding: '4px 12px',
@@ -242,6 +245,17 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                     fontWeight: 600,
                     marginBottom: '16px'
                   }}>
+                    {currentNews.categoryIcon && (
+                      <img 
+                        src={currentNews.categoryIcon} 
+                        alt={currentNews.category}
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          objectFit: 'contain'
+                        }}
+                      />
+                    )}
                     {currentNews.category}
                   </div>
 

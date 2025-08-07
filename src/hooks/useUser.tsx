@@ -42,7 +42,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const storedUser = JSON.parse(stored);
-        
+        // Если объект поврежден — очищаем
+        if (!storedUser || !storedUser.id) {
+          localStorage.removeItem('user');
+          setIsLoading(false);
+          return;
+        }
+
         // Если в localStorage нет email (старая структура данных), обновляем данные из API
         if (storedUser.id && (!storedUser.email || storedUser.email === undefined)) {
           console.log('🔄 Обнаружены устаревшие данные пользователя, обновляем из API...');
@@ -108,6 +114,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     setError(null);
+    localStorage.removeItem('user');
   };
 
   return (

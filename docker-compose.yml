@@ -1,0 +1,15 @@
+services:
+  app:
+    image: node:20
+    working_dir: /app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - PG_CONNECTION_STRING=postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm ci --no-audit --no-fund || npm install --no-audit --no-fund && npm run dev:server"
+    restart: unless-stopped

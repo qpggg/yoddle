@@ -32,10 +32,7 @@ app.use(express.json());
 import path from 'path';
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Для SPA: отдавать index.html на все не-API запросы
-app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+// Для SPA: отдавать index.html на все не-API запросы (после API маршрутов)
 
 import { createDbClient } from './db.js';
 
@@ -80,9 +77,9 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
     let user = getUserFromCache(login);
     
     if (!user) {
-      // Создаем новое подключение
+      // Создаем новое подключение и подключаемся
       client = await createDbClient();
-      
+      await client.connect();
       // Если нет в кэше, запрашиваем из БД
       const userResult = await client.query(
         'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
@@ -261,9 +258,15 @@ app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => 
       actions: 0
     }));
 
-    // Получаем данные активности через оптимизированную функцию
+    // Получаем данные активности прямым запросом (совместимо везде)
     const result = await client.query(
-      'SELECT * FROM get_user_activity($1, $2, $3)',
+      `SELECT EXTRACT(DAY FROM created_at) as day, COUNT(*) as total_actions
+       FROM activity_log
+       WHERE user_id = $1
+         AND EXTRACT(YEAR FROM created_at) = $2
+         AND EXTRACT(MONTH FROM created_at) = $3
+       GROUP BY EXTRACT(DAY FROM created_at)
+       ORDER BY day`,
       [user_id, targetYear, targetMonth]
     );
 
@@ -811,6 +814,146 @@ app.get('/api/check-password-hash', async (req, res) => {
   } catch (error) {
     console.error('Password hash check error:', error);
     return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// API отзывов
+app.get('/api/feedback', async (req, res) => {
+  const { action, user_id, page = 1, limit = 10 } = req.query;
+  const client = createDbClient();
+
+  try {
+    await client.connect();
+
+    if (action === 'check-user') {
+      if (!user_id) {
+        return res.status(400).json({ success: false, error: 'user_id is required' });
+      }
+
+      const result = await client.query(`
+        SELECT id, rating, comment, created_at 
+        FROM feedback 
+        WHERE user_id = $1
+      `, [user_id]);
+
+      return res.json({
+        success: true,
+        hasSubmitted: result.rows.length > 0,
+        feedback: result.rows[0] || null
+      });
+    }
+
+    if (action === 'recent') {
+      const result = await client.query(`
+        SELECT f.id, f.user_id, f.rating, f.comment, f.created_at,
+               e.name as user_name, e.position, e.avatar_url as avatar
+        FROM feedback f
+        LEFT JOIN enter e ON f.user_id = e.id
+        ORDER BY f.created_at DESC
+        LIMIT 5
+      `);
+
+      return res.json({
+        success: true,
+        data: result.rows
+      });
+    }
+
+    // Получение всех отзывов с пагинацией
+    const offset = (page - 1) * limit;
+    const result = await client.query(`
+      SELECT f.id, f.user_id, f.rating, f.comment, f.created_at,
+             e.name as user_name, e.position, e.avatar_url as avatar
+      FROM feedback f
+      LEFT JOIN enter e ON f.user_id = e.id
+      ORDER BY f.created_at DESC
+      LIMIT $1 OFFSET $2
+    `, [parseInt(limit), parseInt(offset)]);
+
+    const countResult = await client.query('SELECT COUNT(*) as total FROM feedback');
+    const total = parseInt(countResult.rows[0].total);
+
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Feedback API error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Database error'
+    });
+  } finally {
+    await client.end();
+  }
+});
+
+app.post('/api/feedback', async (req, res) => {
+  const { user_id, rating, comment } = req.body;
+
+  if (!user_id || !rating || !comment) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'user_id, rating и comment обязательны' 
+    });
+  }
+
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Рейтинг должен быть от 1 до 5' 
+    });
+  }
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    
+    // Проверяем, есть ли уже отзыв
+    const existingCheck = await client.query(`
+      SELECT id FROM feedback WHERE user_id = $1
+    `, [user_id]);
+
+    if (existingCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Вы уже оставили отзыв'
+      });
+    }
+
+    // Создаем новый отзыв
+    const result = await client.query(`
+      INSERT INTO feedback (user_id, rating, comment, created_at)
+      VALUES ($1, $2, $3, NOW())
+      RETURNING id, created_at
+    `, [user_id, rating, comment]);
+
+    return res.json({
+      success: true,
+      data: {
+        id: result.rows[0].id,
+        user_id,
+        rating,
+        comment,
+        created_at: result.rows[0].created_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Feedback submission error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Database error'
+    });
+  } finally {
+    await client.end();
   }
 });
 
