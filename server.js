@@ -37,18 +37,14 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// 🚀 Функция создания нового подключения к БД для каждого запроса
-async function createDbClient() {
-  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  const isLocalDb = connectionString.includes('localhost');
+// Базовая функция для создания клиента БД - хардкод для избежания проблем с .env
+function createDbClient() {
+  const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
   
-  const client = new Client({
-    connectionString,
-    ssl: isLocalDb ? false : { rejectUnauthorized: false }
+  return new Client({
+    connectionString: connectionString,
+    ssl: { rejectUnauthorized: false }
   });
-  
-  await client.connect();
-  return client;
 }
 
 // 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
@@ -151,6 +147,7 @@ app.post('/api/gamification/login', async (req, res) => {
   const client = createDbClient();
 
   try {
+    await client.connect();
     const now = new Date();
     const hour = now.getHours();
     const isWeekend = now.getDay() === 0 || now.getDay() === 6;
