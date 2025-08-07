@@ -22,9 +22,7 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3000) 
 // Middleware
 // Настройка CORS в зависимости от окружения
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://yoddle-o1z7e1wrh-mikhails-projects-da517846.vercel.app']
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: '*',
   credentials: true
 };
 app.use(cors(corsOptions));
