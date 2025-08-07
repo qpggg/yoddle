@@ -50,9 +50,12 @@ function createDbPool() {
     dbPool = new Pool({
       connectionString,
       ssl: isLocalDb ? false : { rejectUnauthorized: false },
-      max: 20, // Максимум соединений
-      idleTimeoutMillis: 30000, // Время жизни неактивного соединения
-      connectionTimeoutMillis: 2000 // Таймаут подключения
+      max: 1, // Строго 1 соединение для Supabase
+      min: 0, // Минимум 0 соединений
+      idleTimeoutMillis: 30000, // 30 секунд
+      connectionTimeoutMillis: 5000, // 5 секунд
+      acquireTimeoutMillis: 10000, // 10 секунд
+      keepAlive: true // Поддерживать соединение активным
     });
   }
   return dbPool;
@@ -832,7 +835,8 @@ app.get('/api/check-password-hash', async (req, res) => {
 app.use('/api/news', newsRouter);
 
 // Запуск сервера
-app.listen(PORT, () => {
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   
   // 🔍 Показываем правильную информацию о подключении к БД
