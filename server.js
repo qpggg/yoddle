@@ -37,15 +37,7 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Базовая функция для создания клиента БД - хардкод для избежания проблем с .env
-function createDbClient() {
-  const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  
-  return new Client({
-    connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
-}
+import { createDbClient } from './db.js';
 
 // 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
 const userCache = new Map();

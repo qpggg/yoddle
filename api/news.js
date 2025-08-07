@@ -1,7 +1,9 @@
 import { Client } from 'pg';
 
 // Функция для создания клиента БД
-function createDbClient() {
+import { createDbClient } from '../db.js';
+
+// Остальной код
   const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
   
   return new Client({
