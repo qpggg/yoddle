@@ -172,7 +172,7 @@ app.post('/api/wallet/refund', async (req, res) => {
 
     // Проверяем, не был ли уже выполнен возврат для этой покупки
     const existingRefund = await client.query(
-      `SELECT 1 FROM coin_transactions WHERE user_id = $1 AND transaction_type = 'credit' AND reference_id = $2`,
+      `SELECT 1 FROM coin_transactions WHERE user_id = $1 AND transaction_type = 'refund' AND reference_id = $2`,
       [user_id, String(transaction_id)]
     );
     if (existingRefund.rows.length > 0) {
@@ -180,19 +180,23 @@ app.post('/api/wallet/refund', async (req, res) => {
       return res.status(409).json({ error: 'already refunded' });
     }
 
-    // Создаём возврат: кредитуем сумму покупки
+    // Создаём возврат: возвращаем сумму покупки
     const balanceBefore = purchase.balance_after; // баланс после покупки
     const balanceAfter = Number(balanceBefore) + Number(purchase.amount);
 
     await client.query(
       `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
-       VALUES ($1,'credit',$2,$3,$4,$5,$6,NULL,NOW())`,
+       VALUES ($1,'refund',$2,$3,$4,$5,$6,NULL,NOW())`,
       [user_id, purchase.amount, balanceBefore, balanceAfter, `Возврат: ${purchase.description || ''}`.trim(), String(transaction_id)]
     );
 
-    // Обновляем user_balance
+    // Обновляем user_balance: баланс растёт, потраченное уменьшается
     await client.query(
-      `UPDATE user_balance SET balance = balance + $2, total_earned = total_earned + $2, updated_at = NOW() WHERE user_id = $1`,
+      `UPDATE user_balance 
+          SET balance = balance + $2, 
+              total_spent = GREATEST(total_spent - $2, 0),
+              updated_at = NOW() 
+        WHERE user_id = $1`,
       [user_id, purchase.amount]
     );
 
@@ -473,12 +477,14 @@ app.post('/api/wallet/refresh', async (req, res) => {
     const agg = await client.query(
       `SELECT 
           COALESCE(SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add') THEN amount ELSE 0 END),0) AS earned,
-          COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) AS spent
+          COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) 
+          - COALESCE(SUM(CASE WHEN transaction_type = 'refund' THEN amount ELSE 0 END),0) AS spent
        FROM coin_transactions WHERE user_id = $1`,
       [user_id]
     );
     const earned = Number(agg.rows[0]?.earned || 0);
-    const spent = Number(agg.rows[0]?.spent || 0);
+    const spentRaw = Number(agg.rows[0]?.spent || 0);
+    const spent = Math.max(0, spentRaw);
     const balance = earned - spent;
 
     await client.query(
@@ -597,16 +603,23 @@ app.get('/api/wallet/transactions', async (req, res) => {
     // Фильтр по типу
     let whereType = '';
     if (type === 'topup') {
-      whereType = `AND ct.transaction_type IN ('monthly_allowance','credit','admin_add')`;
+      whereType = `AND ct.transaction_type IN ('monthly_allowance','credit','admin_add','refund')`;
     } else if (type === 'purchase') {
       whereType = `AND ct.transaction_type IN ('benefit_purchase')`;
     } else if (type === 'debit') {
       whereType = `AND ct.transaction_type IN ('debit','admin_remove')`;
     }
     const sql = `SELECT ct.id, ct.transaction_type, ct.amount, ct.description, ct.reference_id, ct.created_at,
-                        b.name AS benefit_name
+                        COALESCE(bp.name, br.name) AS benefit_name
                    FROM coin_transactions ct
-                   LEFT JOIN benefits b ON (ct.transaction_type = 'benefit_purchase' AND (ct.reference_id = b.id::text OR ct.reference_id::int = b.id))
+              LEFT JOIN benefits bp 
+                         ON (ct.transaction_type = 'benefit_purchase' 
+                         AND (ct.reference_id = bp.id::text OR ct.reference_id::int = bp.id))
+              LEFT JOIN coin_transactions p
+                         ON (ct.transaction_type = 'refund' AND ct.reference_id = p.id::text)
+              LEFT JOIN benefits br
+                         ON (p.transaction_type = 'benefit_purchase' 
+                         AND (p.reference_id = br.id::text OR p.reference_id::int = br.id))
                   WHERE ct.user_id = $1 ${whereType}
                   ORDER BY ct.created_at DESC, ct.id DESC
                   LIMIT $2 OFFSET $3`;
