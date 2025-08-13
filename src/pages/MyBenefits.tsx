@@ -3,7 +3,7 @@ import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularP
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { useActivity } from '../hooks/useActivity';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaPlus, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaBook, FaCheck, FaTimes, FaLeaf, FaUsers, FaHandHoldingHeart, FaExclamationTriangle } from 'react-icons/fa';
 import { GiBrain } from "react-icons/gi";
 
 const containerVariants = {
@@ -69,6 +69,7 @@ interface Benefit {
   name: string;
   description: string;
   category: string;
+  price_coins?: number;
 }
 
 // Функция проверки рекомендации
@@ -83,13 +84,14 @@ const checkIfRecommended = (benefit: Benefit, userRecommendedBenefitIds: number[
   return isRecommended;
 };
 
-const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended }: { 
+const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended, onRefund }: { 
   benefit: Benefit; 
   onAdd: () => void; 
   isAdded: boolean; 
   isDisabled: boolean;
   isSelectedCard?: boolean;
   isRecommended?: boolean;
+  onRefund?: () => void;
 }) => (
   <motion.div variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
     <Paper elevation={0} sx={{ 
@@ -163,23 +165,44 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
       {!isSelectedCard && (
         <button
           style={{ 
-            ...buttonStyle, 
-            opacity: isAdded || isDisabled ? 0.6 : 1, 
+            ...buttonStyle,
+            opacity: isAdded || isDisabled ? 0.6 : 1,
             background: isAdded ? '#555' : 'linear-gradient(45deg, #8B0000, #B22222)',
             cursor: isAdded || isDisabled ? 'not-allowed' : 'pointer'
           }}
           onClick={onAdd}
           disabled={isAdded || isDisabled}
         >
-          {isAdded ? <FaCheck /> : <FaPlus />}
-          {isAdded ? 'Добавлено' : 'Добавить'}
+          {!isAdded && (
+            <>
+              <Box component="img" src="/coins.png" alt="coins" sx={{ width: 16, height: 16 }} />
+              { (benefit.price_coins ?? 0).toLocaleString('ru-RU') }
+            </>
+          )}
+          {isAdded && <><FaCheck />Добавлено</>}
+        </button>
+      )}
+      {isSelectedCard && (
+        <button
+          style={{ 
+            ...buttonStyle,
+            background: 'linear-gradient(45deg, #8B0000, #B22222)',
+            color: '#fff',
+            border: 'none',
+            alignSelf: 'flex-start'
+          }}
+          onClick={onRefund}
+        >
+          <Box component="img" src="/coins.png" alt="coins" sx={{ width: 16, height: 16 }} />
+          Вернуть
         </button>
       )}
     </Paper>
   </motion.div>
 );
 
-const MAX_BENEFITS = 2;
+// Лимит отключен по требованию
+const MAX_BENEFITS = Infinity;
 
 const MyBenefits: React.FC = () => {
   const { user } = useUser();
@@ -232,7 +255,23 @@ const MyBenefits: React.FC = () => {
   const handleConfirm = async () => {
     if (!user || !openBenefit) return;
     
-    // Добавляем льготу в БД
+    // 1) Списываем монеты за льготу (если есть цена)
+    const purchaseRes = await fetch('/api/wallet/purchase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user.id, benefit_id: openBenefit.id })
+    });
+    if (!purchaseRes.ok) {
+      const data = await purchaseRes.json().catch(() => ({}));
+      if (data?.error === 'insufficient_funds') {
+        alert(`Недостаточно средств: нужно ${data.required}, доступно ${data.balance}`);
+      } else {
+        alert('Не удалось выполнить покупку');
+      }
+      return;
+    }
+
+    // 2) Добавляем льготу пользователю для отображения
     await fetch('/api/user-benefits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -335,6 +374,25 @@ const MyBenefits: React.FC = () => {
                       isAdded={true} 
                       isDisabled={false} 
                       isSelectedCard={true}
+                      onRefund={async () => {
+                        if (!user?.id) return;
+                        // Ищем последнюю покупку по этой льготе и пробуем возврат
+                        const purchases = await fetch(`/api/wallet/purchases?user_id=${user.id}&benefit_id=${benefit.id}&limit=1`).then(r => r.json()).catch(() => ({ data: [] }));
+                        const last = purchases?.data && purchases.data[0];
+                        if (!last) { alert('Покупка не найдена для возврата'); return; }
+                        const res = await fetch('/api/wallet/refund', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id, transaction_id: last.id }) });
+                        if (res.ok) {
+                          await fetch('/api/wallet/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) });
+                          // Удаляем льготу из выбранных локально
+                          setUserBenefitIds(prev => prev.filter(id => id !== benefit.id));
+                          // Также убираем из user_benefits на сервере для консистентности
+                          await fetch('/api/user-benefits', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id, benefit_id: benefit.id }) });
+                        } else {
+                          const data = await res.json().catch(() => ({}));
+                          const left = data?.seconds_left ? Math.max(0, Math.floor(data.seconds_left / 3600)) : null;
+                          alert(data?.error ? `Возврат недоступен. ${left !== null ? `Осталось ${left} ч.` : ''}` : 'Ошибка возврата');
+                        }
+                      }}
                       isRecommended={checkIfRecommended(benefit, userRecommendedBenefitIds)}
                     />
                   </Grid>

@@ -11,10 +11,21 @@ import { validateLogin, validateUser, validateProgress, validateActivityParams, 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-dotenv.config();
+// Load .env without overriding container-provided env (so compose env wins in Docker)
+dotenv.config({ override: false });
 
-// 🔍 ОТЛАДКА: Проверяем загрузку .env
-console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', process.env.PG_CONNECTION_STRING);
+// 🔍 ОТЛАДКА: Проверяем загрузку .env (маскируем пароль)
+if (process.env.PG_CONNECTION_STRING) {
+  try {
+    const url = new URL(process.env.PG_CONNECTION_STRING);
+    if (url.password) url.password = '****';
+    console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING =', url.toString());
+  } catch {
+    console.log('🔍 DEBUG: .env loaded, PG_CONNECTION_STRING present');
+  }
+} else {
+  console.warn('⚠️ PG_CONNECTION_STRING is not set');
+}
 
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3000) : (process.env.PORT || 3001);
@@ -82,7 +93,7 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
       await client.connect();
       // Если нет в кэше, запрашиваем из БД
       const userResult = await client.query(
-        'SELECT id, name, login, phone, position, avatar_url, password FROM enter WHERE login = $1',
+        'SELECT id, name, login AS email, phone, position, avatar_url AS avatar, password FROM enter WHERE login = $1',
         [login]
       );
 
@@ -125,6 +136,102 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   }
 });
 
+// POST /api/wallet/refund - возврат покупки льготы
+app.post('/api/wallet/refund', async (req, res) => {
+  const { user_id, transaction_id, reason } = req.body;
+  if (!user_id || !transaction_id) {
+    return res.status(400).json({ error: 'user_id and transaction_id required' });
+  }
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+
+    // Находим исходную транзакцию покупки
+    const tx = await client.query(
+      `SELECT * FROM coin_transactions WHERE id = $1 AND user_id = $2 AND transaction_type = 'benefit_purchase'`,
+      [transaction_id, user_id]
+    );
+    if (tx.rows.length === 0) {
+      await client.end();
+      return res.status(404).json({ error: 'purchase transaction not found' });
+    }
+
+    const purchase = tx.rows[0];
+
+    // Ограничение по времени: 48 часов на возврат
+    const windowHours = 48;
+    const timeDiffQuery = await client.query(`SELECT EXTRACT(EPOCH FROM (NOW() - $1)) AS seconds`, [purchase.created_at]);
+    const secondsPassed = Number(timeDiffQuery.rows[0].seconds || 0);
+    const secondsWindow = windowHours * 3600;
+    if (secondsPassed > secondsWindow) {
+      const secondsLeft = 0;
+      await client.end();
+      return res.status(422).json({ error: 'refund window closed', window_hours: windowHours, seconds_left: secondsLeft });
+    }
+
+    // Проверяем, не был ли уже выполнен возврат для этой покупки
+    const existingRefund = await client.query(
+      `SELECT 1 FROM coin_transactions WHERE user_id = $1 AND transaction_type = 'credit' AND reference_id = $2`,
+      [user_id, String(transaction_id)]
+    );
+    if (existingRefund.rows.length > 0) {
+      await client.end();
+      return res.status(409).json({ error: 'already refunded' });
+    }
+
+    // Создаём возврат: кредитуем сумму покупки
+    const balanceBefore = purchase.balance_after; // баланс после покупки
+    const balanceAfter = Number(balanceBefore) + Number(purchase.amount);
+
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+       VALUES ($1,'credit',$2,$3,$4,$5,$6,NULL,NOW())`,
+      [user_id, purchase.amount, balanceBefore, balanceAfter, `Возврат: ${purchase.description || ''}`.trim(), String(transaction_id)]
+    );
+
+    // Обновляем user_balance
+    await client.query(
+      `UPDATE user_balance SET balance = balance + $2, total_earned = total_earned + $2, updated_at = NOW() WHERE user_id = $1`,
+      [user_id, purchase.amount]
+    );
+
+    const secondsLeft = secondsWindow - secondsPassed;
+    await client.end();
+    return res.status(200).json({ success: true, seconds_left: secondsLeft, window_hours: windowHours });
+  } catch (error) {
+    await client.end();
+    console.error('Refund error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// GET /api/wallet/purchases - последние покупки пользователя (опционально по benefit_id)
+app.get('/api/wallet/purchases', async (req, res) => {
+  const { user_id, benefit_id, limit = 50 } = req.query;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    const rows = await client.query(
+      `SELECT ct.* , b.name AS benefit_name
+         FROM coin_transactions ct
+         LEFT JOIN benefits b ON (ct.transaction_type = 'benefit_purchase' AND (ct.reference_id = b.id::text OR ct.reference_id::int = b.id))
+        WHERE ct.user_id = $1 AND ct.transaction_type = 'benefit_purchase'
+          ${benefit_id ? 'AND (ct.reference_id = $3 OR ct.reference_id::int = $3)' : ''}
+        ORDER BY ct.created_at DESC, ct.id DESC
+        LIMIT $2`,
+      benefit_id ? [user_id, parseInt(limit), benefit_id] : [user_id, parseInt(limit)]
+    );
+    await client.end();
+    return res.status(200).json({ success: true, data: rows.rows });
+  } catch (error) {
+    await client.end();
+    console.error('Purchases fetch error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
 // POST /api/gamification/login - оптимизированная геймификация входа
 app.post('/api/gamification/login', async (req, res) => {
   const { user_id } = req.body;
@@ -307,7 +414,7 @@ app.get('/api/benefits', async (req, res) => {
 
   try {
     await client.connect();
-    const result = await client.query('SELECT id, name, description, category FROM benefits ORDER BY category, name');
+    const result = await client.query('SELECT id, name, description, category, COALESCE(price_coins, 0) AS price_coins FROM benefits ORDER BY category, name');
     await client.end();
     return res.status(200).json({ benefits: result.rows });
   } catch (error) {
@@ -315,6 +422,375 @@ app.get('/api/benefits', async (req, res) => {
     await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
+});
+
+// === Wallet API ===
+// GET /api/wallet - текущий баланс и итоги
+app.get('/api/wallet', async (req, res) => {
+  const { user_id } = req.query;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    const result = await client.query(
+      'SELECT balance, total_earned, total_spent FROM user_balance WHERE user_id = $1',
+      [user_id]
+    );
+    let row = result.rows[0];
+
+    // Если строки нет — создаем нулевую для консистентности интерфейса
+    if (!row) {
+      await client.query(
+        'INSERT INTO user_balance (user_id, balance, total_earned, total_spent) VALUES ($1, 0, 0, 0) ON CONFLICT DO NOTHING',
+        [user_id]
+      );
+      row = { balance: 0, total_earned: 0, total_spent: 0 };
+    }
+
+    await client.end();
+    return res.status(200).json({
+      success: true,
+      balance: Number(row.balance || 0),
+      total_earned: Number(row.total_earned || 0),
+      total_spent: Number(row.total_spent || 0)
+    });
+  } catch (error) {
+    await client.end();
+    console.error('Wallet GET error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// POST /api/wallet/refresh — пересчитать user_balance из транзакций (идемпотентно)
+app.post('/api/wallet/refresh', async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    const agg = await client.query(
+      `SELECT 
+          COALESCE(SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add') THEN amount ELSE 0 END),0) AS earned,
+          COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) AS spent
+       FROM coin_transactions WHERE user_id = $1`,
+      [user_id]
+    );
+    const earned = Number(agg.rows[0]?.earned || 0);
+    const spent = Number(agg.rows[0]?.spent || 0);
+    const balance = earned - spent;
+
+    await client.query(
+      `INSERT INTO user_balance (user_id, balance, total_earned, total_spent)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance, total_earned = EXCLUDED.total_earned, total_spent = EXCLUDED.total_spent, updated_at = NOW()`,
+      [user_id, balance, earned, spent]
+    );
+
+    await client.end();
+    return res.status(200).json({ success: true, balance, total_earned: earned, total_spent: spent });
+  } catch (error) {
+    await client.end();
+    console.error('Wallet refresh error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// POST /api/wallet/purchase — покупка льготы (списание монет и запись транзакции)
+app.post('/api/wallet/purchase', async (req, res) => {
+  const { user_id, benefit_id } = req.body;
+  if (!user_id || !benefit_id) {
+    return res.status(400).json({ error: 'user_id and benefit_id are required' });
+  }
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    await client.query('BEGIN');
+
+    // Убедимся, что есть строка user_balance, и заблокируем её для корректного расчёта
+    const ubRes = await client.query(
+      `SELECT user_id, balance, total_earned, total_spent
+         FROM user_balance
+        WHERE user_id = $1
+        FOR UPDATE`,
+      [user_id]
+    );
+
+    if (ubRes.rows.length === 0) {
+      // Создаём начальную запись с нулями и сразу блокируем (повторный SELECT FOR UPDATE)
+      await client.query(
+        `INSERT INTO user_balance (user_id, balance, total_earned, total_spent)
+         VALUES ($1, 0, 0, 0)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [user_id]
+      );
+    }
+
+    const ubLocked = await client.query(
+      `SELECT user_id, balance, total_earned, total_spent
+         FROM user_balance
+        WHERE user_id = $1
+        FOR UPDATE`,
+      [user_id]
+    );
+
+    const currentBalance = Number(ubLocked.rows[0]?.balance || 0);
+
+    // Загружаем льготу и цену
+    const benefitRes = await client.query(
+      'SELECT id, name, COALESCE(price_coins, 0) AS price_coins FROM benefits WHERE id = $1',
+      [benefit_id]
+    );
+    if (benefitRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'benefit not found' });
+    }
+    const benefit = benefitRes.rows[0];
+    const price = Number(benefit.price_coins || 0);
+
+    if (price > 0 && currentBalance < price) {
+      await client.query('ROLLBACK');
+      return res.status(422).json({ error: 'insufficient_funds', required: price, balance: currentBalance });
+    }
+
+    const balanceBefore = currentBalance;
+    const balanceAfter = balanceBefore - price;
+
+    // Записываем транзакцию покупки
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+       VALUES ($1,'benefit_purchase',$2,$3,$4,$5,$6,NULL,NOW())`,
+      [user_id, price, balanceBefore, balanceAfter, `Покупка льготы: ${benefit.name}`, String(benefit.id)]
+    );
+
+    // Обновляем баланс пользователя
+    await client.query(
+      `UPDATE user_balance
+          SET balance = $2,
+              total_spent = total_spent + $3,
+              updated_at = NOW()
+        WHERE user_id = $1`,
+      [user_id, balanceAfter, price]
+    );
+
+    await client.query('COMMIT');
+    return res.status(200).json({ success: true, balance: balanceAfter, spent: price });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Wallet purchase error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  } finally {
+    await client.end();
+  }
+});
+
+// GET /api/wallet/transactions - история транзакций с пагинацией
+app.get('/api/wallet/transactions', async (req, res) => {
+  const { user_id, limit = 20, offset = 0, type = 'all' } = req.query;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    // Фильтр по типу
+    let whereType = '';
+    if (type === 'topup') {
+      whereType = `AND ct.transaction_type IN ('monthly_allowance','credit','admin_add')`;
+    } else if (type === 'purchase') {
+      whereType = `AND ct.transaction_type IN ('benefit_purchase')`;
+    } else if (type === 'debit') {
+      whereType = `AND ct.transaction_type IN ('debit','admin_remove')`;
+    }
+    const sql = `SELECT ct.id, ct.transaction_type, ct.amount, ct.description, ct.reference_id, ct.created_at,
+                        b.name AS benefit_name
+                   FROM coin_transactions ct
+                   LEFT JOIN benefits b ON (ct.transaction_type = 'benefit_purchase' AND (ct.reference_id = b.id::text OR ct.reference_id::int = b.id))
+                  WHERE ct.user_id = $1 ${whereType}
+                  ORDER BY ct.created_at DESC, ct.id DESC
+                  LIMIT $2 OFFSET $3`;
+    const result = await client.query(sql, [user_id, parseInt(limit), parseInt(offset)]);
+    await client.end();
+    return res.status(200).json({ success: true, data: result.rows });
+  } catch (error) {
+    await client.end();
+    console.error('Wallet transactions error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// GET /api/wallet/policy - политика начислений и дата следующего начисления
+app.get('/api/wallet/policy', async (req, res) => {
+  const { user_id } = req.query;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    const result = await client.query(
+      `SELECT cp.allowance_day, cp.carryover_policy, cp.max_balance, COALESCE(cp.timezone, 'Europe/Moscow') as timezone
+         FROM enter e
+         LEFT JOIN company_plans cp ON cp.id = e.company_id
+        WHERE e.id = $1`,
+      [user_id]
+    );
+    const row = result.rows[0] || {};
+    const allowanceDay = row.allowance_day || 1;
+    const tz = row.timezone || 'Europe/Moscow';
+    const carryover = row.carryover_policy || 'none';
+
+    // Рассчитываем следующую дату начисления в часовом поясе компании
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const currentDay = now.getUTCDate();
+    const targetMonth = currentDay < allowanceDay ? month : month + 1;
+    const targetDate = new Date(Date.UTC(year, targetMonth, Math.min(allowanceDay, 28), 0, 0, 0));
+
+    const hint = `Следующее начисление: ${targetDate.toLocaleDateString('ru-RU')} • Политика переноса: ${carryover === 'none' ? 'без переноса' : carryover === 'full' ? 'полный перенос' : 'частичный перенос'}`;
+    await client.end();
+    return res.status(200).json({ success: true, allowance_day: allowanceDay, carryover_policy: carryover, timezone: tz, next_allowance_at: targetDate, hint });
+  } catch (error) {
+    await client.end();
+    console.error('Wallet policy error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// DEV: seed wallet data for a user (local only)
+app.post('/api/dev/wallet/seed', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Forbidden in production' });
+  }
+
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    // Ensure user_balance exists
+    const ub = await client.query('SELECT balance, total_earned, total_spent FROM user_balance WHERE user_id = $1', [user_id]);
+    let balance = Number(ub.rows[0]?.balance || 0);
+    let totalEarned = Number(ub.rows[0]?.total_earned || 0);
+    let totalSpent = Number(ub.rows[0]?.total_spent || 0);
+
+    // Seed allowance + purchases
+    const allowance = 10000;
+    const createdAt = new Date();
+
+    // monthly_allowance
+    const before1 = balance;
+    const after1 = before1 + allowance;
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+       VALUES ($1,'monthly_allowance',$2,$3,$4,$5,NULL,NULL,NOW())`,
+      [user_id, allowance, before1, after1, 'Тестовое начисление за месяц']
+    );
+    balance = after1; totalEarned += allowance;
+
+    // Fetch some benefits to reference
+    const benefits = await client.query('SELECT id, name FROM benefits ORDER BY id LIMIT 3');
+    const demo = [
+      { amount: 1500, benefit: benefits.rows[0] },
+      { amount: 2000, benefit: benefits.rows[1] },
+      { amount: 700,  benefit: benefits.rows[2] },
+    ].filter(d => d.benefit);
+
+    for (const d of demo) {
+      const before = balance;
+      const after = before - d.amount;
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+         VALUES ($1,'benefit_purchase',$2,$3,$4,$5,$6,NULL,NOW())`,
+        [user_id, d.amount, before, after, `Покупка льготы: ${d.benefit.name}`, d.benefit.id]
+      );
+      balance = after; totalSpent += d.amount;
+    }
+
+    // Симулируем списание неиспользованного остатка в конце месяца
+    const expireAmount = Math.min(300, Math.max(0, balance - 5000));
+    if (expireAmount > 0) {
+      const before = balance;
+      const after = before - expireAmount;
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+         VALUES ($1,'debit',$2,$3,$4,$5,NULL,NULL,NOW())`,
+        [user_id, expireAmount, before, after, 'Сгорание неиспользованного остатка']
+      );
+      balance = after; totalSpent += expireAmount;
+    }
+
+    // Upsert user_balance
+    await client.query(
+      `INSERT INTO user_balance (user_id, balance, total_earned, total_spent)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance, total_earned = EXCLUDED.total_earned, total_spent = EXCLUDED.total_spent, updated_at = NOW()`,
+      [user_id, balance, totalEarned, totalSpent]
+    );
+
+    await client.end();
+    return res.status(200).json({ success: true, balance, total_earned: totalEarned, total_spent: totalSpent });
+  } catch (error) {
+    await client.end();
+    console.error('Seed wallet error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// DEV: SQL script helper — отдаёт готовый SQL для наполнения тестовыми данными
+app.get('/api/dev/wallet/sql-script', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Forbidden in production' });
+  }
+
+  const sql = `-- TEST WALLET SEED
+-- Замените :USER_ID на реальный id пользователя из таблицы enter
+-- Начисление за месяц
+INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+VALUES (:USER_ID,'monthly_allowance',10000,COALESCE((SELECT balance FROM user_balance WHERE user_id=:USER_ID),0),
+        COALESCE((SELECT balance FROM user_balance WHERE user_id=:USER_ID),0)+10000,'Тестовое начисление за месяц',NULL,NULL,NOW());
+
+-- Покупка льготы (привяжите к существующему benefit_id)
+INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+VALUES (:USER_ID,'benefit_purchase',1500,
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID),
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID)-1500,
+        'Покупка льготы: Корпоративный фитнес',
+        (SELECT id FROM benefits ORDER BY id LIMIT 1),NULL,NOW());
+
+-- Ещё одна покупка
+INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+VALUES (:USER_ID,'benefit_purchase',700,
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID)-1500,
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID)-1500-700,
+        'Покупка льготы: Онлайн-курсы',
+        (SELECT id FROM benefits ORDER BY id OFFSET 1 LIMIT 1),NULL,NOW());
+
+-- Списание остатка (сгорание)
+INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
+VALUES (:USER_ID,'debit',300,
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID)-2200,
+        (SELECT balance FROM user_balance WHERE user_id=:USER_ID)-2500,
+        'Сгорание неиспользованного остатка',NULL,NULL,NOW());
+
+-- Обновить user_balance (пересчёт)
+WITH agg AS (
+  SELECT 
+    SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add') THEN amount ELSE 0 END) AS earned,
+    SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END) AS spent
+  FROM coin_transactions WHERE user_id = :USER_ID
+)
+INSERT INTO user_balance (user_id, balance, total_earned, total_spent)
+SELECT :USER_ID, (earned - spent), earned, spent FROM agg
+ON CONFLICT (user_id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    total_earned = EXCLUDED.total_earned,
+    total_spent = EXCLUDED.total_spent,
+    updated_at = NOW();`;
+
+  res.type('text/plain').send(sql);
 });
 
 // GET/POST/PATCH /api/progress - оптимизированные endpoints
@@ -540,6 +1016,23 @@ app.post('/api/user-benefits', async (req, res) => {
     );
     return res.status(200).json({ success: true });
   } catch (error) {
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// DELETE /api/user-benefits - убрать льготу у пользователя
+app.delete('/api/user-benefits', async (req, res) => {
+  const { user_id, benefit_id } = req.body;
+  if (!user_id || !benefit_id) return res.status(400).json({ error: 'user_id and benefit_id required' });
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    await client.query('DELETE FROM user_benefits WHERE user_id = $1 AND benefit_id = $2', [user_id, benefit_id]);
+    await client.end();
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -833,8 +1326,8 @@ app.get('/api/feedback', async (req, res) => {
       const result = await client.query(`
         SELECT id, rating, comment, created_at 
         FROM feedback 
-        WHERE user_id = $1
-      `, [user_id]);
+        WHERE user_id = $1::text
+      `, [String(user_id)]);
 
       return res.json({
         success: true,
@@ -848,7 +1341,7 @@ app.get('/api/feedback', async (req, res) => {
         SELECT f.id, f.user_id, f.rating, f.comment, f.created_at,
                e.name as user_name, e.position, e.avatar_url as avatar
         FROM feedback f
-        LEFT JOIN enter e ON f.user_id = e.id
+        LEFT JOIN enter e ON e.id::text = f.user_id
         ORDER BY f.created_at DESC
         LIMIT 5
       `);
@@ -865,7 +1358,7 @@ app.get('/api/feedback', async (req, res) => {
       SELECT f.id, f.user_id, f.rating, f.comment, f.created_at,
              e.name as user_name, e.position, e.avatar_url as avatar
       FROM feedback f
-      LEFT JOIN enter e ON f.user_id = e.id
+      LEFT JOIN enter e ON e.id::text = f.user_id
       ORDER BY f.created_at DESC
       LIMIT $1 OFFSET $2
     `, [parseInt(limit), parseInt(offset)]);
@@ -966,13 +1459,28 @@ app.listen(PORT, HOST, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   
   // 🔍 Показываем правильную информацию о подключении к БД
-  const connectionString = process.env.PG_CONNECTION_STRING || 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  const isLocalDb = connectionString.includes('localhost');
-  const dbName = isLocalDb ? 'Local PostgreSQL' : 'Supabase';
-  console.log(`📊 Database: Connected to ${dbName}`);
+  const connectionString = process.env.PG_CONNECTION_STRING || '';
+  try {
+    const url = new URL(connectionString);
+    console.log(`📊 Database: Host=${url.hostname} Port=${url.port || '5432'} DB=${url.pathname.replace('/', '')}`);
+  } catch {
+    console.log('📊 Database: DSN present');
+  }
   
   console.log(`📰 News API: Available at /api/news`);
   console.log(`👤 Profile API: Available at /api/profile`);
   console.log(`📢 Notifications API: Available at /api/notifications`);
   console.log(`🎯 Recommendations API: Available at /api/user-recommendations`);
 }); 
+
+// === SPA fallback: отдавать index.html для всех не-API маршрутов ===
+// NOTE: SPA fallback временно отключен из-за несовместимости паттернов в Express 5
+// import fs from 'fs';
+// app.use((req, res, next) => {
+//   if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+//   const indexPath = join(__dirname, 'dist', 'index.html');
+//   if (fs.existsSync(indexPath)) {
+//     return res.sendFile(indexPath);
+//   }
+//   return res.status(404).send('Build not found. Run the frontend build to serve the SPA.');
+// });
