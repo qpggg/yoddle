@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCircle, 
   Gift, 
-  Settings, 
-  MessageCircle,
   Bell,
   Newspaper,
   Star
@@ -21,6 +19,7 @@ import NewsModal from '../components/NewsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import SupportModal from '../components/SupportModal';
 import NotificationCenter from '../components/NotificationCenter';
+// Глобальная модалка теперь в App.tsx; локальную версию используем как InlineProfileEditModal
 import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
 
@@ -52,7 +51,7 @@ interface ProfileEditModalProps {
   setUser: (user: User | null) => void;
 }
 
-function ProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProps) {
+function InlineProfileEditModal({ open, onClose, user, setUser }: ProfileEditModalProps) {
   const { logProfileUpdate } = useActivity();
   const [form, setForm] = useState<{
     name: string;
@@ -235,6 +234,13 @@ const Dashboard: React.FC = () => {
   }, [unreadCount]);
   const navigate = useNavigate();
 
+  // Глобальный обработчик для открытия модалки "Изменить профиль" из других частей приложения
+  useEffect(() => {
+    const handler = () => setShowProfileModal(true);
+    window.addEventListener('openProfileEditModal', handler as EventListener);
+    return () => window.removeEventListener('openProfileEditModal', handler as EventListener);
+  }, []);
+
   // Загрузка прогресса пользователя
   useEffect(() => {
     const loadProgress = async () => {
@@ -257,7 +263,7 @@ const Dashboard: React.FC = () => {
     const loadLatestNews = async () => {
       setNewsLoading(true);
       try {
-        const response = await fetch('/api/news?action=modal-data&limit=1');
+        const response = await fetch('/api/news/modal-data?limit=1');
         const data = await response.json();
         
         if (data.success && data.data.length > 0) {
@@ -521,46 +527,8 @@ const Dashboard: React.FC = () => {
           }}
         >
           <h2>Быстрые действия</h2>
-          <div className="actions-grid">
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              onClick={() => navigate('/profile')}
-            >
-              <UserCircle size={24} />
-              <span>Профиль</span>
-            </motion.button>
-            <NotificationBadge userId={user?.id}>
-              <motion.button 
-                className="action-btn"
-                whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-                whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-                onClick={() => setShowNotificationCenter(true)}
-              >
-                <Bell size={24} />
-                <span>Уведомления</span>
-              </motion.button>
-            </NotificationBadge>
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              onClick={() => setShowSupportModal(true)}
-            >
-              <MessageCircle size={24} />
-              <span>Поддержка</span>
-            </motion.button>
-            <motion.button 
-              className="action-btn"
-              whileHover={{ scale: 1.05, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              whileTap={{ scale: 0.95, transition: { duration: 0.35, ease: 'easeInOut' } }}
-              onClick={() => setShowProfileModal(true)}
-            >
-              <Settings size={24} />
-              <span>Изменить профиль</span>
-            </motion.button>
-          </div>
+          {/* По запросу: временно оставляем карточку пустой для будущих сценариев */}
+          <div className="actions-grid" />
         </motion.div>
 
         <motion.div 
@@ -964,7 +932,7 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
           Связаться с поддержкой
         </motion.button>
       </motion.div>
-      <ProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
+      <InlineProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
       <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
       <FeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} userId={user?.id || null} />
       <SupportModal open={showSupportModal} onClose={() => setShowSupportModal(false)} />

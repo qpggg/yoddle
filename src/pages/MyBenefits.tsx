@@ -84,7 +84,7 @@ const checkIfRecommended = (benefit: Benefit, userRecommendedBenefitIds: number[
   return isRecommended;
 };
 
-const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended, onRefund }: { 
+const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRecommended: recommended, onRefund, refundSecondsLeft }: { 
   benefit: Benefit; 
   onAdd: () => void; 
   isAdded: boolean; 
@@ -92,6 +92,7 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
   isSelectedCard?: boolean;
   isRecommended?: boolean;
   onRefund?: () => void;
+  refundSecondsLeft?: number;
 }) => (
   <motion.div variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
     <Paper elevation={0} sx={{ 
@@ -183,19 +184,29 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
         </button>
       )}
       {isSelectedCard && (
-        <button
-          style={{ 
-            ...buttonStyle,
-            background: 'linear-gradient(45deg, #8B0000, #B22222)',
-            color: '#fff',
-            border: 'none',
-            alignSelf: 'flex-start'
-          }}
-          onClick={onRefund}
-        >
-          <Box component="img" src="/coins.png" alt="coins" sx={{ width: 16, height: 16 }} />
-          Вернуть
-        </button>
+        <Box sx={{ display: 'flex', alignItems: 'center', alignSelf: 'flex-start' }}>
+          <button
+            style={{ 
+              ...buttonStyle,
+              background: 'linear-gradient(45deg, #8B0000, #B22222)',
+              color: '#fff',
+              border: 'none',
+              alignSelf: 'auto',
+              display: 'inline-flex'
+            }}
+            onClick={onRefund}
+          >
+            <Box component="img" src="/coins.png" alt="coins" sx={{ width: 16, height: 16 }} />
+            Вернуть
+          </button>
+          {typeof refundSecondsLeft === 'number' && refundSecondsLeft > 0 && (
+            <Chip 
+              label={`${Math.floor(refundSecondsLeft / 3600).toString().padStart(2, '0')}:${Math.floor((refundSecondsLeft % 3600) / 60).toString().padStart(2, '0')}:${(refundSecondsLeft % 60).toString().padStart(2, '0')}`}
+              size="small"
+              sx={{ ml: 2, background: 'rgba(139,0,0,0.08)', color: '#8B0000', fontWeight: 700, borderRadius: '12px' }}
+            />
+          )}
+        </Box>
       )}
     </Paper>
   </motion.div>
@@ -215,6 +226,7 @@ const MyBenefits: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
   const [userRecommendedBenefitIds, setUserRecommendedBenefitIds] = useState<number[]>([]);
+  const [refundLeft, setRefundLeft] = useState<Record<number, number>>({}); // benefit_id -> seconds_left
 
   useEffect(() => {
     setIsLoading(true);
@@ -277,7 +289,10 @@ const MyBenefits: React.FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: user.id, benefit_id: openBenefit.id })
     });
-    
+
+    // 2.1) Перезапускаем таймер возврата на 48 часов для этой льготы
+    setRefundLeft(prev => ({ ...prev, [openBenefit.id]: 48 * 3600 }));
+
     // 🎉 АВТОЛОГИРОВАНИЕ ДОБАВЛЕНИЯ ЛЬГОТЫ
     await logBenefitAdded(openBenefit.name);
     
@@ -292,6 +307,52 @@ const MyBenefits: React.FC = () => {
     : allBenefits.filter(b => b.category === selectedCategory), [allBenefits, selectedCategory]);
     
   const selectedBenefits = useMemo(() => allBenefits.filter(b => userBenefitIds.includes(b.id)), [allBenefits, userBenefitIds]);
+
+  // Загружаем окна возврата для выбранных льгот (последняя покупка по каждой)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!user?.id) return;
+      const updates: Record<number, number> = {};
+      for (const b of selectedBenefits) {
+        try {
+          const r = await fetch(`/api/wallet/purchases?user_id=${user.id}&benefit_id=${b.id}&limit=1`).then(res => res.json());
+          const last = r?.data && r.data[0];
+          if (last?.created_at) {
+            const createdAt = new Date(last.created_at).getTime();
+            const now = Date.now();
+            const seconds = Math.max(0, Math.floor(48 * 3600 - (now - createdAt) / 1000));
+            updates[b.id] = seconds;
+          } else {
+            updates[b.id] = 0;
+          }
+        } catch {
+          updates[b.id] = 0;
+        }
+      }
+      if (!cancelled) setRefundLeft((prev) => ({ ...prev, ...updates }));
+    };
+    load();
+    const id = setInterval(() => load(), 1000 * 30); // раз в 30 секунд обновляем таймер из сервера
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user?.id, selectedBenefits.map(b => b.id).join(',')]);
+
+  // Тикающий таймер, уменьшаем оставшееся время каждую секунду
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRefundLeft(prev => {
+        const next: Record<number, number> = {};
+        let changed = false;
+        for (const [k, v] of Object.entries(prev)) {
+          const nv = Math.max(0, (v as number) - 1);
+          next[Number(k)] = nv;
+          if (nv !== v) changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   if (isLoading) {
     return (
@@ -367,32 +428,44 @@ const MyBenefits: React.FC = () => {
             {selectedBenefits.length > 0 ? (
               <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
                 {selectedBenefits.map((benefit) => (
-                  <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`}>
-                    <BenefitCard 
+              <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`} component={motion.div} layout>
+                <BenefitCard 
                       benefit={benefit} 
                       onAdd={() => {}} 
                       isAdded={true} 
                       isDisabled={false} 
                       isSelectedCard={true}
+                        refundSecondsLeft={refundLeft[benefit.id] ?? 0}
                       onRefund={async () => {
-                        if (!user?.id) return;
-                        // Ищем последнюю покупку по этой льготе и пробуем возврат
-                        const purchases = await fetch(`/api/wallet/purchases?user_id=${user.id}&benefit_id=${benefit.id}&limit=1`).then(r => r.json()).catch(() => ({ data: [] }));
-                        const last = purchases?.data && purchases.data[0];
-                        if (!last) { alert('Покупка не найдена для возврата'); return; }
-                        const res = await fetch('/api/wallet/refund', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id, transaction_id: last.id }) });
-                        if (res.ok) {
-                          await fetch('/api/wallet/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) });
-                          // Удаляем льготу из выбранных локально
-                          setUserBenefitIds(prev => prev.filter(id => id !== benefit.id));
-                          // Также убираем из user_benefits на сервере для консистентности
-                          await fetch('/api/user-benefits', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id, benefit_id: benefit.id }) });
-                        } else {
-                          const data = await res.json().catch(() => ({}));
-                          const left = data?.seconds_left ? Math.max(0, Math.floor(data.seconds_left / 3600)) : null;
-                          alert(data?.error ? `Возврат недоступен. ${left !== null ? `Осталось ${left} ч.` : ''}` : 'Ошибка возврата');
-                        }
-                      }}
+                          if (!user?.id) return;
+                          // Ищем последнюю покупку по этой льготе
+                          let last: any = null;
+                          try {
+                            const purchases = await fetch(`/api/wallet/purchases?user_id=${user.id}&benefit_id=${benefit.id}&limit=1`).then(r => r.json());
+                            last = purchases?.data && purchases.data[0];
+                          } catch {}
+
+                          // Пытаемся выполнить возврат: по transaction_id если есть, иначе по benefit_id (fallback на бэке)
+                          const txIdOrBenefit = last?.id ?? benefit.id;
+                          const res = await fetch('/api/wallet/refund', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: user.id, transaction_id: txIdOrBenefit })
+                          });
+                          if (res.ok) {
+                            await fetch('/api/wallet/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) });
+                            // Удаляем льготу из выбранных локально
+                            setUserBenefitIds(prev => prev.filter(id => id !== benefit.id));
+                            // Также убираем из user_benefits на сервере для консистентности
+                            await fetch('/api/user-benefits', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id, benefit_id: benefit.id }) });
+                            setRefundLeft(prev => ({ ...prev, [benefit.id]: 0 }));
+                            try { await fetch(`/api/wallet/transactions?user_id=${user.id}&limit=5&offset=0&type=all`); } catch {}
+                          } else {
+                            const data = await res.json().catch(() => ({}));
+                            const left = data?.seconds_left ? Math.max(0, Math.floor(data.seconds_left / 3600)) : null;
+                            alert(data?.error ? `Возврат недоступен. ${left !== null ? `Осталось ${left} ч.` : ''}` : 'Ошибка возврата');
+                          }
+                        }}
                       isRecommended={checkIfRecommended(benefit, userRecommendedBenefitIds)}
                     />
                   </Grid>
@@ -457,7 +530,7 @@ const MyBenefits: React.FC = () => {
 
           <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
             {filteredBenefits.map((benefit) => (
-              <Grid item xs={12} sm={6} md={4} key={benefit.id}>
+              <Grid item xs={12} sm={6} md={4} key={benefit.id} component={motion.div} layout>
                 <BenefitCard 
                   benefit={benefit} 
                   onAdd={() => handleAddClick(benefit)} 
@@ -490,10 +563,12 @@ const MyBenefits: React.FC = () => {
                         </Button>
                       </Box>
                     </>
-                  ) : (
+                      ) : (
                      <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}}>
                         <FaCheck size={40} color="#32CD32"/>
                         <Typography variant="h6" sx={{ color: '#1A1A1A', fontWeight: 700, mt: 2 }}>Льгота добавлена!</Typography>
+                        {/* Таймер окна возврата: показываем 48 часов для UX-подтверждения */}
+                        <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>Возврат доступен в течение 48 часов.</Typography>
                      </motion.div>
                   )}
                 </Box>

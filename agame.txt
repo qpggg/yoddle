@@ -1,0 +1,78 @@
+import chess
+import chess.engine
+
+# Путь к скачанному Stockfish
+STOCKFISH_PATH = r"C:\path\to\stockfish.exe"  # замени на свой путь
+
+# PGN твоей партии
+pgn_text = """
+[Event "rated rapid game"]
+[Site "https://lichess.org/I4AxlLll"]
+[Date "2025.08.09"]
+[Round "?"]
+[White "ttm8888"]
+[Black "mudrick"]
+[Result "0-1"]
+[WhiteElo "1538"]
+[BlackElo "1463"]
+[ECO "B40"]
+[UTCTime "20:43:14"]
+[UTCDate "2025.08.09"]
+[TimeControl "600+5"]
+[Termination "Normal"]
+[GameId "I4AxlLll"]
+[WhiteRatingDiff "-7"]
+[BlackRatingDiff "+8"]
+[Variant "Standard"]
+
+1. e4 c5 2. Nf3 e6 3. Nc3 Nc6 4. Be2 d5 5. exd5 exd5 6. O-O Nf6 7. Re1 Be7
+8. d4 O-O 9. Ne5 Nxd4 10. Be3 Nxe2+ 11. Nxe2 d4 12. Bf4 Bd6 13. Ng3 Re8
+14. Nc6 bxc6 15. Rxe8+ Nxe8 16. Bxd6 Qxd6 17. Qh5 Nf6 18. Qh4 Bd7
+19. Rd1 Re8 20. c3 dxc3 21. Rxd6 Re1+ 22. Nf1 cxb2 23. Rxd7 Nxd7
+24. Qd8+ Nf8 25. Qd3 b1=Q 26. Qc4 Rxf1+ 27. Qxf1 Qxf1+ 28. Kxf1 Ne6 0-1
+"""
+
+# Загружаем партию
+import io
+import chess.pgn
+game = chess.pgn.read_game(io.StringIO(pgn_text))
+
+# Настраиваем движок
+engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+
+board = game.board()
+move_number = 1
+
+print("Анализ партии:\n")
+for move in game.mainline_moves():
+    info_before = engine.analyse(board, chess.engine.Limit(depth=18))
+    eval_before = info_before["score"].pov(board.turn).score(mate_score=10000)
+
+    board.push(move)
+
+    info_after = engine.analyse(board, chess.engine.Limit(depth=18))
+    eval_after = info_after["score"].pov(not board.turn).score(mate_score=10000)
+
+    if eval_before is None or eval_after is None:
+        continue
+
+    eval_diff = eval_before - eval_after
+
+    # Классификация
+    if abs(eval_diff) < 20:
+        label = "Best move"
+    elif abs(eval_diff) < 50:
+        label = "Good"
+    elif abs(eval_diff) < 150:
+        label = "Inaccuracy"
+    elif abs(eval_diff) < 300:
+        label = "Mistake"
+    else:
+        label = "Blunder"
+
+    print(f"{move_number}. {board.san(move)} → {label} ({eval_diff:+} cp)")
+
+    if board.turn == chess.WHITE:
+        move_number += 1
+
+engine.quit()

@@ -7,7 +7,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3001
-      - PG_CONNECTION_STRING=postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres
+      - PG_CONNECTION_STRING=postgresql://f1111323_yoddle:Nei3wmOK@yoddle-pg:5432/supa_full?sslmode=disable
     volumes:
       - .:/app
       - /app/node_modules

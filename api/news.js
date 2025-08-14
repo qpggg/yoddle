@@ -4,9 +4,17 @@ import { createDbClient } from '../db.js';
 // Экспресс-роутер для /api/news
 const router = express.Router();
 
-// GET /api/news (список новостей)
+// GET /api/news (список новостей) + поддержка action=modal-data для обратной совместимости
 router.get('/', async (req, res) => {
-  await getNews(req, res);
+  try {
+    if (req.query && req.query.action === 'modal-data') {
+      return await getModalData(req, res);
+    }
+    return await getNews(req, res);
+  } catch (e) {
+    console.error('News root handler error:', e);
+    return res.status(500).json({ success: false, error: 'Ошибка при загрузке новостей' });
+  }
 });
 
 // GET /api/news/categories
@@ -65,15 +73,24 @@ async function getModalData(req, res) {
         n.id,
         n.title,
         n.content,
+        n.excerpt,
         n.author,
-        n.publish_date as date,
-        nc.name as category,
-        nc.icon as category_icon,
-        n.image_url as image
+        n.publish_date,
+        n.created_at,
+        n.updated_at,
+        n.is_featured,
+        n.status,
+        n.views_count,
+        n.image_url,
+        nc.id AS category_id,
+        nc.name AS category,
+        nc.description AS category_description,
+        nc.color_code AS category_color,
+        nc.icon AS category_icon
       FROM news n
       JOIN news_categories nc ON n.category_id = nc.id
       WHERE n.status = 'published'
-      ORDER BY n.is_featured DESC, n.publish_date DESC
+      ORDER BY n.is_featured DESC, COALESCE(n.publish_date, n.created_at) DESC
       LIMIT $1
     `, [parseInt(limit)]);
 
@@ -84,11 +101,20 @@ async function getModalData(req, res) {
       id: row.id,
       title: row.title,
       content: row.content,
-      date: row.date ? row.date.toISOString().split('T')[0] : null,
+      excerpt: row.excerpt || null,
       author: row.author,
+      date: (row.publish_date || row.created_at) ? new Date(row.publish_date || row.created_at).toISOString() : null,
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      isFeatured: !!row.is_featured,
+      status: row.status,
+      views: row.views_count,
+      image: row.image_url || null,
+      categoryId: row.category_id,
       category: row.category,
-      categoryIcon: row.category_icon,
-      image: row.image
+      categoryDescription: row.category_description,
+      categoryColor: row.category_color,
+      categoryIcon: row.category_icon
     }));
 
     res.json({

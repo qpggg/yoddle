@@ -7,6 +7,8 @@ import { dirname, join } from 'path';
 import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
+import { createDbClient, getDbClient } from './db.js';
+import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,13 +41,65 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Ранний реестр Wallet API (перекрывает старые дубликаты ниже)
+app.post('/api/wallet/purchase', purchaseHandler);
+app.post('/api/wallet/refund', refundHandler);
+app.get('/api/wallet/transactions', transactionsHandler);
+app.get('/api/wallet/purchases', purchasesHandler);
+app.get('/api/wallet/policy', policyHandler);
+app.post('/api/wallet/refresh', refreshHandler);
+
 // === Раздача статики фронта ===
 import path from 'path';
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Для SPA: отдавать index.html на все не-API запросы (после API маршрутов)
 
-import { createDbClient } from './db.js';
+// Обеспечиваем схему кошелька в БД (для локальной разработки и новых окружений)
+async function ensureWalletSchema() {
+  const client = createDbClient();
+  try {
+    await client.query(`ALTER TABLE IF EXISTS benefits ADD COLUMN IF NOT EXISTS price_coins numeric NOT NULL DEFAULT 0`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_balance (
+        user_id integer PRIMARY KEY,
+        balance numeric NOT NULL DEFAULT 0,
+        total_earned numeric NOT NULL DEFAULT 0,
+        total_spent numeric NOT NULL DEFAULT 0,
+        updated_at timestamp DEFAULT NOW()
+      )`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL,
+        transaction_type varchar(50) NOT NULL,
+        amount numeric NOT NULL,
+        balance_before numeric,
+        balance_after numeric,
+        description text,
+        reference_id text,
+        processed_by integer,
+        created_at timestamp DEFAULT NOW()
+      )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coin_transactions_user_id ON coin_transactions(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_coin_transactions_created_at ON coin_transactions(created_at)`);
+    // Relax amount constraint and remove uniqueness that blocks repeated purchases
+    await client.query(`ALTER TABLE IF EXISTS coin_transactions DROP CONSTRAINT IF EXISTS coin_transactions_amount_positive`);
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'coin_transactions_amount_non_negative'
+        ) THEN
+          ALTER TABLE coin_transactions ADD CONSTRAINT coin_transactions_amount_non_negative CHECK (amount >= 0);
+        END IF;
+      END $$;`);
+    // Drop both constraint and index variants of the unique rule
+    await client.query(`ALTER TABLE IF EXISTS coin_transactions DROP CONSTRAINT IF EXISTS uq_tx_user_type_ref`);
+    await client.query(`DROP INDEX IF EXISTS uq_tx_user_type_ref`);
+  } catch (e) {
+    console.error('ensureWalletSchema error:', e.message);
+  }
+}
 
 // 🚀 КЭШ ПОЛЬЗОВАТЕЛЕЙ ДЛЯ БЫСТРОГО ВХОДА
 const userCache = new Map();
@@ -136,84 +190,15 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
   }
 });
 
-// POST /api/wallet/refund - возврат покупки льготы
-app.post('/api/wallet/refund', async (req, res) => {
-  const { user_id, transaction_id, reason } = req.body;
-  if (!user_id || !transaction_id) {
-    return res.status(400).json({ error: 'user_id and transaction_id required' });
-  }
-
-  const client = createDbClient();
-  try {
-    await client.connect();
-
-    // Находим исходную транзакцию покупки
-    const tx = await client.query(
-      `SELECT * FROM coin_transactions WHERE id = $1 AND user_id = $2 AND transaction_type = 'benefit_purchase'`,
-      [transaction_id, user_id]
-    );
-    if (tx.rows.length === 0) {
-      await client.end();
-      return res.status(404).json({ error: 'purchase transaction not found' });
-    }
-
-    const purchase = tx.rows[0];
-
-    // Ограничение по времени: 48 часов на возврат
-    const windowHours = 48;
-    const timeDiffQuery = await client.query(`SELECT EXTRACT(EPOCH FROM (NOW() - $1)) AS seconds`, [purchase.created_at]);
-    const secondsPassed = Number(timeDiffQuery.rows[0].seconds || 0);
-    const secondsWindow = windowHours * 3600;
-    if (secondsPassed > secondsWindow) {
-      const secondsLeft = 0;
-      await client.end();
-      return res.status(422).json({ error: 'refund window closed', window_hours: windowHours, seconds_left: secondsLeft });
-    }
-
-    // Проверяем, не был ли уже выполнен возврат для этой покупки
-    const existingRefund = await client.query(
-      `SELECT 1 FROM coin_transactions WHERE user_id = $1 AND transaction_type = 'refund' AND reference_id = $2`,
-      [user_id, String(transaction_id)]
-    );
-    if (existingRefund.rows.length > 0) {
-      await client.end();
-      return res.status(409).json({ error: 'already refunded' });
-    }
-
-    // Создаём возврат: возвращаем сумму покупки
-    const balanceBefore = purchase.balance_after; // баланс после покупки
-    const balanceAfter = Number(balanceBefore) + Number(purchase.amount);
-
-    await client.query(
-      `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
-       VALUES ($1,'refund',$2,$3,$4,$5,$6,NULL,NOW())`,
-      [user_id, purchase.amount, balanceBefore, balanceAfter, `Возврат: ${purchase.description || ''}`.trim(), String(transaction_id)]
-    );
-
-    // Обновляем user_balance: баланс растёт, потраченное уменьшается
-    await client.query(
-      `UPDATE user_balance 
-          SET balance = balance + $2, 
-              total_spent = GREATEST(total_spent - $2, 0),
-              updated_at = NOW() 
-        WHERE user_id = $1`,
-      [user_id, purchase.amount]
-    );
-
-    const secondsLeft = secondsWindow - secondsPassed;
-    await client.end();
-    return res.status(200).json({ success: true, seconds_left: secondsLeft, window_hours: windowHours });
-  } catch (error) {
-    await client.end();
-    console.error('Refund error:', error);
-    return res.status(500).json({ error: 'Database error' });
-  }
-});
+// Удалён старый inline /api/wallet/refund; используется модульный refundHandler, зарегистрированный выше
 
 // GET /api/wallet/purchases - последние покупки пользователя (опционально по benefit_id)
 app.get('/api/wallet/purchases', async (req, res) => {
   const { user_id, benefit_id, limit = 50 } = req.query;
   if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+  const userIdStr = String(user_id);
+  const benefitIdStr = benefit_id !== undefined ? String(benefit_id) : undefined;
+  const limitNum = parseInt(String(limit), 10) || 50;
 
   const client = createDbClient();
   try {
@@ -221,12 +206,12 @@ app.get('/api/wallet/purchases', async (req, res) => {
     const rows = await client.query(
       `SELECT ct.* , b.name AS benefit_name
          FROM coin_transactions ct
-         LEFT JOIN benefits b ON (ct.transaction_type = 'benefit_purchase' AND (ct.reference_id = b.id::text OR ct.reference_id::int = b.id))
-        WHERE ct.user_id = $1 AND ct.transaction_type = 'benefit_purchase'
-          ${benefit_id ? 'AND (ct.reference_id = $3 OR ct.reference_id::int = $3)' : ''}
+         LEFT JOIN benefits b ON (ct.transaction_type = 'benefit_purchase' AND ct.reference_id = b.id::text)
+        WHERE ct.user_id::text = $1 AND ct.transaction_type = 'benefit_purchase'
+          ${benefitIdStr ? 'AND ct.reference_id = $3' : ''}
         ORDER BY ct.created_at DESC, ct.id DESC
         LIMIT $2`,
-      benefit_id ? [user_id, parseInt(limit), benefit_id] : [user_id, parseInt(limit)]
+      benefitIdStr ? [userIdStr, limitNum, benefitIdStr] : [userIdStr, limitNum]
     );
     await client.end();
     return res.status(200).json({ success: true, data: rows.rows });
@@ -428,7 +413,14 @@ app.get('/api/benefits', async (req, res) => {
   }
 });
 
-// === Wallet API ===
+// === Wallet API (delegated to api/wallet/handlers.js) ===
+// app.post('/api/wallet/purchase', purchaseHandler); // This line is now handled by the early registration
+// app.post('/api/wallet/refund', refundHandler); // This line is now handled by the early registration
+// app.get('/api/wallet/transactions', transactionsHandler); // This line is now handled by the early registration
+// app.get('/api/wallet/purchases', purchasesHandler); // This line is now handled by the early registration
+// app.get('/api/wallet/policy', policyHandler); // This line is now handled by the early registration
+// app.post('/api/wallet/refresh', refreshHandler); // This line is now handled by the early registration
+
 // GET /api/wallet - текущий баланс и итоги
 app.get('/api/wallet', async (req, res) => {
   const { user_id } = req.query;
@@ -436,6 +428,7 @@ app.get('/api/wallet', async (req, res) => {
 
   const client = createDbClient();
   try {
+    await ensureWalletSchema();
     await client.connect();
     const result = await client.query(
       'SELECT balance, total_earned, total_spent FROM user_balance WHERE user_id = $1',
@@ -473,6 +466,7 @@ app.post('/api/wallet/refresh', async (req, res) => {
 
   const client = createDbClient();
   try {
+    await ensureWalletSchema();
     await client.connect();
     const agg = await client.query(
       `SELECT 
@@ -509,19 +503,22 @@ app.post('/api/wallet/purchase', async (req, res) => {
   if (!user_id || !benefit_id) {
     return res.status(400).json({ error: 'user_id and benefit_id are required' });
   }
+  const userIdStr = String(user_id);
+  const benefitIdNum = parseInt(String(benefit_id), 10);
 
-  const client = createDbClient();
+  // Используем один коннект из пула для транзакции
+  const client = await getDbClient();
   try {
-    await client.connect();
+    await ensureWalletSchema();
     await client.query('BEGIN');
 
     // Убедимся, что есть строка user_balance, и заблокируем её для корректного расчёта
     const ubRes = await client.query(
       `SELECT user_id, balance, total_earned, total_spent
          FROM user_balance
-        WHERE user_id = $1
+        WHERE user_id::text = $1
         FOR UPDATE`,
-      [user_id]
+      [userIdStr]
     );
 
     if (ubRes.rows.length === 0) {
@@ -530,16 +527,16 @@ app.post('/api/wallet/purchase', async (req, res) => {
         `INSERT INTO user_balance (user_id, balance, total_earned, total_spent)
          VALUES ($1, 0, 0, 0)
          ON CONFLICT (user_id) DO NOTHING`,
-        [user_id]
+        [userIdStr]
       );
     }
 
     const ubLocked = await client.query(
       `SELECT user_id, balance, total_earned, total_spent
          FROM user_balance
-        WHERE user_id = $1
+        WHERE user_id::text = $1
         FOR UPDATE`,
-      [user_id]
+      [userIdStr]
     );
 
     const currentBalance = Number(ubLocked.rows[0]?.balance || 0);
@@ -547,7 +544,7 @@ app.post('/api/wallet/purchase', async (req, res) => {
     // Загружаем льготу и цену
     const benefitRes = await client.query(
       'SELECT id, name, COALESCE(price_coins, 0) AS price_coins FROM benefits WHERE id = $1',
-      [benefit_id]
+      [benefitIdNum]
     );
     if (benefitRes.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -562,24 +559,40 @@ app.post('/api/wallet/purchase', async (req, res) => {
     }
 
     const balanceBefore = currentBalance;
-    const balanceAfter = balanceBefore - price;
+    const balanceAfter = price > 0 ? balanceBefore - price : balanceBefore;
+
+    // Анти-дубль: если совсем свежая покупка этой льготы (<= 5 секунд) — не дублируем
+    const recentPurchase = await client.query(
+      `SELECT id FROM coin_transactions 
+         WHERE user_id::text = $1 AND transaction_type = 'benefit_purchase'
+           AND reference_id = $2 AND created_at >= NOW() - INTERVAL '5 seconds'
+         ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [userIdStr, String(benefitIdNum)]
+    );
+    if (recentPurchase.rows.length > 0) {
+      await client.query('COMMIT');
+      return res.status(200).json({ success: true, duplicate: true, balance: currentBalance, spent: 0 });
+    }
 
     // Записываем транзакцию покупки
+    console.log('INSERTING PURCHASE:', { user_id: userIdStr, price, benefit_id: String(benefit.id) });
     await client.query(
       `INSERT INTO coin_transactions (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id, processed_by, created_at)
        VALUES ($1,'benefit_purchase',$2,$3,$4,$5,$6,NULL,NOW())`,
-      [user_id, price, balanceBefore, balanceAfter, `Покупка льготы: ${benefit.name}`, String(benefit.id)]
+      [userIdStr, price, balanceBefore, balanceAfter, `Покупка льготы: ${benefit.name}`, String(benefit.id)]
     );
 
     // Обновляем баланс пользователя
-    await client.query(
-      `UPDATE user_balance
-          SET balance = $2,
-              total_spent = total_spent + $3,
-              updated_at = NOW()
-        WHERE user_id = $1`,
-      [user_id, balanceAfter, price]
-    );
+    if (price > 0) {
+      await client.query(
+        `UPDATE user_balance
+            SET balance = $2,
+                total_spent = total_spent + $3,
+                updated_at = NOW()
+          WHERE user_id::text = $1`,
+        [userIdStr, balanceAfter, price]
+      );
+    }
 
     await client.query('COMMIT');
     return res.status(200).json({ success: true, balance: balanceAfter, spent: price });
@@ -588,7 +601,7 @@ app.post('/api/wallet/purchase', async (req, res) => {
     console.error('Wallet purchase error:', error);
     return res.status(500).json({ error: 'Database error' });
   } finally {
-    await client.end();
+    client.release();
   }
 });
 
@@ -596,9 +609,9 @@ app.post('/api/wallet/purchase', async (req, res) => {
 app.get('/api/wallet/transactions', async (req, res) => {
   const { user_id, limit = 20, offset = 0, type = 'all' } = req.query;
   if (!user_id) return res.status(400).json({ error: 'user_id is required' });
-
   const client = createDbClient();
   try {
+    await ensureWalletSchema();
     await client.connect();
     // Фильтр по типу
     let whereType = '';
@@ -609,23 +622,31 @@ app.get('/api/wallet/transactions', async (req, res) => {
     } else if (type === 'debit') {
       whereType = `AND ct.transaction_type IN ('debit','admin_remove')`;
     }
-    const sql = `SELECT ct.id, ct.transaction_type, ct.amount, ct.description, ct.reference_id, ct.created_at,
-                        COALESCE(bp.name, br.name) AS benefit_name
-                   FROM coin_transactions ct
-              LEFT JOIN benefits bp 
-                         ON (ct.transaction_type = 'benefit_purchase' 
-                         AND (ct.reference_id = bp.id::text OR ct.reference_id::int = bp.id))
-              LEFT JOIN coin_transactions p
-                         ON (ct.transaction_type = 'refund' AND ct.reference_id = p.id::text)
-              LEFT JOIN benefits br
-                         ON (p.transaction_type = 'benefit_purchase' 
-                         AND (p.reference_id = br.id::text OR p.reference_id::int = br.id))
-                  WHERE ct.user_id = $1 ${whereType}
-                  ORDER BY ct.created_at DESC, ct.id DESC
-                  LIMIT $2 OFFSET $3`;
-    const result = await client.query(sql, [user_id, parseInt(limit), parseInt(offset)]);
+    // Упрощенный запрос без сложных JOIN'ов для начала
+    const sqlWallet = `SELECT ct.id, ct.transaction_type, ct.amount, ct.description, ct.reference_id, ct.created_at
+                         FROM coin_transactions ct
+                        WHERE ct.user_id::text = $1 ${whereType}
+                        ORDER BY ct.created_at DESC, ct.id DESC`;
+
+    const limitNum = parseInt(String(limit), 10) || 20;
+    const offsetNum = parseInt(String(offset), 10) || 0;
+
+    console.log('QUERYING TRANSACTIONS for user_id:', String(user_id));
+    const walletRows = await client.query(sqlWallet, [String(user_id)]);
+    console.log('FOUND TRANSACTIONS:', walletRows.rows.length);
+    
+    // Получаем названия льгот отдельно для benefit_purchase
+    const transactions = walletRows.rows.map(row => {
+      if (row.transaction_type === 'benefit_purchase' && row.reference_id) {
+        // Добавим название льготы потом отдельным запросом, пока возвращаем как есть
+        return { ...row, benefit_name: null };
+      }
+      return { ...row, benefit_name: null };
+    });
+    
+    const page = transactions.slice(offsetNum, offsetNum + limitNum);
     await client.end();
-    return res.status(200).json({ success: true, data: result.rows });
+    return res.status(200).json({ success: true, data: page });
   } catch (error) {
     await client.end();
     console.error('Wallet transactions error:', error);
@@ -640,6 +661,7 @@ app.get('/api/wallet/policy', async (req, res) => {
 
   const client = createDbClient();
   try {
+    await ensureWalletSchema();
     await client.connect();
     const result = await client.query(
       `SELECT cp.allowance_day, cp.carryover_policy, cp.max_balance, COALESCE(cp.timezone, 'Europe/Moscow') as timezone
@@ -682,6 +704,7 @@ app.post('/api/dev/wallet/seed', async (req, res) => {
 
   const client = createDbClient();
   try {
+    await ensureWalletSchema();
     await client.connect();
     // Ensure user_balance exists
     const ub = await client.query('SELECT balance, total_earned, total_spent FROM user_balance WHERE user_id = $1', [user_id]);

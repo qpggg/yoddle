@@ -21,7 +21,20 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // Инициализируем из localStorage синхронно, чтобы не потерять сессию при reload
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.id) {
+        return parsed;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,13 +116,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Синхронизация с localStorage только после завершения первоначальной инициализации,
+  // чтобы не стереть сохраненную сессию на первом рендере
   useEffect(() => {
+    if (isLoading) return;
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
     } else {
       localStorage.removeItem('user');
     }
-  }, [user]);
+  }, [user, isLoading]);
 
   const logout = () => {
     setUser(null);

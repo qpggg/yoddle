@@ -77,7 +77,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
     setError(null);
 
     try {
-      const response = await fetch('/api/feedback?action=submit', {
+      const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

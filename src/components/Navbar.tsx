@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Button, Box, Container, IconButton, Drawer, List, ListItem } from '@mui/material';
+import { AppBar, Toolbar, Button, Box, Container, IconButton, Drawer, List, ListItem, Badge, Menu, MenuItem, Divider, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material/styles';
 import { useUser } from '../hooks/useUser';
+import { useNotifications } from '../hooks/useNotifications';
+import NotificationCenter from './NotificationCenter';
 
 const navItems = [
   { title: 'О платформе', path: '/about' },
@@ -26,6 +28,32 @@ const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useUser();
+  const navigate = useNavigate();
+  const { unreadCount } = useNotifications({ userId: user?.id });
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [walletPreview, setWalletPreview] = useState<string>('…');
+
+  useEffect(() => {
+    const loadWallet = async () => {
+      try {
+        if (user?.id) {
+          const r = await fetch(`/api/wallet?user_id=${user.id}`);
+          const d = await r.json();
+          if (d && d.success) setWalletPreview(Number(d.balance || 0).toLocaleString('ru-RU'));
+          else setWalletPreview('—');
+        } else setWalletPreview('—');
+      } catch { setWalletPreview('—'); }
+    };
+    loadWallet();
+  }, [user?.id]);
+
+  const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => setAnchorEl(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -195,7 +223,7 @@ const Navbar: React.FC = () => {
               ))}
               {user ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <IconButton component={Link} to="/dashboard" sx={{ p: 0 }}>
+                  <IconButton sx={{ p: 0 }} onClick={handleAvatarClick} aria-controls={open ? 'user-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined}>
                     {user.avatar ? (
                       <Box component="img" src={user.avatar} alt={user.name} sx={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #8B0000' }} />
                     ) : (
@@ -204,6 +232,42 @@ const Navbar: React.FC = () => {
                       </Box>
                     )}
                   </IconButton>
+
+                  <Menu
+                    id="user-menu"
+                    anchorEl={anchorEl}
+                    open={open}
+                    onClose={handleClose}
+                    MenuListProps={{
+                      'aria-labelledby': 'avatar-button',
+                    }}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    sx={{ '& .MuiPaper-root': { borderRadius: 2, mt: 1, minWidth: 220 } }}
+                  >
+                    <MenuItem onClick={() => { handleClose(); navigate('/dashboard'); }}>
+                      <Typography fontWeight={800}>Кабинет</Typography>
+                    </MenuItem>
+                    <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
+                      <Typography fontWeight={600}>Профиль</Typography>
+                    </MenuItem>
+                    <MenuItem onClick={() => { handleClose(); setShowNotificationCenter(true); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <Typography fontWeight={800}>Уведомления</Typography>
+                        <Badge badgeContent={unreadCount} sx={{ ml: 2, mr: -0.5, '& .MuiBadge-badge': { bgcolor: '#8B0000', color: '#fff' } }} />
+                      </Box>
+                    </MenuItem>
+                    <MenuItem onClick={() => { handleClose(); navigate('/balance'); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography fontWeight={600}>Баланс: {walletPreview}</Typography>
+                        <Box component="img" src="/coins.png" alt="coins" sx={{ width: 16, height: 16 }} />
+                      </Box>
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={() => { handleClose(); window.dispatchEvent(new CustomEvent('openProfileEditModal')); }}>
+                      <Typography>Изменить профиль</Typography>
+                    </MenuItem>
+                  </Menu>
                 </Box>
               ) : (
                 <Button
@@ -350,6 +414,7 @@ const Navbar: React.FC = () => {
       </Drawer>
 
       <Toolbar /> {/* Spacer for fixed AppBar */}
+      <NotificationCenter open={showNotificationCenter} onClose={() => setShowNotificationCenter(false)} userId={user?.id || null} />
     </motion.div>
   );
 };

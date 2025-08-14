@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       await client.connect();
-      const result = await client.query('SELECT id, name, description, category FROM benefits ORDER BY category, name');
+      const result = await client.query('SELECT id, name, description, category, COALESCE(price_coins, 0) AS price_coins FROM benefits ORDER BY category, name');
       await client.end();
       return res.status(200).json({ benefits: result.rows });
     } catch (error) {

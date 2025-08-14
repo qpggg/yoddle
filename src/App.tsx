@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
 import { theme } from './theme';
 import Navbar from './components/Navbar';
+import ProfileEditModal from './components/ProfileEditModal';
 import { Hero } from './components/Hero';
 import { About } from './components/About';
 import { Benefits } from './components/Benefits';
@@ -23,11 +24,13 @@ import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
+import BalancePage from './pages/Balance';
 import ContactsPage from './pages/Contacts';
 import TermsPage from './pages/Terms';
 import PrivacyPage from './pages/Privacy';
 import ToastNotification, { useToast } from './components/ToastNotification';
 import React, { createContext, useContext } from 'react';
+import { useUser } from './hooks/useUser';
 
 // Контекст для Toast уведомлений
 const ToastContext = createContext<ReturnType<typeof useToast> | undefined>(undefined);
@@ -66,6 +69,22 @@ const HomePage = () => (
   </Box>
 );
 
+// Глобальная модалка редактирования профиля (доступна на любой странице)
+const GlobalProfileEditModal: React.FC = () => {
+  const { user, setUser } = useUser();
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('openProfileEditModal', handler as EventListener);
+    return () => window.removeEventListener('openProfileEditModal', handler as EventListener);
+  }, []);
+
+  return (
+    <ProfileEditModal open={open} onClose={() => setOpen(false)} user={user} setUser={setUser} />
+  );
+};
+
 const App = () => {
   return (
     <ThemeProvider theme={theme}>
@@ -75,6 +94,8 @@ const App = () => {
           <ScrollToTop />
           <Box>
             <Navbar />
+            {/* Глобальная модалка редактирования профиля, доступна на любой странице */}
+            <GlobalProfileEditModal />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
@@ -90,6 +111,7 @@ const App = () => {
               <Route path="/my-benefits" element={<MyBenefits />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/preferences" element={<Preferences />} />
+              <Route path="/balance" element={<BalancePage />} />
             </Routes>
             <Footer />
           </Box>

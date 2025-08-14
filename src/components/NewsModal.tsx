@@ -36,7 +36,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/news?action=modal-data&limit=10');
+      const response = await fetch('/api/news/modal-data?limit=10');
       const data = await response.json();
       
       if (data.success) {
