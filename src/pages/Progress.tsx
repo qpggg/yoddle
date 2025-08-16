@@ -288,14 +288,12 @@ const Progress: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const loadRealProgress = async () => {
-    if (!user?.id) return;
-    
     setLoading(true);
     try {
       // Параллельная загрузка данных
       const [progressResponse, benefitsResponse] = await Promise.all([
-        fetch(`/api/progress?user_id=${user.id}`),
-        fetch(`/api/user-benefits?user_id=${user.id}`)
+        fetch(`/api/progress?user_id=${user?.id || 1}`),
+        fetch(`/api/user-benefits?user_id=${user?.id || 1}`)
       ]);
       
       if (progressResponse.ok && benefitsResponse.ok) {
@@ -340,8 +338,9 @@ const Progress: React.FC = () => {
   };
 
   useEffect(() => {
+    console.log('Progress page mounted, loading data...');
     loadRealProgress();
-  }, [user?.id]);
+  }, []);
 
   if (loading) {
     return (

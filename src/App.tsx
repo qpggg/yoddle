@@ -24,6 +24,7 @@ import Profile from './pages/Profile';
 import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
+import Productivity from './pages/Productivity';
 import BalancePage from './pages/Balance';
 import ContactsPage from './pages/Contacts';
 import TermsPage from './pages/Terms';
@@ -107,6 +108,7 @@ const App = () => {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/productivity" element={<Productivity />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/my-benefits" element={<MyBenefits />} />
               <Route path="/progress" element={<Progress />} />

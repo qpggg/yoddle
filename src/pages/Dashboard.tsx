@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Box } from '@mui/material';
 import { 
-  UserCircle, 
-  Gift, 
+  Brain, 
+  Zap, 
   Bell,
   Newspaper,
-  Star
+  Star,
+  UserCircle,
+  Gift
 } from 'lucide-react';
 import { FaRocket, FaBolt, FaStar, FaCrown } from 'react-icons/fa';
 import { GiCrystalShine } from 'react-icons/gi';
@@ -525,10 +528,196 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{
+            background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+            border: '2px solid #8B000020',
+            borderRadius: '16px',
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+            cursor: 'pointer'
+          }}
+          onClick={() => navigate('/productivity')}
         >
-          <h2>Быстрые действия</h2>
-          {/* По запросу: временно оставляем карточку пустой для будущих сценариев */}
-          <div className="actions-grid" />
+          {/* Декоративные элементы */}
+          <div style={{
+            position: 'absolute',
+            top: -30,
+            right: -30,
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            background: 'rgba(139,0,0,0.05)',
+            zIndex: 0
+          }} />
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, justifyContent: 'center' }}>
+              <Box sx={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(139,0,0,0.3)'
+              }}>
+                <Brain size={24} color="#fff" />
+              </Box>
+              <h2 style={{ color: '#1A1A1A', margin: 0 }}>ИИ Продуктивность</h2>
+            </Box>
+            
+            {/* Анимированная иконка AI */}
+            <motion.div
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem',
+                boxShadow: '0 8px 24px rgba(139,0,0,0.3)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              animate={{
+                boxShadow: [
+                  '0 8px 24px rgba(139,0,0,0.3)',
+                  '0 12px 32px rgba(139,0,0,0.4)',
+                  '0 8px 24px rgba(139,0,0,0.3)'
+                ],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+              whileHover={{
+                scale: 1.1,
+                rotate: 0,
+                transition: { duration: 0.3 }
+              }}
+            >
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                  borderRadius: '20px'
+                }}
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.7, 0.3]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
+              />
+              
+              {/* Пульсирующие частицы */}
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  width: '6px',
+                  height: '6px',
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderRadius: '50%',
+                  top: '20%',
+                  left: '30%'
+                }}
+                animate={{
+                  scale: [0, 1, 0],
+                  opacity: [0, 1, 0]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay: 0.5
+                }}
+              />
+              
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  width: '4px',
+                  height: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.6)',
+                  borderRadius: '50%',
+                  bottom: '25%',
+                  right: '25%'
+                }}
+                animate={{
+                  scale: [0, 1, 0],
+                  opacity: [0, 1, 0]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay: 1
+                }}
+              />
+              
+              <motion.div
+                animate={{
+                  rotate: [0, 360]
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'linear'
+                }}
+                style={{ position: 'relative', zIndex: 1 }}
+              >
+                <Zap size={40} color="#fff" />
+              </motion.div>
+            </motion.div>
+            
+            <p style={{ 
+              color: '#666', 
+              marginBottom: '1.5rem', 
+              fontSize: '1rem',
+              lineHeight: '1.4'
+            }}>
+              "Узнайте больше о своей продуктивности с помощью ИИ-аналитики!"
+            </p>
+            
+            <motion.button
+              style={{
+                background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 24px',
+                fontWeight: 600,
+                fontSize: '16px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(139,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                margin: '0 auto'
+              }}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: '0 6px 20px rgba(139,0,0,0.4)'
+              }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/productivity');
+              }}
+            >
+              Начать анализ
+              <Bell size={18} style={{ marginLeft: '4px' }} />
+            </motion.button>
+          </div>
         </motion.div>
 
         <motion.div 

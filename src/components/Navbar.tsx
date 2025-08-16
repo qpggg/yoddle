@@ -17,6 +17,7 @@ const navItems = [
 ];
 
 const authNavItems = [
+  { title: 'Продуктивность', path: '/productivity' },
   { title: 'Мои льготы', path: '/my-benefits' },
   { title: 'Прогресс', path: '/progress' },
   { title: 'Предпочтения', path: '/preferences' }
