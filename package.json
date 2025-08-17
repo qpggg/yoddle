@@ -28,6 +28,7 @@
     "setup-local": "node setup_local_development.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.18.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.15.10",
@@ -38,6 +39,7 @@
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "framer-motion": "^11.18.2",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.511.0",
     "mysql2": "^3.14.1",
     "node-fetch": "^3.3.2",

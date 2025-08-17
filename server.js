@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
+import aiRouter from './api/ai.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 import { createDbClient, getDbClient } from './db.js';
 import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
@@ -1486,6 +1487,18 @@ app.post('/api/feedback', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Подключаем AI API
+app.use('/api/ai', aiRouter);
+
 // Подключаем API новостей
 app.use('/api/news', newsRouter);
 
@@ -1503,6 +1516,7 @@ app.listen(PORT, HOST, () => {
     console.log('📊 Database: DSN present');
   }
   
+  console.log(`🤖 AI API: Available at /api/ai`);
   console.log(`📰 News API: Available at /api/news`);
   console.log(`👤 Profile API: Available at /api/profile`);
   console.log(`📢 Notifications API: Available at /api/notifications`);
