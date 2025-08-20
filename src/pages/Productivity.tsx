@@ -1,28 +1,199 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
-import { useNavigate } from 'react-router-dom';
+
+import { useAI } from '../hooks/useAI';
 import {
-  TrendingUpIcon,
   BrainIcon,
   HeartIcon,
   SparklesIcon,
-  ChartBarIcon,
   LightbulbIcon,
   ArrowRightIcon,
   UserCheckIcon,
-  SunIcon,
   BarChart3Icon,
-  MessageSquareIcon,
   ZapIcon,
   ActivityIcon,
   StarIcon,
   ShieldCheckIcon,
   TrophyIcon,
   FlameIcon,
-  GemIcon
+  GemIcon,
+  BriefcaseIcon,
+  BookOpenIcon,
+  Building2Icon,
+  GraduationCapIcon,
+  CheckIcon,
+  XIcon,
+  PartyPopperIcon,
+  TargetIcon,
+  RocketIcon,
+  TrendingUpIcon
 } from 'lucide-react';
+
+// Компонент для отображения AI ответов с иконками
+interface AIResponseDisplayProps {
+  response: string;
+  isWeekly?: boolean; // true для недельного инсайта, false для обычного анализа
+}
+
+const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekly = false }) => {
+  // Добавляем отладочную информацию
+  console.log('AIResponseDisplay получил ответ:', response);
+  
+  // Функция для замены XML-тегов на иконки и форматирования
+  const formatAIResponse = (text: string) => {
+    if (!text) return text;
+
+    console.log('Форматируем текст:', text);
+
+    // Заменяем XML-теги на иконки и форматирование
+    let formattedText = text
+      // Основные теги для недельного инсайта
+      .replace(/<answer>/g, '')
+      .replace(/<\/answer>/g, '')
+      
+      // Эмоциональные реакции
+      .replace(/<emotional_reaction>/g, 'EMOTION ')
+      .replace(/<\/emotional_reaction>/g, '\n\n')
+      
+      // Анализ ситуации
+      .replace(/<situation_analysis>/g, 'ANALYSIS ')
+      .replace(/<\/situation_analysis>/g, '\n\n')
+      
+      // Советы
+      .replace(/<advice>/g, 'ADVICE ')
+      .replace(/<\/advice>/g, '\n\n')
+      
+      // Прогноз
+      .replace(/<forecast>/g, 'FORECAST ')
+      .replace(/<\/forecast>/g, '\n\n')
+      
+      // Недельный инсайт
+      .replace(/<weekly_insight>/g, 'WEEKLY ')
+      .replace(/<\/weekly_insight>/g, '\n\n')
+      
+      // Поддержка
+      .replace(/<encouragement>/g, 'SUPPORT ')
+      .replace(/<\/encouragement>/g, '\n\n')
+      
+      // Конкретный совет
+      .replace(/<specific_advice>/g, 'SPECIFIC ')
+      .replace(/<\/specific_advice>/g, '\n\n')
+      
+      // Мотивация
+      .replace(/<motivation>/g, 'MOTIVATION ')
+      .replace(/<\/motivation>/g, '\n\n')
+      
+      // Убираем лишние переносы строк
+      .replace(/\n\n+/g, '\n\n')
+      .trim();
+
+    console.log('Отформатированный текст:', formattedText);
+    return formattedText;
+  };
+
+  const formattedResponse = formatAIResponse(response);
+
+  // Проверяем, есть ли XML-теги в ответе
+  const hasXMLTags = /<[^>]+>/.test(response);
+  
+  if (!hasXMLTags) {
+    // Если нет XML-тегов, отображаем как обычный текст
+    return (
+      <Typography 
+        variant="body1" 
+        sx={{ 
+          color: isWeekly ? '#fff' : '#1A1A1A',
+          fontWeight: 500,
+          lineHeight: 1.8,
+          whiteSpace: 'pre-wrap'
+        }}
+      >
+        {response}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box sx={{ 
+      textAlign: 'left',
+      lineHeight: 1.8
+    }}>
+      {formattedResponse.split('\n\n').map((section, index) => {
+        if (!section.trim()) return null;
+        
+        // Определяем тип секции по ключевому слову
+        const sectionType = section.split(' ')[0];
+        let icon = null;
+        
+        switch (sectionType) {
+          case 'EMOTION':
+            icon = <PartyPopperIcon size={20} color="#FF6B6B" />;
+            break;
+          case 'ANALYSIS':
+            icon = <BrainIcon size={20} color="#4ECDC4" />;
+            break;
+          case 'ADVICE':
+            icon = <LightbulbIcon size={20} color="#FFD93D" />;
+            break;
+          case 'FORECAST':
+            icon = <GemIcon size={20} color="#A8E6CF" />;
+            break;
+          case 'WEEKLY':
+            icon = <BarChart3Icon size={20} color="#6C5CE7" />;
+            break;
+          case 'SUPPORT':
+            icon = <TargetIcon size={20} color="#FD79A8" />;
+            break;
+          case 'SPECIFIC':
+            icon = <RocketIcon size={20} color="#00B894" />;
+            break;
+          case 'MOTIVATION':
+            icon = <StarIcon size={20} color="#FDCB6E" />;
+            break;
+          default:
+            icon = <SparklesIcon size={20} color="#fff" />;
+        }
+
+        return (
+          <Box 
+            key={index} 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              gap: 2, 
+              mb: 2
+            }}
+          >
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              flexShrink: 0,
+              mt: 0.5
+            }}>
+              {icon}
+            </Box>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                flex: 1,
+                color: isWeekly ? '#fff' : '#1A1A1A',
+                fontWeight: 500,
+                lineHeight: 1.6
+              }}
+            >
+              {section.replace(/^(EMOTION|ANALYSIS|ADVICE|FORECAST|WEEKLY|SUPPORT|SPECIFIC|MOTIVATION)\s+/, '').trim()}
+            </Typography>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
 
 // Анимационные варианты
 const containerVariants = {
@@ -69,14 +240,7 @@ interface WeeklyMood {
   stress: number;
 }
 
-interface PersonalInsight {
-  id: string;
-  title: string;
-  description: string;
-  type: 'positive' | 'neutral' | 'warning';
-  icon: React.ReactNode;
-  actionable: boolean;
-}
+
 
 interface MoodEntry {
   mood: number;
@@ -221,11 +385,16 @@ const AnimatedMoodIndicator: React.FC<{ value: number; label: string; color: str
 
 const Productivity: React.FC = () => {
   const { user } = useUser();
-  const navigate = useNavigate();
+  const { 
+    dailyInsight, 
+    loading: aiLoading, 
+    analyzeMood,
+    logActivity,
+    generateDailyInsight
+  } = useAI();
   
   // Состояния
   const [weeklyMood, setWeeklyMood] = useState<WeeklyMood[]>([]);
-  const [insights, setInsights] = useState<PersonalInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
@@ -236,6 +405,21 @@ const Productivity: React.FC = () => {
     notes: ''
   });
   const [lastAnalysis, setLastAnalysis] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [lastActivities, setLastActivities] = useState<{[key: string]: string}>({});
+  
+  // Состояния для логирования активностей
+  const [activityEntry, setActivityEntry] = useState({
+    activity: '',
+    category: 'work',
+    duration: 60,
+    success: true,
+    notes: '',
+    mood: 7,
+    energy: 7,
+    stress: 3
+  });
 
   // Загрузка данных при монтировании
   useEffect(() => {
@@ -246,10 +430,10 @@ const Productivity: React.FC = () => {
   const loadProductivityData = async () => {
     setLoading(true);
     try {
-      // Имитация загрузки данных - здесь будут реальные API вызовы
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Используем реальные AI данные
+      await generateDailyInsight();
       
-      // Мок данные настроения за неделю
+      // Mock данные настроения за неделю (пока не реализовано в API)
       const mockWeeklyMood: WeeklyMood[] = [
         { day: 'Пн', mood: 6, energy: 7, stress: 4 },
         { day: 'Вт', mood: 8, energy: 8, stress: 2 },
@@ -260,38 +444,18 @@ const Productivity: React.FC = () => {
         { day: 'Вс', mood: 8, energy: 6, stress: 3 }
       ];
       
-      // Мок персональных инсайтов
-      const mockInsights: PersonalInsight[] = [
-        {
-          id: '1',
-          title: 'Отличная динамика настроения',
-          description: 'Ваше настроение стабильно растёт. Особенно продуктивны вы во вторник и четверг утром.',
-          type: 'positive',
-          icon: <TrendingUpIcon size={24} />,
-          actionable: true
-        },
-        {
-          id: '2',
-          title: 'Рекомендуем отдых',
-          description: 'Уровень стресса в середине недели повышается. Попробуйте медитацию или прогулку.',
-          type: 'warning',
-          icon: <HeartIcon size={24} />,
-          actionable: true
-        },
-        {
-          id: '3',
-          title: 'Пик энергии утром',
-          description: 'Планируйте сложные задачи на первую половину дня - это ваше золотое время.',
-          type: 'neutral',
-          icon: <SunIcon size={24} />,
-          actionable: true
-        }
-      ];
-      
       setWeeklyMood(mockWeeklyMood);
-      setInsights(mockInsights);
+      
+      // Загружаем последние активности по категориям (пока используем mock данные)
+      setLastActivities({
+        work: 'Завершение проекта Yoddle',
+        health: 'Утренняя пробежка 5км',
+        learning: 'Изучение React Hooks'
+      });
     } catch (error) {
       console.error('Error loading productivity data:', error);
+      setSnackbarMessage('Ошибка загрузки данных');
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
@@ -300,42 +464,100 @@ const Productivity: React.FC = () => {
   const handleQuickMoodSubmit = async () => {
     setSubmitting(true);
     try {
-      // Здесь будет отправка данных в API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Проверяем, является ли это логированием активности
+      if (moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('activity_form:') || 
+          moodEntry.notes.startsWith('Работа: ') || 
+          moodEntry.notes.startsWith('Спорт & Здоровье: ') || 
+          moodEntry.notes.startsWith('Обучение: ')) {
+        
+        // Определяем категорию активности
+        let category = activityEntry.category;
+        if (moodEntry.notes.startsWith('Работа: ')) category = 'work';
+        if (moodEntry.notes.startsWith('Спорт & Здоровье: ')) category = 'health';
+        if (moodEntry.notes.startsWith('Обучение: ')) category = 'learning';
+        
+        // Извлекаем название активности из заметок
+        let activityName = '';
+        if (moodEntry.notes === 'activity_form') {
+          activityName = 'Общая активность';
+        } else if (moodEntry.notes.startsWith('activity_form:')) {
+          activityName = moodEntry.notes.replace('activity_form:', '').trim();
+        } else {
+          activityName = moodEntry.notes.replace(/^(Работа|Спорт & Здоровье|Обучение): /, '').trim();
+        }
+        
+        if (activityName && activityName !== 'Общая активность') {
+          // Отправляем активность в AI API
+          const activityResponse = await logActivity({
+            activity: activityName,
+            category: category,
+            duration: activityEntry.duration,
+            success: activityEntry.success,
+            notes: activityEntry.notes
+          });
+          
+          // Показываем AI ответ как уведомление
+          if (activityResponse) {
+            setSnackbarMessage(activityResponse);
+          } else {
+            setSnackbarMessage('Активность залогирована и проанализирована!');
+          }
+        } else if (activityName === 'Общая активность') {
+          setSnackbarMessage('Пожалуйста, укажите название активности');
+        } else {
+          setSnackbarMessage('Пожалуйста, укажите название активности');
+        }
+      } else {
+        // Обычное логирование настроения
+        const analysis = await analyzeMood({
+          mood: moodEntry.mood,
+          activities: ['daily_mood_check'],
+          notes: moodEntry.notes,
+          stressLevel: moodEntry.stress
+        });
+        
+        setLastAnalysis(analysis || 'AI проанализировал ваше настроение!');
+        setSnackbarMessage('AI проанализировал ваше настроение!');
+      }
       
-      // Мок ответа от AI
-      const aiResponse = generateAIResponse(moodEntry);
-      setLastAnalysis(aiResponse);
+      setSnackbarOpen(true);
       
-      // Сброс формы
-      setMoodEntry({
-        mood: 7,
-        energy: 7,
-        stress: 3,
-        notes: ''
-      });
-      setShowQuickEntry(false);
+      // Добавляем задержку перед сбросом формы, чтобы пользователь увидел ответ
+      setTimeout(() => {
+        // Сброс формы
+        setMoodEntry({
+          mood: 7,
+          energy: 7,
+          stress: 3,
+          notes: ''
+        });
+        setActivityEntry({
+          activity: '',
+          category: 'work',
+          duration: 60,
+          success: true,
+          notes: '',
+          mood: 7,
+          energy: 7,
+          stress: 3
+        });
+        setShowQuickEntry(false);
+      }, 2000); // 2 секунды задержки
       
       // Перезагрузка данных
       await loadProductivityData();
     } catch (error) {
-      console.error('Error submitting mood:', error);
+      console.error('Error submitting data:', error);
+      setSnackbarMessage('Ошибка отправки данных');
+      setSnackbarOpen(true);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const generateAIResponse = (entry: MoodEntry): string => {
-    if (entry.mood >= 8 && entry.stress <= 3) {
-      return "Отлично! Вы в прекрасном настроении и низком стрессе. Это идеальное время для новых проектов и амбициозных задач!";
-    } else if (entry.stress >= 7) {
-      return "Замечаю высокий уровень стресса. Рекомендую воспользоваться корпоративным психологом или массажем для восстановления баланса.";
-    } else if (entry.energy <= 4) {
-      return "Низкая энергия может быть признаком переутомления. Рассмотрите фитнес-абонемент или витаминный комплекс для восстановления сил.";
-    } else {
-      return "Хорошие показатели! Продолжайте в том же духе и не забывайте про важный баланс между работой и отдыхом.";
-    }
-  };
+
+
+
 
   const calculateAverageFromWeek = () => {
     if (weeklyMood.length === 0) return { mood: 0, energy: 0, stress: 0 };
@@ -353,13 +575,7 @@ const Productivity: React.FC = () => {
     };
   };
 
-  const getInsightColor = (type: string) => {
-    switch (type) {
-      case 'positive': return '#8B0000';
-      case 'warning': return '#B71C1C';
-      default: return '#A0000A';
-    }
-  };
+
 
   const averages = calculateAverageFromWeek();
 
@@ -889,18 +1105,28 @@ const Productivity: React.FC = () => {
                 </Box>
                 
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, lineHeight: 1.4 }}>
-                  Вы наиболее продуктивны во вторник и четверг утром
+                  {dailyInsight ? 'AI Анализ недели' : 'Загрузка AI анализа...'}
                 </Typography>
                 
-                <Typography variant="body1" sx={{ opacity: 0.9, lineHeight: 1.6 }}>
-                  ИИ-анализ показывает, что ваш пик энергии приходится на начало недели. 
-                  Планируйте важные встречи и сложные задачи на вторник и четверг до 12:00.
-                </Typography>
+                <Box sx={{ opacity: 0.9, lineHeight: 1.6 }}>
+                  {aiLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} color="inherit" />
+                      AI анализирует ваши данные...
+                    </Box>
+                  ) : dailyInsight ? (
+                    <AIResponseDisplay response={dailyInsight} isWeekly={true} />
+                  ) : (
+                    <Typography variant="body1" sx={{ color: 'inherit' }}>
+                      AI анализирует ваши данные и готовит персональные инсайты. Продолжайте вести дневник настроения!
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Paper>
           </motion.div>
 
-          {/* Персональные инсайты */}
+          {/* Логирование активностей */}
           <motion.div variants={itemVariants} style={{ marginBottom: '3rem' }}>
             <Typography variant="h4" sx={{ 
               fontWeight: 800, 
@@ -927,100 +1153,284 @@ const Productivity: React.FC = () => {
                 }}
                 style={{ display: 'inline-block' }}
               >
-                <ChartBarIcon size={32} color="#8B0000" />
+                <ActivityIcon size={32} color="#8B0000" />
               </motion.div>
-              Персональные инсайты
+              Логирование активностей
             </Typography>
             
             <Grid container spacing={3}>
-              {insights.map((insight) => (
-                <Grid item xs={12} md={6} key={insight.id}>
-                  <motion.div
-                    whileHover={{ 
-                      y: -8,
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                      transition: { duration: 0.3 }
-                    }}
-                  >
-                    <Paper elevation={0} sx={{
-                      ...cardStyle,
-                      borderLeft: `6px solid ${getInsightColor(insight.type)}`,
-                      position: 'relative'
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                        <motion.div
-                          animate={
-                            insight.id === '1' ? {
-                              y: [0, -2, 0],
-                              scale: [1, 1.02, 1]
-                            } : insight.id === '2' ? {
-                              x: [0, 1, -1, 0],
-                              rotate: [0, 0.5, -0.5, 0]
-                            } : {
-                              scale: [1, 1.03, 0.98, 1],
-                              rotate: [0, 1, 0]
-                            }
-                          }
-                          transition={{ 
-                            duration: insight.id === '1' ? 2.5 : insight.id === '2' ? 3.2 : 2.8,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: insight.id === '1' ? 0 : insight.id === '2' ? 0.8 : 1.6
-                          }}
-                          whileHover={{
-                            scale: 1.08,
-                            y: insight.id === '1' ? -3 : insight.id === '2' ? 0 : -1,
-                            rotate: insight.id === '1' ? 0 : insight.id === '2' ? 3 : 2,
-                            transition: { duration: 0.2 }
-                          }}
-                        >
-                          <Box sx={{
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '12px',
-                            background: `${getInsightColor(insight.type)}15`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: getInsightColor(insight.type),
-                            boxShadow: `0 4px 12px ${getInsightColor(insight.type)}20`
-                          }}>
-                            {insight.icon}
-                          </Box>
-                        </motion.div>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1A1A1A' }}>
-                            {insight.title}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6 }}>
-                            {insight.description}
-                          </Typography>
+              {/* Карточка 1: Работа */}
+              <Grid item xs={12} md={6}>
+                <motion.div
+                  whileHover={{ 
+                    y: -8,
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  <Paper elevation={0} sx={{
+                    ...cardStyle,
+                    borderLeft: '6px solid #8B0000',
+                    position: 'relative',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setActivityEntry({...activityEntry, category: 'work'});
+                    setShowQuickEntry(true);
+                    // Устанавливаем специальный режим для логирования активности
+                    setMoodEntry({...moodEntry, notes: 'Работа: '});
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                      <motion.div
+                        animate={{ 
+                          y: [0, -2, 0],
+                          scale: [1, 1.02, 1]
+                        }}
+                        transition={{ 
+                          duration: 2.5,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        whileHover={{
+                          scale: 1.08,
+                          y: -3,
+                          transition: { duration: 0.2 }
+                        }}
+                      >
+                        <Box sx={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '12px',
+                          background: '#8B000015',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#8B0000',
+                          boxShadow: '0 4px 12px #8B000020'
+                        }}>
+                          <BriefcaseIcon size={24} />
                         </Box>
+                      </motion.div>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1A1A1A' }}>
+                          Работа
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6, mb: 2 }}>
+                          Записать завершение проекта, встречу или задачу. AI проанализирует вашу продуктивность и даст рекомендации.
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          color: '#8B0000', 
+                          fontWeight: 600, 
+                          fontSize: '0.9rem',
+                          fontStyle: 'italic'
+                        }}>
+                          Последняя активность: {lastActivities.work}
+                        </Typography>
                       </Box>
-                      
-                      {insight.actionable && (
-                        <Button
-                          variant="text"
-                          endIcon={<ArrowRightIcon size={16} />}
-                          onClick={() => navigate('/preferences')}
-                          sx={{
-                            color: getInsightColor(insight.type),
-                            fontWeight: 600,
-                            mt: 1,
-                            textTransform: 'none',
-                            '&:hover': {
-                              background: `${getInsightColor(insight.type)}10`
-                            }
-                          }}
-                        >
-                          Настроить предпочтения
-                        </Button>
-                      )}
-                    </Paper>
-                  </motion.div>
-                </Grid>
-              ))}
+                    </Box>
+                    
+                    <Button
+                      variant="text"
+                      endIcon={<ArrowRightIcon size={16} />}
+                      sx={{
+                        color: '#8B0000',
+                        fontWeight: 600,
+                        mt: 1,
+                        textTransform: 'none',
+                        '&:hover': {
+                          background: '#8B000010'
+                        }
+                      }}
+                    >
+                      Записать активность
+                    </Button>
+                  </Paper>
+                </motion.div>
+              </Grid>
+
+              {/* Карточка 2: Спорт/Здоровье */}
+              <Grid item xs={12} md={6}>
+                <motion.div
+                  whileHover={{ 
+                    y: -8,
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  <Paper elevation={0} sx={{
+                    ...cardStyle,
+                    borderLeft: '6px solid #B71C1C',
+                    position: 'relative',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setActivityEntry({...activityEntry, category: 'health'});
+                    setShowQuickEntry(true);
+                    // Устанавливаем специальный режим для логирования активности
+                    setMoodEntry({...moodEntry, notes: 'Спорт & Здоровье: '});
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                      <motion.div
+                        animate={{ 
+                          x: [0, 1, -1, 0],
+                          rotate: [0, 0.5, -0.5, 0]
+                        }}
+                        transition={{ 
+                          duration: 3.2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        whileHover={{
+                          scale: 1.08,
+                          x: 0,
+                          rotate: 3,
+                          transition: { duration: 0.2 }
+                        }}
+                      >
+                        <Box sx={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '12px',
+                          background: '#B71C1C15',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#B71C1C',
+                          boxShadow: '0 4px 12px #B71C1C20'
+                        }}>
+                          <HeartIcon size={24} />
+                        </Box>
+                      </motion.div>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1A1A1A' }}>
+                          Спорт & Здоровье
+                        </Typography>
+                                                 <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6, mb: 2 }}>
+                           Записать тренировку, прогулку или здоровые привычки. AI оценит ваш прогресс и предложит мотивацию.
+                         </Typography>
+                         <Typography variant="body2" sx={{ 
+                           color: '#B71C1C', 
+                           fontWeight: 600, 
+                           fontSize: '0.9rem',
+                           fontStyle: 'italic'
+                         }}>
+                           Последняя активность: {lastActivities.health}
+                         </Typography>
+                       </Box>
+                     </Box>
+                    
+                    <Button
+                      variant="text"
+                      endIcon={<ArrowRightIcon size={16} />}
+                      sx={{
+                        color: '#B71C1C',
+                        fontWeight: 600,
+                        mt: 1,
+                        textTransform: 'none',
+                        '&:hover': {
+                          background: '#B71C1C10'
+                        }
+                      }}
+                    >
+                      Записать активность
+                    </Button>
+                  </Paper>
+                </motion.div>
+              </Grid>
+
+              {/* Карточка 3: Обучение */}
+              <Grid item xs={12} md={6}>
+                <motion.div
+                  whileHover={{ 
+                    y: -8,
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  <Paper elevation={0} sx={{
+                    ...cardStyle,
+                    borderLeft: '6px solid #A0000A',
+                    position: 'relative',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setActivityEntry({...activityEntry, category: 'learning'});
+                    setShowQuickEntry(true);
+                    // Устанавливаем специальный режим для логирования активности
+                    setMoodEntry({...moodEntry, notes: 'Обучение: '});
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.03, 0.98, 1],
+                          rotate: [0, 1, 0]
+                        }}
+                        transition={{ 
+                          duration: 2.8,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        whileHover={{
+                          scale: 1.08,
+                          rotate: 2,
+                          transition: { duration: 0.2 }
+                        }}
+                      >
+                        <Box sx={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '12px',
+                          background: '#A0000A15',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#A0000A',
+                          boxShadow: '0 4px 12px #A0000A20'
+                        }}>
+                          <BookOpenIcon size={24} />
+                        </Box>
+                      </motion.div>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1A1A1A' }}>
+                          Обучение
+                        </Typography>
+                                                 <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6, mb: 2 }}>
+                           Записать изучение нового навыка, чтение книги или курс. AI проанализирует ваш рост и даст советы.
+                         </Typography>
+                         <Typography variant="body2" sx={{ 
+                           color: '#A0000A', 
+                           fontWeight: 600, 
+                           fontSize: '0.9rem',
+                           fontStyle: 'italic'
+                         }}>
+                           Последняя активность: {lastActivities.learning}
+                         </Typography>
+                       </Box>
+                     </Box>
+                    
+                    <Button
+                      variant="text"
+                      endIcon={<ArrowRightIcon size={16} />}
+                      sx={{
+                        color: '#A0000A',
+                        fontWeight: 600,
+                        mt: 1,
+                        textTransform: 'none',
+                        '&:hover': {
+                          background: '#A0000A10'
+                        }
+                      }}
+                    >
+                      Записать активность
+                    </Button>
+                  </Paper>
+                </motion.div>
+              </Grid>
             </Grid>
+
+
+
+
           </motion.div>
 
           {/* Call to Action */}
@@ -1064,7 +1474,7 @@ const Productivity: React.FC = () => {
                   mx: 'auto',
                   lineHeight: 1.6
                 }}>
-                  Поделитесь своими мыслями, и ИИ проанализирует данные, даст персональную обратную связь 
+                  Поделитесь своими мыслями или запишите активность, и ИИ проанализирует данные, даст персональную обратную связь 
                   и предложит подходящие льготы
                 </Typography>
 
@@ -1160,10 +1570,10 @@ const Productivity: React.FC = () => {
                       <Button
                         variant="outlined"
                         size="large"
-                        startIcon={<MessageSquareIcon size={20} />}
+                        startIcon={<ActivityIcon size={20} />}
                         onClick={() => {
                           setShowQuickEntry(true);
-                          setMoodEntry({...moodEntry, notes: 'Мои мысли на сегодня: '});
+                          setMoodEntry({...moodEntry, notes: 'activity_form'});
                         }}
                         sx={{
                           borderColor: '#8B0000',
@@ -1197,7 +1607,7 @@ const Productivity: React.FC = () => {
                           }
                         }}
                       >
-                        Просто записать мысли
+                        Записать активность
                       </Button>
                     </motion.div>
                   </Box>
@@ -1209,168 +1619,543 @@ const Productivity: React.FC = () => {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.5 }}
                     >
-                      <Card sx={{ maxWidth: '600px', mx: 'auto', p: 3 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'left' }}>
-                          Быстрая оценка состояния
+                      <Card sx={{ 
+                        maxWidth: '700px', 
+                        mx: 'auto', 
+                        p: 4,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                        borderRadius: '24px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.1), 0 8px 32px rgba(139,0,0,0.1)',
+                        border: '2px solid rgba(139,0,0,0.1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '4px',
+                          background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #A0000A 100%)',
+                          zIndex: 1
+                        }
+                      }}>
+                        <Typography variant="h5" sx={{ 
+                          fontWeight: 800, 
+                          mb: 4, 
+                          textAlign: 'center', 
+                          color: '#1A1A1A',
+                          background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          textShadow: '0 2px 4px rgba(139,0,0,0.1)'
+                        }}>
+                          {moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ') 
+                            ? 'Записать активность' 
+                            : 'Быстрая оценка состояния'}
                         </Typography>
                         
-                        <Box sx={{ mb: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Box sx={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '10px',
-                              background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 4px 12px rgba(139,0,0,0.3)'
-                            }}>
-                              <UserCheckIcon size={20} color="#fff" />
-                            </Box>
-                            <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1 }}>
-                              Настроение: {moodEntry.mood}/10
-                            </Typography>
-                          </Box>
-                          <Slider
-                            value={moodEntry.mood}
-                            onChange={(_, value) => setMoodEntry({...moodEntry, mood: value as number})}
-                            min={1} max={10} step={1}
-                            sx={{
-                              color: '#8B0000',
-                              height: 8,
-                              '& .MuiSlider-track': {
-                                background: 'linear-gradient(90deg, #8B0000 0%, #B22222 100%)',
-                                border: 'none',
-                                height: 8,
-                                borderRadius: 4
-                              },
-                              '& .MuiSlider-thumb': {
-                                width: 24,
-                                height: 24,
-                                backgroundColor: '#fff',
-                                border: '3px solid #8B0000',
-                                boxShadow: '0 4px 12px rgba(139,0,0,0.4)',
-                                '&:hover': {
-                                  boxShadow: '0 6px 16px rgba(139,0,0,0.5)'
+                        {/* Название активности */}
+                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                          <Box sx={{ mb: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <Box sx={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '16px',
+                                background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 8px 24px rgba(139,0,0,0.4)',
+                                position: 'relative',
+                                '&:before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '100%',
+                                  height: '100%',
+                                  borderRadius: '16px',
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                  zIndex: 0
                                 }
-                              },
-                              '& .MuiSlider-rail': {
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: '#f0f0f0'
-                              }
-                            }}
-                          />
-                        </Box>
-
-                        <Box sx={{ mb: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Box sx={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '10px',
-                              background: 'linear-gradient(135deg, #B22222 0%, #8B0000 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 4px 12px rgba(178,34,34,0.3)'
-                            }}>
-                              <FlameIcon size={20} color="#fff" />
+                              }}>
+                                <BriefcaseIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                              </Box>
+                              <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                                Название активности
+                              </Typography>
                             </Box>
-                            <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1 }}>
-                              Энергия: {moodEntry.energy}/10
-                            </Typography>
-                          </Box>
-                          <Slider
-                            value={moodEntry.energy}
-                            onChange={(_, value) => setMoodEntry({...moodEntry, energy: value as number})}
-                            min={1} max={10} step={1}
-                            sx={{
-                              color: '#B22222',
-                              height: 8,
-                              '& .MuiSlider-track': {
-                                background: 'linear-gradient(90deg, #B22222 0%, #8B0000 100%)',
-                                border: 'none',
-                                height: 8,
-                                borderRadius: 4
-                              },
-                              '& .MuiSlider-thumb': {
-                                width: 24,
-                                height: 24,
-                                backgroundColor: '#fff',
-                                border: '3px solid #B22222',
-                                boxShadow: '0 4px 12px rgba(178,34,34,0.4)',
-                                '&:hover': {
-                                  boxShadow: '0 6px 16px rgba(178,34,34,0.5)'
+                            <TextField
+                              fullWidth
+                              value={moodEntry.notes === 'activity_form' ? '' : moodEntry.notes.replace(/^(Работа|Спорт & Здоровье|Обучение): /, '')}
+                              onChange={(e) => {
+                                if (moodEntry.notes === 'activity_form') {
+                                  setMoodEntry({...moodEntry, notes: 'activity_form:' + e.target.value});
+                                } else {
+                                  const prefix = moodEntry.notes.startsWith('Работа: ') ? 'Работа: ' : 
+                                               moodEntry.notes.startsWith('Спорт & Здоровье: ') ? 'Спорт & Здоровье: ' : 'Обучение: ';
+                                  setMoodEntry({...moodEntry, notes: prefix + e.target.value});
                                 }
-                              },
-                              '& .MuiSlider-rail': {
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: '#f0f0f0'
-                              }
-                            }}
-                          />
-                        </Box>
+                              }}
+                              placeholder="Например: Завершение проекта, Тренировка, Изучение React"
+                              sx={{ 
+                                '& .MuiOutlinedInput-root': {
+                                  borderRadius: '16px',
+                                  backgroundColor: '#f8f9fa',
+                                  border: '2px solid transparent',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    backgroundColor: '#f0f2f5',
+                                    border: '2px solid #8B000020'
+                                  },
+                                  '&.Mui-focused': {
+                                    backgroundColor: '#fff',
+                                    border: '2px solid #8B0000',
+                                    boxShadow: '0 8px 24px rgba(139,0,0,0.15)'
+                                  }
+                                }
+                              }}
+                            />
+                          </Box>
+                        )}
 
-                        <Box sx={{ mb: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Box sx={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '10px',
-                              background: 'linear-gradient(135deg, #8B0000 0%, #A0000A 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 4px 12px rgba(220,20,60,0.3)'
-                            }}>
-                              <ActivityIcon size={20} color="#fff" />
+                        {/* Категория активности */}
+                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                          <Box sx={{ mb: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <Box sx={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '16px',
+                                background: 'linear-gradient(135deg, #A0000A 0%, #8B0000 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 8px 24px rgba(160,0,10,0.4)',
+                                position: 'relative',
+                                '&:before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '100%',
+                                  height: '100%',
+                                  borderRadius: '16px',
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                  zIndex: 0
+                                }
+                              }}>
+                                <BarChart3Icon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                              </Box>
+                              <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                                Категория активности
+                              </Typography>
                             </Box>
-                            <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1 }}>
-                              Стресс: {moodEntry.stress}/10
-                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <Button
+                                variant={activityEntry.category === 'work' ? 'contained' : 'outlined'}
+                                onClick={() => setActivityEntry({...activityEntry, category: 'work'})}
+                                sx={{
+                                  background: activityEntry.category === 'work' ? 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)' : 'transparent',
+                                  color: activityEntry.category === 'work' ? '#fff' : '#8B0000',
+                                  borderColor: '#8B0000',
+                                  borderRadius: '12px',
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  minWidth: '120px'
+                                }}
+                              >
+                                <Building2Icon size={16} style={{ marginRight: '8px' }} />
+                                Работа
+                              </Button>
+                              <Button
+                                variant={activityEntry.category === 'health' ? 'contained' : 'outlined'}
+                                onClick={() => setActivityEntry({...activityEntry, category: 'health'})}
+                                sx={{
+                                  background: activityEntry.category === 'health' ? 'linear-gradient(135deg, #B22222 0%, #8B0000 100%)' : 'transparent',
+                                  color: activityEntry.category === 'health' ? '#fff' : '#B22222',
+                                  borderColor: '#B22222',
+                                  borderRadius: '12px',
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  minWidth: '120px'
+                                }}
+                              >
+                                <HeartIcon size={16} style={{ marginRight: '8px' }} />
+                                Здоровье
+                              </Button>
+                              <Button
+                                variant={activityEntry.category === 'learning' ? 'contained' : 'outlined'}
+                                onClick={() => setActivityEntry({...activityEntry, category: 'learning'})}
+                                sx={{
+                                  background: activityEntry.category === 'learning' ? 'linear-gradient(135deg, #A0000A 0%, #8B0000 100%)' : 'transparent',
+                                  color: activityEntry.category === 'learning' ? '#fff' : '#A0000A',
+                                  borderColor: '#A0000A',
+                                  borderRadius: '12px',
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  minWidth: '120px'
+                                }}
+                              >
+                                <GraduationCapIcon size={16} style={{ marginRight: '8px' }} />
+                                Обучение
+                              </Button>
+                            </Box>
                           </Box>
-                          <Slider
-                            value={moodEntry.stress}
-                            onChange={(_, value) => setMoodEntry({...moodEntry, stress: value as number})}
-                            min={1} max={10} step={1}
-                            sx={{
-                              color: '#8B0000',
-                              height: 8,
-                              '& .MuiSlider-track': {
-                                background: 'linear-gradient(90deg, #8B0000 0%, #A0000A 100%)',
-                                border: 'none',
-                                height: 8,
-                                borderRadius: 4
-                              },
-                              '& .MuiSlider-thumb': {
-                                width: 24,
-                                height: 24,
-                                backgroundColor: '#fff',
-                                border: '3px solid #8B0000',
-                                boxShadow: '0 4px 12px rgba(220,20,60,0.4)',
-                                '&:hover': {
-                                  boxShadow: '0 6px 16px rgba(220,20,60,0.5)'
-                                }
-                              },
-                              '& .MuiSlider-rail': {
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: '#f0f0f0'
-                              }
-                            }}
-                          />
-                        </Box>
+                        )}
 
-                        <TextField
+                        {/* Длительность активности */}
+                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                          <Box sx={{ mb: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <Box sx={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '16px',
+                                background: 'linear-gradient(135deg, #B22222 0%, #8B0000 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 8px 24px rgba(178,34,34,0.4)',
+                                position: 'relative',
+                                '&:before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '100%',
+                                  height: '100%',
+                                  borderRadius: '16px',
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                  zIndex: 0
+                                }
+                              }}>
+                                <ActivityIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                              </Box>
+                              <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                                Длительность: {activityEntry.duration} минут
+                              </Typography>
+                            </Box>
+                            <Slider
+                              value={activityEntry.duration}
+                              onChange={(_, value) => setActivityEntry({...activityEntry, duration: value as number})}
+                              min={15} max={480} step={15}
+                              marks={[
+                                { value: 15, label: '15м' },
+                                { value: 60, label: '1ч' },
+                                { value: 120, label: '2ч' },
+                                { value: 240, label: '4ч' },
+                                { value: 480, label: '8ч' }
+                              ]}
+                              sx={{
+                                color: '#B22222',
+                                height: 8,
+                                '& .MuiSlider-track': {
+                                  background: 'linear-gradient(90deg, #B22222 0%, #8B0000 100%)',
+                                  border: 'none',
+                                  height: 8,
+                                  borderRadius: 4
+                                },
+                                '& .MuiSlider-thumb': {
+                                  width: 24,
+                                  height: 24,
+                                  backgroundColor: '#fff',
+                                  border: '3px solid #B22222',
+                                  boxShadow: '0 4px 12px rgba(178,34,34,0.4)',
+                                  '&:hover': {
+                                    boxShadow: '0 6px 16px rgba(178,34,34,0.5)'
+                                  }
+                                },
+                                '& .MuiSlider-rail': {
+                                  height: 8,
+                                  borderRadius: 4,
+                                  backgroundColor: '#f0f0f0'
+                                }
+                              }}
+                            />
+                          </Box>
+                        )}
+
+                        {/* Успешность активности */}
+                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                          <Box sx={{ mb: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <Box sx={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '16px',
+                                background: 'linear-gradient(135deg, #8B0000 0%, #A0000A 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 8px 24px rgba(220,20,60,0.4)',
+                                position: 'relative',
+                                '&:before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '100%',
+                                  height: '100%',
+                                  borderRadius: '16px',
+                                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                  zIndex: 0
+                                }
+                              }}>
+                                <TrophyIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                              </Box>
+                              <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                                Успешность
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                              <Button
+                                variant={activityEntry.success ? 'contained' : 'outlined'}
+                                onClick={() => setActivityEntry({...activityEntry, success: true})}
+                                sx={{
+                                  background: activityEntry.success ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)' : 'transparent',
+                                  color: activityEntry.success ? '#fff' : '#4CAF50',
+                                  borderColor: '#4CAF50',
+                                  borderRadius: '12px',
+                                  textTransform: 'none',
+                                  fontWeight: 600
+                                }}
+                              >
+                                                                 <CheckIcon size={16} style={{ marginRight: '8px' }} />
+                                 Успешно
+                              </Button>
+                              <Button
+                                variant={!activityEntry.success ? 'contained' : 'outlined'}
+                                onClick={() => setActivityEntry({...activityEntry, success: false})}
+                                sx={{
+                                  background: !activityEntry.success ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)' : 'transparent',
+                                  color: !activityEntry.success ? '#fff' : '#f44336',
+                                  borderColor: '#f44336',
+                                  borderRadius: '12px',
+                                  textTransform: 'none',
+                                  fontWeight: 600
+                                }}
+                              >
+                                                                 <XIcon size={16} style={{ marginRight: '8px' }} />
+                                 Неудача
+                              </Button>
+                            </Box>
+                          </Box>
+                        )}
+
+
+
+
+
+
+
+                                                 {/* Настроение */}
+                         <Box sx={{ mb: 3 }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                             <Box sx={{
+                               width: '48px',
+                               height: '48px',
+                               borderRadius: '16px',
+                               background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               boxShadow: '0 8px 24px rgba(139,0,0,0.4)',
+                               position: 'relative',
+                               '&:before': {
+                                 content: '""',
+                                 position: 'absolute',
+                                 top: '50%',
+                                 left: '50%',
+                                 transform: 'translate(-50%, -50%)',
+                                 width: '100%',
+                                 height: '100%',
+                                 borderRadius: '16px',
+                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                 zIndex: 0
+                               }
+                             }}>
+                               <UserCheckIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                             </Box>
+                             <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                               Настроение: {moodEntry.mood}/10
+                             </Typography>
+                           </Box>
+                           <Slider
+                             value={moodEntry.mood}
+                             onChange={(_, value) => setMoodEntry({...moodEntry, mood: value as number})}
+                             min={1} max={10} step={1}
+                             sx={{
+                               color: '#8B0000',
+                               height: 8,
+                               '& .MuiSlider-track': {
+                                 background: 'linear-gradient(90deg, #8B0000 0%, #B22222 100%)',
+                                 border: 'none',
+                                 height: 8,
+                                 borderRadius: 4
+                               },
+                               '& .MuiSlider-thumb': {
+                                 width: 24,
+                                 height: 24,
+                                 backgroundColor: '#fff',
+                                 border: '3px solid #8B0000',
+                                 boxShadow: '0 4px 12px rgba(139,0,0,0.4)',
+                                 '&:hover': {
+                                   boxShadow: '0 6px 16px rgba(139,0,0,0.5)'
+                                 }
+                               },
+                               '& .MuiSlider-rail': {
+                                 height: 8,
+                                 borderRadius: 4,
+                                 backgroundColor: '#f0f0f0'
+                               }
+                             }}
+                           />
+                         </Box>
+
+                         {/* Энергия */}
+                         <Box sx={{ mb: 3 }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                             <Box sx={{
+                               width: '48px',
+                               height: '48px',
+                               borderRadius: '16px',
+                               background: 'linear-gradient(135deg, #B22222 0%, #8B0000 100%)',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               boxShadow: '0 8px 24px rgba(178,34,34,0.4)',
+                               position: 'relative',
+                               '&:before': {
+                                 content: '""',
+                                 position: 'absolute',
+                                 top: '50%',
+                                 left: '50%',
+                                 transform: 'translate(-50%, -50%)',
+                                 width: '100%',
+                                 height: '100%',
+                                 borderRadius: '16px',
+                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                 zIndex: 0
+                               }
+                             }}>
+                               <FlameIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                             </Box>
+                             <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                               Энергия: {moodEntry.energy}/10
+                             </Typography>
+                           </Box>
+                           <Slider
+                             value={moodEntry.energy}
+                             onChange={(_, value) => setMoodEntry({...moodEntry, energy: value as number})}
+                             min={1} max={10} step={1}
+                             sx={{
+                               color: '#B22222',
+                               height: 8,
+                               '& .MuiSlider-track': {
+                                 background: 'linear-gradient(90deg, #B22222 0%, #8B0000 100%)',
+                                 border: 'none',
+                                 height: 8,
+                                 borderRadius: 4
+                               },
+                               '& .MuiSlider-thumb': {
+                                 width: 24,
+                                 height: 24,
+                                 backgroundColor: '#fff',
+                                 border: '3px solid #B22222',
+                                 boxShadow: '0 4px 12px rgba(178,34,34,0.4)',
+                                 '&:hover': {
+                                   boxShadow: '0 6px 16px rgba(178,34,34,0.5)'
+                                 }
+                               },
+                               '& .MuiSlider-rail': {
+                                 height: 8,
+                                 borderRadius: 4,
+                                 backgroundColor: '#f0f0f0'
+                               }
+                             }}
+                           />
+                         </Box>
+
+                         {/* Стресс */}
+                         <Box sx={{ mb: 3 }}>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                             <Box sx={{
+                               width: '48px',
+                               height: '48px',
+                               borderRadius: '16px',
+                               background: 'linear-gradient(135deg, #8B0000 0%, #A0000A 100%)',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               boxShadow: '0 8px 24px rgba(220,20,60,0.4)',
+                               position: 'relative',
+                               '&:before': {
+                                 content: '""',
+                                 position: 'absolute',
+                                 top: '50%',
+                                 left: '50%',
+                                 transform: 'translate(-50%, -50%)',
+                                 width: '100%',
+                                 height: '100%',
+                                 borderRadius: '16px',
+                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
+                                 zIndex: 0
+                               }
+                             }}>
+                               <ActivityIcon size={24} color="#fff" style={{ zIndex: 1, position: 'relative' }} />
+                             </Box>
+                             <Typography sx={{ fontWeight: 700, color: '#2c3e50', flex: 1, textAlign: 'center' }}>
+                               Стресс: {moodEntry.stress}/10
+                             </Typography>
+                           </Box>
+                           <Slider
+                             value={moodEntry.stress}
+                             onChange={(_, value) => setMoodEntry({...moodEntry, stress: value as number})}
+                             min={1} max={10} step={1}
+                             sx={{
+                               color: '#8B0000',
+                               height: 8,
+                               '& .MuiSlider-track': {
+                                 background: 'linear-gradient(90deg, #8B0000 0%, #A0000A 100%)',
+                                 border: 'none',
+                                 height: 8,
+                                 borderRadius: 4
+                               },
+                               '& .MuiSlider-thumb': {
+                                 width: 24,
+                                 height: 24,
+                                 backgroundColor: '#fff',
+                                 border: '3px solid #8B0000',
+                                 boxShadow: '0 4px 12px rgba(220,20,60,0.4)',
+                                 '&:hover': {
+                                   boxShadow: '0 6px 16px rgba(220,20,60,0.5)'
+                                 }
+                               },
+                               '& .MuiSlider-rail': {
+                                 height: 8,
+                                 borderRadius: 4,
+                                 backgroundColor: '#f0f0f0'
+                               }
+                             }}
+                           />
+                         </Box>
+
+                         {/* Дополнительные заметки */}
+                         <TextField
                           fullWidth
                           multiline
-                          rows={4}
-                          label="Что происходило сегодня?"
-                          value={moodEntry.notes}
-                          onChange={(e) => setMoodEntry({...moodEntry, notes: e.target.value})}
+                          rows={3}
+                          label="Дополнительные заметки"
+                          value={activityEntry.notes}
+                          onChange={(e) => setActivityEntry({...activityEntry, notes: e.target.value})}
                           sx={{ 
                             mb: 3,
                             '& .MuiOutlinedInput-root': {
@@ -1393,7 +2178,7 @@ const Productivity: React.FC = () => {
                               color: '#666'
                             }
                           }}
-                          placeholder="Расскажите о своих успехах, проблемах или просто о настроении..."
+                          placeholder="Дополнительные детали, мысли, планы..."
                         />
 
                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
@@ -1440,9 +2225,18 @@ const Productivity: React.FC = () => {
                         mx: 'auto'
                       }}
                     >
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        ИИ-анализ: {lastAnalysis}
-                      </Typography>
+                      <Box sx={{ fontWeight: 600 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, mb: 2 }}>
+                          ИИ-анализ:
+                        </Typography>
+                        {lastAnalysis ? (
+                          <AIResponseDisplay response={lastAnalysis} isWeekly={false} />
+                        ) : (
+                          <Typography variant="body1">
+                            AI проанализировал ваше настроение!
+                          </Typography>
+                        )}
+                      </Box>
                     </Alert>
                   </motion.div>
                 )}
@@ -1451,6 +2245,45 @@ const Productivity: React.FC = () => {
           </motion.div>
         </motion.div>
       </Container>
+      
+      {/* Snackbar для уведомлений */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={snackbarMessage && snackbarMessage.length > 50 ? 8000 : 4000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ 
+          '& .MuiSnackbar-root': {
+            maxWidth: '600px'
+          }
+        }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="success" 
+          sx={{ 
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%)',
+            border: '2px solid #4CAF50',
+            maxWidth: '600px',
+            '& .MuiAlert-message': {
+              width: '100%',
+              wordBreak: 'break-word'
+            }
+          }}
+        >
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontWeight: 500,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap'
+            }}
+          >
+            {snackbarMessage}
+          </Typography>
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
