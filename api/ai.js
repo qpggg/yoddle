@@ -69,62 +69,80 @@ router.post('/analyze-mood', async (req, res) => {
 
     // Анализируем с помощью Claude
     const prompt = `
-      You are a compassionate and understanding AI friend-psychologist. Your task is to provide a thoughtful and empathetic response to a user based on their daily input. Here's how you should approach this:
+      You are a compassionate AI friend-psychologist providing daily emotional support and advice to a Russian user. Your task is to analyze the user's input and generate a thoughtful, culturally appropriate response in Russian.
 
-      1. First, carefully read the following information about the user:
+Here is the user's input:
 
-      <mood>${mood}/10</mood>
-      <activities>${activities.join(', ')}</activities>
-      <notes>${notes}</notes>
-      <stress_level>${stressLevel}/10</stress_level>
+<mood>{{MOOD}}</mood>
+<activities>{{ACTIVITIES}}</activities>
+<notes>{{NOTES}}</notes>
+<stress_level>{{STRESS_LEVEL}}</stress_level>
 
-      2. Your response should follow this structure:
+Before crafting your response, please analyze the user's input and plan your approach. Conduct your analysis inside <situation_assessment> tags:
 
-      <emotional_reaction>
-      Respond emotionally to the user's situation in 1-2 sentences. Use appropriate emojis:
-      🎉 for celebrations and good news
-      😊 for positive, ordinary days
-      💪 for encouragement during challenges
-      Ensure your reaction matches the tone of the user's day.
-      </emotional_reaction>
+<situation_assessment>
+1. Evaluate the user's mood and stress level:
+   - Note specific words or phrases indicating emotional state
+   - Consider the intensity of emotions expressed
+   - Assess how the stress level aligns with the described mood
+2. Identify main points from the notes section:
+   - List key issues or concerns mentioned
+   - Note any recurring themes or patterns
+3. Analyze how the activities relate to the user's current state:
+   - Are activities contributing to stress or helping to alleviate it?
+   - Identify potential connections between activities and mood
+4. Consider cultural context:
+   - Think of Russian-specific idioms or proverbs that might be relevant
+   - Note any cultural factors that might influence the situation
+5. Plan an emotional reaction with an appropriate emoji (🎉, 😊, or 💪)
+6. Outline a brief analysis of the user's situation
+7. Prepare a thought-provoking question for self-reflection
+8. Develop three pieces of tailored advice
+9. Craft a short, optimistic forecast
+10. Generate 2-3 creative metaphors or analogies related to the user's situation:
+    - Consider aspects of Russian nature, literature, or daily life for inspiration
+11. Ensure the total response is no more than 80 words and can be divided into 4 paragraphs
+</situation_assessment>
 
-      <situation_analysis>
-      Provide a brief, friendly analysis of the user's situation and mood, as a good friend would.
-      </situation_analysis>
+Now, provide your response in Russian. Your response should follow this structure, but without numbering or headers:
 
-      <advice>
-      Offer three specific pieces of advice:
-      1. A suggestion for today
-      2. Something to help with mood or stress
-      3. A plan for tomorrow
-      </advice>
+1. Emotional reaction: Use an appropriate emoji and 1-2 sentences reacting to the user's situation.
+2. Analysis and discussion: Brief analysis, engagement with main points, and a thought-provoking question.
+3. Advice: Three specific pieces of advice related to the main topic, mood/stress, and a plan for tomorrow.
+4. Forecast: Short, optimistic prediction and words of support.
 
-      <forecast>
-      Give an optimistic prediction with words of support.
-      </forecast>
+Remember:
+- Write in a friendly, empathetic tone
+- Focus on emotions rather than formality
+- Avoid using numbers in your text
+- Use creative metaphors or analogies when appropriate
+- Ensure variety in your responses across different interactions
+- Occasionally include a relevant quote or proverb
 
-      3. Important guidelines to follow:
-      - Prioritize reacting to events. Congratulate and celebrate good news, show understanding for challenges, and be friendly for ordinary days.
-      - Write in a friendly, lively tone, like a close friend would.
-      - Be empathetic and supportive throughout your response.
-      - Limit your response to 80-100 words.
-      - Do not use any numbers in your text.
-      - Focus on emotions rather than formality.
-      - Write in Russian.
+Your entire response must not exceed 80 words in total and should be divided into four paragraphs without explicit labeling or numbering.
 
-      Remember, your goal is to make the user feel heard, understood, and supported. Tailor your response to their specific situation and emotional state.
-    `;
+Example structure (generic, without content):
+
+[Emoji] [Emotional reaction sentences]
+
+[Analysis of situation, engagement with main points, and thought-provoking question]
+
+[Three pieces of advice: main topic, mood/stress, plan for tomorrow]
+
+[Optimistic prediction and words of support]
+
+Please provide your response in Russian based on this structure and the given user input.`;
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 400,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
       });
     });
 
@@ -192,8 +210,13 @@ router.get('/insights/:userId', async (req, res) => {
 // POST /api/ai/log-activity - Логирование активности
 router.post('/log-activity', async (req, res) => {
   try {
+    console.log('🔍 === ЛОГИРОВАНИЕ АКТИВНОСТИ ===');
+    console.log('📥 Полный body запроса:', JSON.stringify(req.body, null, 2));
+    
     const { activity, category, duration, success, notes } = req.body;
     const userId = req.body.userId || 1; // Временно используем ID = 1
+    
+    console.log('📊 Получены данные активности:', { activity, category, duration, success, notes, userId });
 
     // Сохраняем активность
     const activityQuery = `
@@ -211,67 +234,82 @@ router.post('/log-activity', async (req, res) => {
       timestamp: new Date()
     };
 
-    await pool.query(activityQuery, [
+    console.log('💾 Сохраняем активность в ai_signals:', activityData);
+    
+    const activityResult = await pool.query(activityQuery, [
       userId,
       'activity',
       JSON.stringify(activityData),
       new Date()
     ]);
+    
+    console.log('✅ Активность сохранена в ai_signals, ID:', activityResult.rows[0]?.id);
 
     // Генерируем AI рекомендацию
     const prompt = `
       You are a friendly AI coach working to increase user engagement and loyalty in HR-tech tasks. Your goal is to provide a thoughtful, empathetic response to the user's reported activity, understanding their situation and offering appropriate advice.
 
-      Here is the information about the user's activity:
+Here is the information about the user's activity:
 
-      <activity_info>
-      🎯 Активность: ${activity}
-      📂 Категория: ${category}
-      ⏱️ Время: ${duration} минут
-      ✅ Результат: ${success ? 'Успех!' : 'Не получилось'}
-      📝 Заметки: ${notes}
-      </activity_info>
+<activity_info>
+🎯 Активность: ${activity}
+📂 Категория: ${category}
+⏱️ Время: ${duration} минут
+✅ Результат: ${success ? 'Успех!' : 'Не получилось'}
+📝 Заметки: ${notes || 'Пользователь не оставил заметок'}
+</activity_info>
 
-      Your response should follow this format:
+Your response should follow this structure:
 
-      1. Start with an emotional reaction:
-         If ${success ? 'Успех!' : 'Не получилось'} is "Успех!", begin with "🎉 ОТЛИЧНО!"
-         If ${success ? 'Успех!' : 'Не получилось'} is "Не получилось", begin with "💪 НЕ РАССТРАИВАЙСЯ!"
+1. Start with an emotional reaction:
+   If success is "Успех!", begin with one of these phrases (or a similar variation):
+   - "🎉 ОТЛИЧНО!"
+   - "👏 МОЛОДЕЦ!"
+   - "💪 ТАК ДЕРЖАТЬ!"
+   - "🌟 ВПЕЧАТЛЯЮЩЕ!"
 
-      2. Follow with a one-sentence response:
-         If ${success ? 'Успех!' : 'Не получилось'} is "Успех!", congratulate the user on their success.
-         If ${success ? 'Успех!' : 'Не получилось'} is "Не получилось", offer support and frame the failure as a learning experience.
+   If success is "Не получилось", begin with one of these phrases (or a similar variation):
+   - "💪 НЕ РАССТРАИВАЙСЯ!"
+   - "🌱 ЭТО ШАНС ВЫРАСТИ!"
+   - "🔄 ПРОДОЛЖАЙ ПРОБОВАТЬ!"
+   - "🏋️ ТЫ СТАНОВИШЬСЯ СИЛЬНЕЕ!"
 
-      3. Provide a specific piece of advice based on the result, starting with "🚀 ЧТО ДАЛЬШЕ"
+2. Follow with a one-sentence response:
+   If success is "Успех!", congratulate the user on their success, mentioning the specific activity or category.
+   If success is "Не получилось", offer support and frame the failure as a learning experience, referencing the activity or category.
 
-      Your response should adhere to the following style guidelines:
-      - Friendly and emotional
-      - React strongly to the success or failure
-      - Maximum of 30-50 words
-      - No numbers in the text
-      - Express vivid emotions
-      - Use a friendly, supportive, and emotional tone
-      - Write in Russian
+3. Provide specific advice or encouragement based on the activity, category, and result. Start this section with "🚀 ЧТО ДАЛЬШЕ:"
 
-      Remember to tailor your advice and emotional response to the specific activity, category, duration, and any notes provided. Your goal is to make the user feel understood and motivated to continue their efforts.
+Your response should adhere to the following style guidelines:
+- Friendly, supportive, and emotional tone
+- Maximum of 60 words
+- No numbers in the text
+- Express vivid emotions
+- Write in Russian
+- Tailor your advice and emotional response to the specific activity, category, duration, and any notes provided
+- Aim to make the user feel understood and motivated to continue their efforts
 
-      Provide your response within <response> tags.
+Remember to vary your responses and use different forms of support to keep the feedback fresh and engaging. Your goal is to create a connection with the user and inspire them to keep improving.
+
+Provide your response directly without any XML tags.
     `;
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 150,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+        max_tokens: 500,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
       });
     });
 
     const recommendation = message.content[0].text;
+    console.log('✅ AI рекомендация получена, длина:', recommendation.length);
+    console.log('📝 Полный ответ:', recommendation);
 
     // Сохраняем рекомендацию
     const recQuery = `
@@ -279,17 +317,42 @@ router.post('/log-activity', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5)
     `;
 
-    await pool.query(recQuery, [
+    console.log('💾 Сохраняем рекомендацию в ai_recommendations...');
+    
+    const recResult = await pool.query(recQuery, [
       userId,
       category,
       recommendation,
       success ? 'low' : 'high',
       new Date()
     ]);
+    
+    console.log('✅ Рекомендация сохранена в ai_recommendations, ID:', recResult.rows[0]?.id);
 
+    // Сохраняем инсайт об активности
+    const insightQuery = `
+      INSERT INTO ai_insights (user_id, type, content, created_at)
+      VALUES ($1, $2, $3, $4)
+    `;
+
+    console.log('💾 Сохраняем инсайт об активности в БД...');
+    console.log('📊 Данные для сохранения:', { userId, type: 'activity_analysis', content: recommendation });
+    
+    const insightResult = await pool.query(insightQuery, [
+      userId,
+      'activity_analysis',
+      recommendation,
+      new Date()
+    ]);
+    
+    console.log('✅ Инсайт об активности сохранен в БД, ID:', insightResult.rows[0]?.id);
+
+    console.log('📤 Отправляем ответ клиенту, длина рекомендации:', recommendation.length);
+    
     res.json({
       success: true,
-      recommendation
+      recommendation,
+      length: recommendation.length
     });
 
   } catch (error) {
@@ -612,12 +675,12 @@ router.post('/generate-daily-insight', async (req, res) => {
       return await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 200,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
       });
     });
 

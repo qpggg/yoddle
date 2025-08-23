@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Grid, Paper, LinearProgress, Chip, CircularProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
+import { useProductivity } from '../hooks/useProductivity';
 import { 
   FaRocket, 
   FaFire, 

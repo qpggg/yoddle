@@ -7,6 +7,7 @@ import { dirname, join } from 'path';
 import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import aiRouter from './api/ai.js';
+import productivityRouter from './api/productivity.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 import { createDbClient, getDbClient } from './db.js';
 import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
@@ -36,11 +37,23 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3000) 
 // Middleware
 // Настройка CORS в зависимости от окружения
 const corsOptions = {
-  origin: '*',
-  credentials: true
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4173', '*'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Middleware для логирования всех запросов
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
 
 // Ранний реестр Wallet API (перекрывает старые дубликаты ниже)
 app.post('/api/wallet/purchase', purchaseHandler);
@@ -1498,6 +1511,9 @@ app.get('/health', (req, res) => {
 
 // Подключаем AI API
 app.use('/api/ai', aiRouter);
+
+// Подключаем API продуктивности
+app.use('/api/productivity', productivityRouter);
 
 // Подключаем API новостей
 app.use('/api/news', newsRouter);

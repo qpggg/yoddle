@@ -4,6 +4,7 @@ export interface MoodEntry {
   activities: string[];
   notes: string;
   stressLevel: number;
+  timestamp?: string;
 }
 
 export interface ActivityEntry {
@@ -12,6 +13,9 @@ export interface ActivityEntry {
   duration: number;
   success: boolean;
   notes: string;
+  mood?: number;
+  energy?: number;
+  stress?: number;
 }
 
 export interface AIInsight {
@@ -67,6 +71,9 @@ class AIClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    console.log('🌐 AI Client: Выполняем запрос к:', url);
+    console.log('📋 AI Client: Опции запроса:', options);
+    
     try {
       const response = await fetch(url, {
         headers: {
@@ -76,25 +83,37 @@ class AIClient {
         ...options,
       });
 
+      console.log('📡 AI Client: Получен ответ:', response.status, response.statusText);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const responseData = await response.json();
+      console.log('📦 AI Client: Данные ответа:', responseData);
+      
+      return responseData;
     } catch (error) {
-      console.error(`AI API request failed: ${endpoint}`, error);
+      console.error(`❌ AI API request failed: ${endpoint}`, error);
       throw error;
     }
   }
 
   // Анализ настроения
   async analyzeMood(moodData: MoodEntry): Promise<AIAnalysisResponse> {
+    console.log('🚀 AI Client: Отправляем данные настроения:', moodData);
+    console.log('🌐 AI Client: URL запроса:', `${this.baseURL}/api/ai/analyze-mood`);
+    
+    const requestBody = {
+      ...moodData,
+      userId: 1, // Временно используем ID = 1 для тестирования
+    };
+    
+    console.log('📦 AI Client: Тело запроса:', requestBody);
+    
     return this.request<AIAnalysisResponse>('/api/ai/analyze-mood', {
       method: 'POST',
-      body: JSON.stringify({
-        ...moodData,
-        userId: 1, // Временно используем ID = 1 для тестирования
-      }),
+      body: JSON.stringify(requestBody),
     });
   }
 

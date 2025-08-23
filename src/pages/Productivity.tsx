@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
-
+import { useProductivity } from '../hooks/useProductivity';
 import { useAI } from '../hooks/useAI';
 import {
   BrainIcon,
@@ -39,7 +39,10 @@ interface AIResponseDisplayProps {
 
 const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekly = false }) => {
   // Добавляем отладочную информацию
+  console.log('AIResponseDisplay получил ответ, длина:', response?.length || 0);
   console.log('AIResponseDisplay получил ответ:', response);
+  console.log('AIResponseDisplay получил ответ (первые 200 символов):', response?.substring(0, 200));
+  console.log('AIResponseDisplay получил ответ (последние 200 символов):', response?.substring(Math.max(0, (response?.length || 0) - 200)));
   
   // Функция для замены XML-тегов на иконки и форматирования
   const formatAIResponse = (text: string) => {
@@ -47,8 +50,14 @@ const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekl
 
     console.log('Форматируем текст:', text);
 
-    // Заменяем XML-теги на иконки и форматирование
+    // Убираем теги response если они есть
     let formattedText = text
+      .replace(/<response>/g, '')
+      .replace(/<\/response>/g, '')
+      
+      // Убираем английский текст situation_assessment
+      .replace(/<situation_assessment>[\s\S]*?<\/situation_assessment>/g, '')
+      
       // Основные теги для недельного инсайта
       .replace(/<answer>/g, '')
       .replace(/<\/answer>/g, '')
@@ -85,8 +94,13 @@ const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekl
       .replace(/<motivation>/g, 'MOTIVATION ')
       .replace(/<\/motivation>/g, '\n\n')
       
-      // Убираем лишние переносы строк
-      .replace(/\n\n+/g, '\n\n')
+      // Сначала добавляем перенос перед "🚀 ЧТО ДАЛЬШЕ:"
+      .replace(/\s*🚀/g, '\n🚀')
+      // Убираем все переносы строк и заменяем на пробелы
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
+      // Снова добавляем перенос перед "🚀 ЧТО ДАЛЬШЕ:"
+      .replace(/\s*🚀/g, '\n🚀')
       .trim();
 
     console.log('Отформатированный текст:', formattedText);
@@ -107,7 +121,7 @@ const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekl
           color: isWeekly ? '#fff' : '#1A1A1A',
           fontWeight: 500,
           lineHeight: 1.8,
-          whiteSpace: 'pre-wrap'
+          whiteSpace: 'normal'
         }}
       >
         {response}
@@ -129,31 +143,31 @@ const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekl
         
         switch (sectionType) {
           case 'EMOTION':
-            icon = <PartyPopperIcon size={20} color="#FF6B6B" />;
+            icon = <PartyPopperIcon size={20} color="#8B0000" />;
             break;
           case 'ANALYSIS':
-            icon = <BrainIcon size={20} color="#4ECDC4" />;
+            icon = <BrainIcon size={20} color="#8B0000" />;
             break;
           case 'ADVICE':
-            icon = <LightbulbIcon size={20} color="#FFD93D" />;
+            icon = <LightbulbIcon size={20} color="#8B0000" />;
             break;
           case 'FORECAST':
-            icon = <GemIcon size={20} color="#A8E6CF" />;
+            icon = <GemIcon size={20} color="#8B0000" />;
             break;
           case 'WEEKLY':
-            icon = <BarChart3Icon size={20} color="#6C5CE7" />;
+            icon = <BarChart3Icon size={20} color="#8B0000" />;
             break;
           case 'SUPPORT':
-            icon = <TargetIcon size={20} color="#FD79A8" />;
+            icon = <TargetIcon size={20} color="#8B0000" />;
             break;
           case 'SPECIFIC':
-            icon = <RocketIcon size={20} color="#00B894" />;
+            icon = <RocketIcon size={20} color="#8B0000" />;
             break;
           case 'MOTIVATION':
-            icon = <StarIcon size={20} color="#FDCB6E" />;
+            icon = <StarIcon size={20} color="#8B0000" />;
             break;
           default:
-            icon = <SparklesIcon size={20} color="#fff" />;
+            icon = <SparklesIcon size={20} color="#8B0000" />;
         }
 
         return (
@@ -393,11 +407,18 @@ const Productivity: React.FC = () => {
     generateDailyInsight
   } = useAI();
   
+  // Хук для продуктивности
+  const {
+    dashboard,
+    loading: productivityLoading
+  } = useProductivity();
+  
   // Состояния
   const [weeklyMood, setWeeklyMood] = useState<WeeklyMood[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [formType, setFormType] = useState<'mood' | 'activity' | null>(null);
   const [moodEntry, setMoodEntry] = useState<MoodEntry>({
     mood: 7,
     energy: 7,
@@ -421,11 +442,24 @@ const Productivity: React.FC = () => {
     stress: 3
   });
 
+  // Ref для формы
+  const formRef = useRef<HTMLDivElement>(null);
+
   // Загрузка данных при монтировании
   useEffect(() => {
     console.log('Productivity page mounted, loading data...');
     loadProductivityData();
   }, []);
+
+  // Функция плавного скролла к форме
+  const scrollToForm = () => {
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }
+  };
 
   const loadProductivityData = async () => {
     setLoading(true);
@@ -465,28 +499,16 @@ const Productivity: React.FC = () => {
     setSubmitting(true);
     try {
       // Проверяем, является ли это логированием активности
-      if (moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('activity_form:') || 
-          moodEntry.notes.startsWith('Работа: ') || 
-          moodEntry.notes.startsWith('Спорт & Здоровье: ') || 
-          moodEntry.notes.startsWith('Обучение: ')) {
+      if (formType === 'activity') {
         
         // Определяем категорию активности
         let category = activityEntry.category;
-        if (moodEntry.notes.startsWith('Работа: ')) category = 'work';
-        if (moodEntry.notes.startsWith('Спорт & Здоровье: ')) category = 'health';
-        if (moodEntry.notes.startsWith('Обучение: ')) category = 'learning';
         
-        // Извлекаем название активности из заметок
-        let activityName = '';
-        if (moodEntry.notes === 'activity_form') {
-          activityName = 'Общая активность';
-        } else if (moodEntry.notes.startsWith('activity_form:')) {
-          activityName = moodEntry.notes.replace('activity_form:', '').trim();
-        } else {
-          activityName = moodEntry.notes.replace(/^(Работа|Спорт & Здоровье|Обучение): /, '').trim();
-        }
+        // Извлекаем название активности из поля названия
+        let activityName = activityEntry.activity.trim();
         
-        if (activityName && activityName !== 'Общая активность') {
+        // Проверяем, что название активности указано
+        if (activityName && activityName.trim() !== '') {
           // Отправляем активность в AI API
           const activityResponse = await logActivity({
             activity: activityName,
@@ -496,25 +518,42 @@ const Productivity: React.FC = () => {
             notes: activityEntry.notes
           });
           
-          // Показываем AI ответ как уведомление
+          // Показываем AI ответ в том же месте, где показывается анализ настроения
           if (activityResponse) {
-            setSnackbarMessage(activityResponse);
+            console.log('📝 Полученный ответ активности, длина:', activityResponse?.length || 0);
+            console.log('📝 Полученный ответ активности (первые 200 символов):', activityResponse?.substring(0, 200));
+            console.log('📝 Полученный ответ активности (последние 200 символов):', activityResponse?.substring(Math.max(0, (activityResponse?.length || 0) - 200)));
+            setLastAnalysis(activityResponse);
+            setSnackbarMessage('Активность залогирована и проанализирована!');
           } else {
             setSnackbarMessage('Активность залогирована и проанализирована!');
           }
-        } else if (activityName === 'Общая активность') {
-          setSnackbarMessage('Пожалуйста, укажите название активности');
         } else {
           setSnackbarMessage('Пожалуйста, укажите название активности');
+          setSnackbarOpen(true);
+          return; // Не сбрасываем форму, если название не указано
         }
       } else {
         // Обычное логирование настроения
+        console.log('🚀 Отправляем данные настроения:', {
+          mood: moodEntry.mood,
+          activities: ['daily_mood_check'],
+          notes: moodEntry.notes,
+          stressLevel: moodEntry.stress,
+          timestamp: new Date().toISOString()
+        });
+        
         const analysis = await analyzeMood({
           mood: moodEntry.mood,
           activities: ['daily_mood_check'],
           notes: moodEntry.notes,
-          stressLevel: moodEntry.stress
+          stressLevel: moodEntry.stress,
+          timestamp: new Date().toISOString()
         });
+        
+        console.log('📝 Полученный анализ настроения, длина:', analysis?.length || 0);
+        console.log('📝 Полученный анализ настроения (первые 200 символов):', analysis?.substring(0, 200));
+        console.log('📝 Полученный анализ настроения (последние 200 символов):', analysis?.substring(Math.max(0, (analysis?.length || 0) - 200)));
         
         setLastAnalysis(analysis || 'AI проанализировал ваше настроение!');
         setSnackbarMessage('AI проанализировал ваше настроение!');
@@ -524,7 +563,7 @@ const Productivity: React.FC = () => {
       
       // Добавляем задержку перед сбросом формы, чтобы пользователь увидел ответ
       setTimeout(() => {
-        // Сброс формы
+        // Сброс формы только если операция прошла успешно
         setMoodEntry({
           mood: 7,
           energy: 7,
@@ -541,8 +580,9 @@ const Productivity: React.FC = () => {
           energy: 7,
           stress: 3
         });
+        setFormType(null);
         setShowQuickEntry(false);
-      }, 2000); // 2 секунды задержки
+      }, 3000); // 3 секунды задержки для формы активности
       
       // Перезагрузка данных
       await loadProductivityData();
@@ -783,7 +823,223 @@ const Productivity: React.FC = () => {
             </Box>
           </motion.div>
 
-          {/* Настроение за неделю */}
+          {/* Бейдж уровня продуктивности */}
+          <motion.div variants={itemVariants} style={{ marginBottom: '3rem' }}>
+            <Paper elevation={0} sx={{
+              ...cardStyle,
+              background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
+              border: '2px solid #8B000020',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '6px',
+                background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #8B0000 100%)'
+              }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1, pt: 3 }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 600, 
+                  color: '#666', 
+                  mb: 3,
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  fontSize: '0.9rem'
+                }}>
+                  Ваш уровень продуктивности
+                </Typography>
+                
+                {productivityLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                    <CircularProgress sx={{ color: '#8B0000' }} size={40} />
+                  </Box>
+                ) : dashboard ? (
+                  <Box sx={{ textAlign: 'center' }}>
+                    {/* Большой бейдж уровня */}
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      whileHover={{ scale: 1.05 }}
+                      style={{ display: 'inline-block', marginBottom: '2rem' }}
+                    >
+                      <Box sx={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        background: `linear-gradient(135deg, ${dashboard.level_color || '#8B4513'} 0%, ${dashboard.level_color || '#8B4513'}DD 100%)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: `0 20px 40px ${dashboard.level_color || '#8B4513'}40`,
+                        border: '4px solid #fff',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: -8,
+                          left: -8,
+                          right: -8,
+                          bottom: -8,
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${dashboard.level_color || '#8B4513'}20 0%, transparent 100%)`,
+                          zIndex: -1
+                        }
+                      }}>
+                        <Typography variant="h2" sx={{ 
+                          color: '#fff', 
+                          fontWeight: 900,
+                          fontSize: '3rem',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                        }}>
+                          {dashboard.level_icon || '🌱'}
+                        </Typography>
+                      </Box>
+                    </motion.div>
+                    
+                    {/* Название уровня */}
+                    <Typography variant="h3" sx={{ 
+                      fontWeight: 800, 
+                      color: '#1A1A1A', 
+                      mb: 2,
+                      fontSize: { xs: '2rem', md: '2.5rem' }
+                    }}>
+                      {dashboard.productivity_level || 'Новичок'}
+                    </Typography>
+                    
+                    {/* Описание уровня */}
+                    <Typography variant="body1" sx={{ 
+                      color: '#666', 
+                      mb: 3, 
+                      maxWidth: '500px', 
+                      mx: 'auto',
+                      lineHeight: 1.6,
+                      fontSize: '1.1rem'
+                    }}>
+                      {dashboard.level_description || 'Начинающий путь к продуктивности'}
+                    </Typography>
+                    
+                    {/* Рейтинг продуктивности */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: 3,
+                      mb: 3
+                    }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" sx={{ 
+                          fontWeight: 800, 
+                          color: dashboard.level_color || '#8B4513',
+                          fontSize: '2rem'
+                        }}>
+                          {dashboard.productivity_score?.toFixed(1) || '0.0'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#666', fontWeight: 600 }}>
+                          Рейтинг
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ 
+                        width: '2px', 
+                        height: '40px', 
+                        background: 'linear-gradient(to bottom, transparent, #ddd, transparent)' 
+                      }} />
+                      
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" sx={{ 
+                          fontWeight: 800, 
+                          color: '#8B0000',
+                          fontSize: '2rem'
+                        }}>
+                          {dashboard.xp_multiplier || 1.0}x
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#666', fontWeight: 600 }}>
+                          XP множитель
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    {/* Статистика */}
+                    <Grid container spacing={3} sx={{ maxWidth: '600px', mx: 'auto' }}>
+                      <Grid item xs={6} md={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" sx={{ 
+                            fontWeight: 800, 
+                            color: '#8B0000',
+                            fontSize: '1.5rem'
+                          }}>
+                            {dashboard.weekly_productivity?.toFixed(1) || '0.0'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                            За неделю
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} md={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" sx={{ 
+                            fontWeight: 800, 
+                            color: '#B22222',
+                            fontSize: '1.5rem'
+                          }}>
+                            {dashboard.monthly_productivity?.toFixed(1) || '0.0'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                            За месяц
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} md={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" sx={{ 
+                            fontWeight: 800, 
+                            color: '#A0000A',
+                            fontSize: '1.5rem'
+                          }}>
+                            {dashboard.days_tracked_this_week || 0}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                            Дней отслежено
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} md={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" sx={{ 
+                            fontWeight: 800, 
+                            color: '#B71C1C',
+                            fontSize: '1.5rem'
+                          }}>
+                            {dashboard.productivity_achievements_count || 0}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                            Достижения
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" sx={{ color: '#666' }}>
+                      Загрузка данных продуктивности...
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </motion.div>
+
+                    {/* Настроение за неделю */}
           <motion.div variants={itemVariants} style={{ marginBottom: '3rem' }}>
             <Paper elevation={0} sx={{
               ...cardStyle,
@@ -1176,9 +1432,10 @@ const Productivity: React.FC = () => {
                   }}
                   onClick={() => {
                     setActivityEntry({...activityEntry, category: 'work'});
+                    setFormType('activity');
                     setShowQuickEntry(true);
-                    // Устанавливаем специальный режим для логирования активности
-                    setMoodEntry({...moodEntry, notes: 'Работа: '});
+                    // Плавный скролл к форме
+                    setTimeout(() => scrollToForm(), 100);
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
                       <motion.div
@@ -1265,9 +1522,10 @@ const Productivity: React.FC = () => {
                   }}
                   onClick={() => {
                     setActivityEntry({...activityEntry, category: 'health'});
+                    setFormType('activity');
                     setShowQuickEntry(true);
-                    // Устанавливаем специальный режим для логирования активности
-                    setMoodEntry({...moodEntry, notes: 'Спорт & Здоровье: '});
+                    // Плавный скролл к форме
+                    setTimeout(() => scrollToForm(), 100);
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
                       <motion.div
@@ -1355,9 +1613,10 @@ const Productivity: React.FC = () => {
                   }}
                   onClick={() => {
                     setActivityEntry({...activityEntry, category: 'learning'});
+                    setFormType('activity');
                     setShowQuickEntry(true);
-                    // Устанавливаем специальный режим для логирования активности
-                    setMoodEntry({...moodEntry, notes: 'Обучение: '});
+                    // Плавный скролл к форме
+                    setTimeout(() => scrollToForm(), 100);
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
                       <motion.div
@@ -1486,8 +1745,11 @@ const Productivity: React.FC = () => {
                         size="large"
                         startIcon={<TrophyIcon size={20} />}
                         onClick={() => {
+                          console.log('🎯 Нажата кнопка "Поделиться успехом"');
                           setShowQuickEntry(true);
+                          setFormType('mood');
                           setMoodEntry({...moodEntry, notes: 'Сегодня у меня был успех: '});
+                          console.log('📝 Установлено значение notes:', 'Сегодня у меня был успех: ');
                         }}
                         sx={{
                           background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
@@ -1530,6 +1792,7 @@ const Productivity: React.FC = () => {
                         startIcon={<ShieldCheckIcon size={20} />}
                         onClick={() => {
                           setShowQuickEntry(true);
+                          setFormType('mood');
                           setMoodEntry({...moodEntry, notes: 'Сегодня мне нужна поддержка: ', mood: 4, stress: 8, energy: 3});
                         }}
                         sx={{
@@ -1573,6 +1836,7 @@ const Productivity: React.FC = () => {
                         startIcon={<ActivityIcon size={20} />}
                         onClick={() => {
                           setShowQuickEntry(true);
+                          setFormType('activity');
                           setMoodEntry({...moodEntry, notes: 'activity_form'});
                         }}
                         sx={{
@@ -1619,27 +1883,30 @@ const Productivity: React.FC = () => {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.5 }}
                     >
-                      <Card sx={{ 
-                        maxWidth: '700px', 
-                        mx: 'auto', 
-                        p: 4,
-                        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                        borderRadius: '24px',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.1), 0 8px 32px rgba(139,0,0,0.1)',
-                        border: '2px solid rgba(139,0,0,0.1)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&:before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '4px',
-                          background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #A0000A 100%)',
-                          zIndex: 1
-                        }
-                      }}>
+                      <Card 
+                        ref={formRef}
+                        sx={{ 
+                          maxWidth: '700px', 
+                          mx: 'auto', 
+                          p: 4,
+                          background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                          borderRadius: '24px',
+                          boxShadow: '0 20px 60px rgba(0,0,0,0.1), 0 8px 32px rgba(139,0,0,0.1)',
+                          border: '2px solid rgba(139,0,0,0.1)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&:before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '4px',
+                            background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #A0000A 100%)',
+                            zIndex: 1
+                          }
+                        }}
+                      >
                         <Typography variant="h5" sx={{ 
                           fontWeight: 800, 
                           mb: 4, 
@@ -1651,13 +1918,11 @@ const Productivity: React.FC = () => {
                           WebkitTextFillColor: 'transparent',
                           textShadow: '0 2px 4px rgba(139,0,0,0.1)'
                         }}>
-                          {moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ') 
-                            ? 'Записать активность' 
-                            : 'Быстрая оценка состояния'}
+                          {formType === 'activity' ? 'Записать активность' : 'Быстрая оценка состояния'}
                         </Typography>
                         
                         {/* Название активности */}
-                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                        {formType === 'activity' && (
                           <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                               <Box sx={{
@@ -1691,15 +1956,9 @@ const Productivity: React.FC = () => {
                             </Box>
                             <TextField
                               fullWidth
-                              value={moodEntry.notes === 'activity_form' ? '' : moodEntry.notes.replace(/^(Работа|Спорт & Здоровье|Обучение): /, '')}
+                              value={activityEntry.activity}
                               onChange={(e) => {
-                                if (moodEntry.notes === 'activity_form') {
-                                  setMoodEntry({...moodEntry, notes: 'activity_form:' + e.target.value});
-                                } else {
-                                  const prefix = moodEntry.notes.startsWith('Работа: ') ? 'Работа: ' : 
-                                               moodEntry.notes.startsWith('Спорт & Здоровье: ') ? 'Спорт & Здоровье: ' : 'Обучение: ';
-                                  setMoodEntry({...moodEntry, notes: prefix + e.target.value});
-                                }
+                                setActivityEntry({...activityEntry, activity: e.target.value});
                               }}
                               placeholder="Например: Завершение проекта, Тренировка, Изучение React"
                               sx={{ 
@@ -1724,7 +1983,7 @@ const Productivity: React.FC = () => {
                         )}
 
                         {/* Категория активности */}
-                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                        {formType === 'activity' && (
                           <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                               <Box sx={{
@@ -1810,7 +2069,7 @@ const Productivity: React.FC = () => {
                         )}
 
                         {/* Длительность активности */}
-                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                        {formType === 'activity' && (
                           <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                               <Box sx={{
@@ -1883,7 +2142,7 @@ const Productivity: React.FC = () => {
                         )}
 
                         {/* Успешность активности */}
-                        {(moodEntry.notes === 'activity_form' || moodEntry.notes.startsWith('Работа: ') || moodEntry.notes.startsWith('Спорт & Здоровье: ') || moodEntry.notes.startsWith('Обучение: ')) && (
+                        {formType === 'activity' && (
                           <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                               <Box sx={{
@@ -1950,13 +2209,10 @@ const Productivity: React.FC = () => {
                           </Box>
                         )}
 
-
-
-
-
-
-
-                                                 {/* Настроение */}
+                        {/* Поля настроения, энергии и стресса - показываются только для формы настроения */}
+                        {formType === 'mood' && (
+                          <>
+                            {/* Настроение */}
                          <Box sx={{ mb: 3 }}>
                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                              <Box sx={{
@@ -2147,6 +2403,8 @@ const Productivity: React.FC = () => {
                              }}
                            />
                          </Box>
+                          </>
+                        )}
 
                          {/* Дополнительные заметки */}
                          <TextField
@@ -2154,8 +2412,17 @@ const Productivity: React.FC = () => {
                           multiline
                           rows={3}
                           label="Дополнительные заметки"
-                          value={activityEntry.notes}
-                          onChange={(e) => setActivityEntry({...activityEntry, notes: e.target.value})}
+                          value={formType === 'activity' ? activityEntry.notes : moodEntry.notes}
+                          onChange={(e) => {
+                            console.log('✏️ Изменение поля заметок:', e.target.value);
+                            if (formType === 'activity') {
+                              setActivityEntry({...activityEntry, notes: e.target.value});
+                              console.log('📝 Обновляем activityEntry.notes:', e.target.value);
+                            } else {
+                              setMoodEntry({...moodEntry, notes: e.target.value});
+                              console.log('📝 Обновляем moodEntry.notes:', e.target.value);
+                            }
+                          }}
                           sx={{ 
                             mb: 3,
                             '& .MuiOutlinedInput-root': {
@@ -2178,7 +2445,9 @@ const Productivity: React.FC = () => {
                               color: '#666'
                             }
                           }}
-                          placeholder="Дополнительные детали, мысли, планы..."
+                          placeholder={formType === 'activity' 
+                            ? "Дополнительные детали, мысли, планы..."
+                            : "Расскажите подробнее о вашем настроении, что произошло сегодня, ваши мысли и планы..."}
                         />
 
                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
@@ -2277,7 +2546,7 @@ const Productivity: React.FC = () => {
             sx={{ 
               fontWeight: 500,
               lineHeight: 1.6,
-              whiteSpace: 'pre-wrap'
+              whiteSpace: 'normal'
             }}
           >
             {snackbarMessage}
