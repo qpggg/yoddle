@@ -882,7 +882,6 @@ const Productivity: React.FC = () => {
                   </Box>
                 ) : dashboard ? (
                   <Box sx={{ textAlign: 'center' }}>
-                    {console.log('🎯 Rendering dashboard with data:', dashboard)}
                     {/* Большой бейдж уровня */}
                     <motion.div
                       initial={{ scale: 0.8, opacity: 0 }}
@@ -895,11 +894,11 @@ const Productivity: React.FC = () => {
                         width: '120px',
                         height: '120px',
                         borderRadius: '50%',
-                        background: `linear-gradient(135deg, ${dashboard.level_color || '#8B4513'} 0%, ${dashboard.level_color || '#8B4513'}DD 100%)`,
+                        background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: `0 20px 40px ${dashboard.level_color || '#8B4513'}40`,
+                        boxShadow: '0 20px 40px rgba(139, 0, 0, 0.4)',
                         border: '4px solid #fff',
                         position: 'relative',
                         '&::before': {
@@ -910,7 +909,7 @@ const Productivity: React.FC = () => {
                           right: -8,
                           bottom: -8,
                           borderRadius: '50%',
-                          background: `linear-gradient(135deg, ${dashboard.level_color || '#8B4513'}20 0%, transparent 100%)`,
+                          background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, transparent 100%)',
                           zIndex: -1
                         }
                       }}>
@@ -952,37 +951,58 @@ const Productivity: React.FC = () => {
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
-                      gap: 3,
-                      mb: 3
+                      gap: 4,
+                      mb: 4
                     }}>
                       <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ 
-                          fontWeight: 800, 
-                          color: dashboard.level_color || '#8B4513',
-                          fontSize: '2rem'
+                        <Typography variant="h2" sx={{ 
+                          fontWeight: 900, 
+                          color: '#8B0000',
+                          fontSize: '3.5rem',
+                          textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          letterSpacing: '-0.03em',
+                          mb: 1
                         }}>
                           {dashboard.productivity_score?.toFixed(1) || '0.0'}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666', fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ 
+                          color: '#666', 
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          fontSize: '0.85rem'
+                        }}>
                           Рейтинг
                         </Typography>
                       </Box>
                       
                       <Box sx={{ 
-                        width: '2px', 
-                        height: '40px', 
-                        background: 'linear-gradient(to bottom, transparent, #ddd, transparent)' 
+                        width: '3px', 
+                        height: '60px', 
+                        background: 'linear-gradient(to bottom, transparent, #ddd, transparent)',
+                        borderRadius: '2px'
                       }} />
                       
                       <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ 
-                          fontWeight: 800, 
+                        <Typography variant="h2" sx={{ 
+                          fontWeight: 900, 
                           color: '#8B0000',
-                          fontSize: '2rem'
+                          fontSize: '3.5rem',
+                          textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          letterSpacing: '-0.03em',
+                          mb: 1
                         }}>
                           {dashboard.xp_multiplier || 1.0}x
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666', fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ 
+                          color: '#666', 
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          fontSize: '0.85rem'
+                        }}>
                           XP множитель
                         </Typography>
                       </Box>
@@ -995,7 +1015,7 @@ const Productivity: React.FC = () => {
                           <Typography variant="h6" sx={{ 
                             fontWeight: 800, 
                             color: '#8B0000',
-                            fontSize: '1.5rem'
+                            fontSize: '1.8rem'
                           }}>
                             {dashboard.weekly_productivity?.toFixed(1) || '0.0'}
                           </Typography>
@@ -1009,8 +1029,8 @@ const Productivity: React.FC = () => {
                         <Box sx={{ textAlign: 'center' }}>
                           <Typography variant="h6" sx={{ 
                             fontWeight: 800, 
-                            color: '#B22222',
-                            fontSize: '1.5rem'
+                            color: '#8B0000',
+                            fontSize: '1.8rem'
                           }}>
                             {dashboard.monthly_productivity?.toFixed(1) || '0.0'}
                           </Typography>
@@ -1024,8 +1044,8 @@ const Productivity: React.FC = () => {
                         <Box sx={{ textAlign: 'center' }}>
                           <Typography variant="h6" sx={{ 
                             fontWeight: 800, 
-                            color: '#A0000A',
-                            fontSize: '1.5rem'
+                            color: '#8B0000',
+                            fontSize: '1.8rem'
                           }}>
                             {dashboard.days_tracked_this_week || 0}
                           </Typography>
@@ -1039,8 +1059,8 @@ const Productivity: React.FC = () => {
                         <Box sx={{ textAlign: 'center' }}>
                           <Typography variant="h6" sx={{ 
                             fontWeight: 800, 
-                            color: '#B71C1C',
-                            fontSize: '1.5rem'
+                            color: '#8B0000',
+                            fontSize: '1.8rem'
                           }}>
                             {dashboard.productivity_achievements_count || 0}
                           </Typography>
