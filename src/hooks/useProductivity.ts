@@ -271,15 +271,19 @@ export const useProductivity = () => {
     setError(null);
 
     try {
+      console.log('🔄 Loading progress for user:', user.id);
       const response = await fetch(`${API_BASE}/progress/${user.id}`);
       const result = await response.json();
 
       if (result.success) {
+        console.log('✅ Progress loaded:', result.progress);
         setProgress(result.progress);
       } else {
+        console.error('❌ Progress load failed:', result.message);
         setError(result.message || 'Ошибка при загрузке прогресса');
       }
     } catch (err: any) {
+      console.error('❌ Progress load error:', err);
       handleError(err, 'Ошибка при загрузке прогресса');
     } finally {
       setLoading(false);
@@ -376,6 +380,7 @@ export const useProductivity = () => {
   // Загрузка всех данных при изменении пользователя
   useEffect(() => {
     if (user?.id) {
+      console.log('🔄 Loading productivity data for user:', user.id);
       loadStats();
       loadDashboard();
       loadProgress();

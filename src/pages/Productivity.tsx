@@ -410,7 +410,9 @@ const Productivity: React.FC = () => {
   // Хук для продуктивности
   const {
     dashboard,
-    loading: productivityLoading
+    loading: productivityLoading,
+    error: productivityError,
+    loadDashboard
   } = useProductivity();
   
   // Состояния
@@ -449,7 +451,13 @@ const Productivity: React.FC = () => {
   useEffect(() => {
     console.log('Productivity page mounted, loading data...');
     loadProductivityData();
-  }, []);
+    
+    // Принудительно загружаем данные продуктивности
+    if (user?.id) {
+      console.log('🔄 Forcing productivity data load for user:', user.id);
+      loadDashboard();
+    }
+  }, [user?.id, loadDashboard]);
 
   // Функция плавного скролла к форме
   const scrollToForm = () => {
@@ -857,9 +865,24 @@ const Productivity: React.FC = () => {
                 {productivityLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                     <CircularProgress sx={{ color: '#8B0000' }} size={40} />
+                    <Typography sx={{ ml: 2, color: '#666' }}>Загрузка данных продуктивности...</Typography>
+                  </Box>
+                ) : productivityError ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" sx={{ color: '#f44336', mb: 2 }}>
+                      Ошибка загрузки: {productivityError}
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      onClick={() => loadDashboard()}
+                      sx={{ color: '#8B0000', borderColor: '#8B0000' }}
+                    >
+                      Попробовать снова
+                    </Button>
                   </Box>
                 ) : dashboard ? (
                   <Box sx={{ textAlign: 'center' }}>
+                    {console.log('🎯 Rendering dashboard with data:', dashboard)}
                     {/* Большой бейдж уровня */}
                     <motion.div
                       initial={{ scale: 0.8, opacity: 0 }}

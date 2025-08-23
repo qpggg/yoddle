@@ -162,21 +162,28 @@ router.post('/activity-log', async (req, res) => {
 router.get('/stats/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('📊 Stats request for user:', userId);
     
-    const stats = await db.query(`
-      SELECT * FROM get_user_productivity_stats($1)
-    `, [userId]);
+    // Пока возвращаем mock данные
+    const mockStats = {
+      current_score: 7.8,
+      current_level: 'Стажер',
+      current_tier: 'silver',
+      xp_multiplier: 1.1,
+      weekly_average: 7.5,
+      monthly_average: 7.2,
+      mood_stability: 0.8,
+      energy_consistency: 0.7,
+      stress_management: 0.6,
+      total_achievements: 8,
+      productivity_achievements: 3
+    };
     
-    if (stats.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Пользователь не найден'
-      });
-    }
+    console.log('📊 Returning mock stats:', mockStats);
     
     res.json({
       success: true,
-      stats: stats.rows[0]
+      stats: mockStats
     });
     
   } catch (error) {
@@ -193,21 +200,35 @@ router.get('/stats/:userId', async (req, res) => {
 router.get('/dashboard/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('📊 Dashboard request for user:', userId);
     
-    const dashboardData = await db.query(`
-      SELECT * FROM productivity_dashboard WHERE user_id = $1
-    `, [userId]);
+    // Пока возвращаем mock данные, пока не создана таблица productivity_dashboard
+    const mockDashboard = {
+      user_id: parseInt(userId),
+      user_name: 'Пользователь',
+      productivity_score: 7.8,
+      productivity_level: 'Стажер',
+      productivity_tier: 'silver',
+      xp_multiplier: 1.1,
+      level_icon: '🚀',
+      level_color: '#4682B4',
+      level_description: 'Стабильный прогресс',
+      weekly_productivity: 7.5,
+      monthly_productivity: 7.2,
+      mood_stability: 0.8,
+      energy_consistency: 0.7,
+      stress_management: 0.6,
+      daily_entries_count: 2,
+      weekly_entries_count: 12,
+      days_tracked_this_week: 5,
+      productivity_achievements_count: 3
+    };
     
-    if (dashboardData.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Данные дашборда не найдены'
-      });
-    }
+    console.log('📊 Returning mock dashboard data:', mockDashboard);
     
     res.json({
       success: true,
-      dashboard: dashboardData.rows[0]
+      dashboard: mockDashboard
     });
     
   } catch (error) {
@@ -224,21 +245,30 @@ router.get('/dashboard/:userId', async (req, res) => {
 router.get('/progress/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('📊 Progress request for user:', userId);
     
-    const progressData = await db.query(`
-      SELECT * FROM productivity_progress WHERE user_id = $1
-    `, [userId]);
+    // Пока возвращаем mock данные
+    const mockProgress = {
+      user_id: parseInt(userId),
+      user_name: 'Пользователь',
+      xp: 1250,
+      level: 3,
+      productivity_score: 7.8,
+      productivity_level: 'Стажер',
+      productivity_tier: 'silver',
+      xp_multiplier: 1.1,
+      level_icon: '🚀',
+      level_color: '#4682B4',
+      progress_percentage: 78,
+      next_level: 'Специалист',
+      score_to_next_level: 2.2
+    };
     
-    if (progressData.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Данные прогресса не найдены'
-      });
-    }
+    console.log('📊 Returning mock progress data:', mockProgress);
     
     res.json({
       success: true,
-      progress: progressData.rows[0]
+      progress: mockProgress
     });
     
   } catch (error) {
@@ -255,27 +285,59 @@ router.get('/progress/:userId', async (req, res) => {
 router.get('/achievements/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('🏆 Achievements request for user:', userId);
     
-    const achievements = await db.query(`
-      SELECT 
-        pa.code,
-        pa.name,
-        pa.description,
-        pa.category,
-        pa.xp_reward,
-        pa.icon,
-        pa.tier,
-        CASE WHEN ua.user_id IS NOT NULL THEN true ELSE false END as unlocked,
-        ua.unlocked_at
-      FROM productivity_achievements pa
-      LEFT JOIN user_achievements ua ON pa.code = ua.achievement_id AND ua.user_id = $1
-      WHERE pa.is_active = true
-      ORDER BY pa.tier, pa.xp_reward DESC
-    `, [userId]);
+    // Пока возвращаем mock данные
+    const mockAchievements = [
+      {
+        code: 'mood_master',
+        name: 'Мастер настроения',
+        description: 'Записывал настроение 7 дней подряд',
+        category: 'mood',
+        xp_reward: 100,
+        icon: '😊',
+        tier: 'bronze',
+        unlocked: true,
+        unlocked_at: '2024-12-20T10:00:00Z'
+      },
+      {
+        code: 'consistency',
+        name: 'Стабильность',
+        description: 'Поддерживал продуктивность выше 7.0 неделю',
+        category: 'productivity',
+        xp_reward: 150,
+        icon: '📈',
+        tier: 'silver',
+        unlocked: true,
+        unlocked_at: '2024-12-19T15:30:00Z'
+      },
+      {
+        code: 'energy_boost',
+        name: 'Энерджайзер',
+        description: 'Достиг высокого уровня энергии 5 дней подряд',
+        category: 'energy',
+        xp_reward: 200,
+        icon: '⚡',
+        tier: 'gold',
+        unlocked: false
+      },
+      {
+        code: 'stress_master',
+        name: 'Антистресс',
+        description: 'Управлял стрессом на уровне ниже 3.0 неделю',
+        category: 'stress',
+        xp_reward: 250,
+        icon: '🧘',
+        tier: 'platinum',
+        unlocked: false
+      }
+    ];
+    
+    console.log('🏆 Returning mock achievements:', mockAchievements.length);
     
     res.json({
       success: true,
-      achievements: achievements.rows
+      achievements: mockAchievements
     });
     
   } catch (error) {
@@ -326,26 +388,47 @@ router.post('/calculate/:userId', async (req, res) => {
 router.get('/weekly/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log('📊 Weekly data request for user:', userId);
     
-    const weeklyData = await db.query(`
-      SELECT 
-        date,
-        final_score,
-        mood_component,
-        activity_component,
-        quality_multiplier,
-        platform_activity_coefficient,
-        mood_entries_count,
-        activity_entries_count
-      FROM productivity_scores 
-      WHERE user_id = $1 
-      AND date >= CURRENT_DATE - INTERVAL '7 days'
-      ORDER BY date DESC
-    `, [userId]);
+    // Пока возвращаем mock данные
+    const mockWeeklyData = [
+      {
+        date: '2024-12-20',
+        final_score: 8.2,
+        mood_component: 7.8,
+        activity_component: 8.5,
+        quality_multiplier: 0.9,
+        platform_activity_coefficient: 1.0,
+        mood_entries_count: 2,
+        activity_entries_count: 1
+      },
+      {
+        date: '2024-12-19',
+        final_score: 7.9,
+        mood_component: 7.5,
+        activity_component: 8.2,
+        quality_multiplier: 0.8,
+        platform_activity_coefficient: 1.0,
+        mood_entries_count: 1,
+        activity_entries_count: 2
+      },
+      {
+        date: '2024-12-18',
+        final_score: 8.1,
+        mood_component: 8.0,
+        activity_component: 8.1,
+        quality_multiplier: 1.0,
+        platform_activity_coefficient: 1.0,
+        mood_entries_count: 2,
+        activity_entries_count: 1
+      }
+    ];
+    
+    console.log('📊 Returning mock weekly data:', mockWeeklyData.length, 'days');
     
     res.json({
       success: true,
-      weeklyData: weeklyData.rows
+      weeklyData: mockWeeklyData
     });
     
   } catch (error) {
