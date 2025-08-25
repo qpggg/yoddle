@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 export const Contact = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -21,13 +22,14 @@ export const Contact = () => {
       const response = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, company, message }),
       });
       const data = await response.json();
       if (data.success) {
         setSuccess(true);
         setName('');
         setEmail('');
+        setCompany('');
         setMessage('');
       } else {
         setError(data.error || 'Ошибка отправки');
@@ -161,6 +163,25 @@ export const Contact = () => {
                   }}
                 />
                 <TextField
+                  label="Компания (необязательно)"
+                  fullWidth
+                  variant="outlined"
+                  value={company}
+                  onChange={e => setCompany(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: '#F8F9FA',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(117, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#750000',
+                      },
+                    },
+                  }}
+                />
+                <TextField
                   label="Сообщение"
                   required
                   fullWidth
@@ -183,7 +204,7 @@ export const Contact = () => {
                   }}
                 />
                 {error && <Alert severity="error">{error}</Alert>}
-                {success && <Alert severity="success">Спасибо! Ваша заявка отправлена.</Alert>}
+                {success && <Alert severity="success">Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время.</Alert>}
                 <Button
                   variant="contained"
                   size="large"
