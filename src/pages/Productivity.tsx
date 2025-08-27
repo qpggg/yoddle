@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar, Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { useProductivity } from '../hooks/useProductivity';
@@ -410,9 +410,12 @@ const Productivity: React.FC = () => {
   // Хук для продуктивности
   const {
     dashboard,
+    moodPercentages,
+    dailyMoodData,
     loading: productivityLoading,
     error: productivityError,
-    loadDashboard
+    loadDashboard,
+    loadMoodPercentages
   } = useProductivity();
   
   // Состояния
@@ -456,8 +459,17 @@ const Productivity: React.FC = () => {
     if (user?.id) {
       console.log('🔄 Forcing productivity data load for user:', user.id);
       loadDashboard();
+      loadMoodPercentages();
     }
-  }, [user?.id, loadDashboard]);
+  }, [user?.id, loadDashboard, loadMoodPercentages]);
+
+  // Обновляем данные при изменении процентов из БД
+  useEffect(() => {
+    if (moodPercentages && dailyMoodData) {
+      console.log('📊 Обновляем данные на основе процентов из БД:', moodPercentages);
+      loadProductivityData();
+    }
+  }, [moodPercentages, dailyMoodData]);
 
   // Функция плавного скролла к форме
   const scrollToForm = () => {
@@ -475,18 +487,58 @@ const Productivity: React.FC = () => {
       // Используем реальные AI данные
       await generateDailyInsight();
       
-      // Mock данные настроения за неделю (пока не реализовано в API)
-      const mockWeeklyMood: WeeklyMood[] = [
-        { day: 'Пн', mood: 6, energy: 7, stress: 4 },
-        { day: 'Вт', mood: 8, energy: 8, stress: 2 },
-        { day: 'Ср', mood: 7, energy: 6, stress: 5 },
-        { day: 'Чт', mood: 9, energy: 9, stress: 1 },
-        { day: 'Пт', mood: 8, energy: 7, stress: 3 },
-        { day: 'Сб', mood: 9, energy: 8, stress: 2 },
-        { day: 'Вс', mood: 8, energy: 6, stress: 3 }
-      ];
-      
-      setWeeklyMood(mockWeeklyMood);
+      // Преобразуем реальные данные из БД в формат для отображения
+      if (dailyMoodData && dailyMoodData.length > 0) {
+        // Правильный порядок дней: Пн, Вт, Ср, Чт, Пт, Сб, Вс
+        const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        
+        // Создаем массив для всех дней недели
+        const realWeeklyMood: WeeklyMood[] = weekDays.map((dayName, index) => {
+          // Ищем данные для текущего дня недели
+          const dayData = dailyMoodData.find(data => {
+            const date = new Date(data.date);
+            const dayIndex = date.getDay();
+            // getDay() возвращает 0=Вс, 1=Пн, 2=Вт, 3=Ср, 4=Чт, 5=Пт, 6=Сб
+            // Нам нужно: 0=Пн, 1=Вт, 2=Ср, 3=Чт, 4=Пт, 5=Сб, 6=Вс
+            const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+            return adjustedIndex === index;
+          });
+          
+          if (dayData) {
+            return {
+              day: dayName,
+              mood: Math.round(dayData.mood_percentage), // Проценты уже в правильном формате
+              energy: Math.round(dayData.energy_percentage),
+              stress: Math.round(100 - dayData.calmness_percentage) // Инвертируем спокойствие в стресс
+            };
+          } else {
+            // Если нет данных для этого дня, возвращаем 0
+            return {
+              day: dayName,
+              mood: 0,
+              energy: 0,
+              stress: 100 // Максимальный стресс = нет спокойствия
+            };
+          }
+        });
+        
+        setWeeklyMood(realWeeklyMood);
+        console.log('📊 Загружены реальные недельные данные настроения:', realWeeklyMood);
+        console.log('📊 Исходные данные из БД:', dailyMoodData);
+      } else {
+        console.log('📊 Нет данных настроения, используем базовые значения');
+        // Базовые данные если нет реальных
+        const baseWeeklyMood: WeeklyMood[] = [
+          { day: 'Пн', mood: 5, energy: 5, stress: 5 },
+          { day: 'Вт', mood: 5, energy: 5, stress: 5 },
+          { day: 'Ср', mood: 5, energy: 5, stress: 5 },
+          { day: 'Чт', mood: 5, energy: 5, stress: 5 },
+          { day: 'Пт', mood: 5, energy: 5, stress: 5 },
+          { day: 'Сб', mood: 5, energy: 5, stress: 5 },
+          { day: 'Вс', mood: 5, energy: 5, stress: 5 }
+        ];
+        setWeeklyMood(baseWeeklyMood);
+      }
       
       // Загружаем последние активности по категориям (пока используем mock данные)
       setLastActivities({
@@ -608,6 +660,16 @@ const Productivity: React.FC = () => {
 
 
   const calculateAverageFromWeek = () => {
+    // Используем реальные данные из БД если они есть
+    if (moodPercentages) {
+      return {
+        mood: moodPercentages.mood || 0,
+        energy: moodPercentages.energy || 0,
+        stress: 100 - (moodPercentages.calmness || 0) // Инвертируем спокойствие в стресс
+      };
+    }
+    
+    // Fallback на локальные данные если БД недоступна
     if (weeklyMood.length === 0) return { mood: 0, energy: 0, stress: 0 };
     
     const totals = weeklyMood.reduce((acc, day) => ({
@@ -1176,7 +1238,13 @@ const Productivity: React.FC = () => {
 
                 {/* График по дням */}
                 <Grid container spacing={2}>
-                  {weeklyMood.map((day, index) => (
+                  {weeklyMood
+                    .sort((a, b) => {
+                      // Сортируем дни в правильном порядке: Пн, Вт, Ср, Чт, Пт, Сб, Вс
+                      const dayOrder = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 7 };
+                      return (dayOrder[a.day as keyof typeof dayOrder] || 0) - (dayOrder[b.day as keyof typeof dayOrder] || 0);
+                    })
+                    .map((day, index) => (
                     <Grid item xs key={day.day}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#666' }}>
@@ -1193,82 +1261,100 @@ const Productivity: React.FC = () => {
                           borderRadius: '12px'
                         }}>
                           {/* Настроение */}
-                          <motion.div
-                            initial={{ scaleY: 0, opacity: 0 }}
-                            animate={{ scaleY: 1, opacity: 1 }}
-                            whileHover={{ 
-                              scaleY: 1.1, 
-                              scaleX: 1.2,
-                              boxShadow: '0 4px 12px rgba(139,0,0,0.5)',
-                              transition: { duration: 0.2 }
-                            }}
-                            transition={{ 
-                              delay: index * 0.1, 
-                              duration: 0.8,
-                              ease: "backOut"
-                            }}
-                            style={{
-                              transformOrigin: 'bottom',
-                              width: '18px',
-                              height: `${Math.max(day.mood * 8, 15)}px`,
-                              background: 'linear-gradient(to top, #8B0000 0%, #A52A2A 100%)',
-                              borderRadius: '4px',
-                              boxShadow: '0 2px 6px rgba(139,0,0,0.3)',
-                              cursor: 'pointer'
-                            }}
-                          />
+                          <Tooltip 
+                            title={`Настроение: ${Math.round(day.mood)}%`}
+                            arrow
+                            placement="top"
+                          >
+                            <motion.div
+                              initial={{ scaleY: 0, opacity: 0 }}
+                              animate={{ scaleY: 1, opacity: 1 }}
+                              whileHover={{ 
+                                scaleY: 1.1, 
+                                scaleX: 1.2,
+                                boxShadow: '0 4px 12px rgba(139,0,0,0.5)',
+                                transition: { duration: 0.2 }
+                              }}
+                              transition={{ 
+                                delay: index * 0.1, 
+                                duration: 0.8,
+                                ease: "backOut"
+                              }}
+                              style={{
+                                transformOrigin: 'bottom',
+                                width: '18px',
+                                height: `${Math.max(day.mood * 1.2, 15)}px`,
+                                background: 'linear-gradient(to top, #8B0000 0%, #A52A2A 100%)',
+                                borderRadius: '4px',
+                                boxShadow: '0 2px 6px rgba(139,0,0,0.3)',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          </Tooltip>
                           
                           {/* Энергия */}
-                          <motion.div
-                            initial={{ scaleY: 0, opacity: 0 }}
-                            animate={{ scaleY: 1, opacity: 1 }}
-                            whileHover={{ 
-                              scaleY: 1.1, 
-                              scaleX: 1.2,
-                              boxShadow: '0 4px 12px rgba(160,0,10,0.5)',
-                              transition: { duration: 0.2 }
-                            }}
-                            transition={{ 
-                              delay: index * 0.1 + 0.1, 
-                              duration: 0.8,
-                              ease: "backOut"
-                            }}
-                            style={{
-                              transformOrigin: 'bottom',
-                              width: '18px',
-                              height: `${Math.max(day.energy * 8, 15)}px`,
-                              background: 'linear-gradient(to top, #A0000A 0%, #C41E3A 100%)',
-                              borderRadius: '4px',
-                              boxShadow: '0 2px 6px rgba(178,34,34,0.3)',
-                              cursor: 'pointer'
-                            }}
-                          />
+                          <Tooltip 
+                            title={`Энергия: ${Math.round(day.energy)}%`}
+                            arrow
+                            placement="top"
+                          >
+                            <motion.div
+                              initial={{ scaleY: 0, opacity: 0 }}
+                              animate={{ scaleY: 1, opacity: 1 }}
+                              whileHover={{ 
+                                scaleY: 1.1, 
+                                scaleX: 1.2,
+                                boxShadow: '0 4px 12px rgba(160,0,10,0.5)',
+                                transition: { duration: 0.2 }
+                              }}
+                              transition={{ 
+                                delay: index * 0.1 + 0.1, 
+                                duration: 0.8,
+                                ease: "backOut"
+                              }}
+                              style={{
+                                transformOrigin: 'bottom',
+                                width: '18px',
+                                height: `${Math.max(day.energy * 1.2, 15)}px`,
+                                background: 'linear-gradient(to top, #A0000A 0%, #C41E3A 100%)',
+                                borderRadius: '4px',
+                                boxShadow: '0 2px 6px rgba(178,34,34,0.3)',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          </Tooltip>
                           
                           {/* Спокойствие */}
-                          <motion.div
-                            initial={{ scaleY: 0, opacity: 0 }}
-                            animate={{ scaleY: 1, opacity: 1 }}
-                            whileHover={{ 
-                              scaleY: 1.1, 
-                              scaleX: 1.2,
-                              boxShadow: '0 4px 12px rgba(183,28,28,0.5)',
-                              transition: { duration: 0.2 }
-                            }}
-                            transition={{ 
-                              delay: index * 0.1 + 0.2, 
-                              duration: 0.8,
-                              ease: "backOut"
-                            }}
-                            style={{
-                              transformOrigin: 'bottom',
-                              width: '18px',
-                              height: `${Math.max((10 - day.stress) * 8, 15)}px`,
-                              background: 'linear-gradient(to top, #B71C1C 0%, #DC143C 100%)',
-                              borderRadius: '4px',
-                              boxShadow: '0 2px 6px rgba(183,28,28,0.3)',
-                              cursor: 'pointer'
-                            }}
-                          />
+                          <Tooltip 
+                            title={`Спокойствие: ${Math.round(100 - day.stress)}%`}
+                            arrow
+                            placement="top"
+                          >
+                            <motion.div
+                              initial={{ scaleY: 0, opacity: 0 }}
+                              animate={{ scaleY: 1, opacity: 1 }}
+                              whileHover={{ 
+                                scaleY: 1.1, 
+                                scaleX: 1.2,
+                                boxShadow: '0 4px 12px rgba(183,28,28,0.5)',
+                                transition: { duration: 0.2 }
+                              }}
+                              transition={{ 
+                                delay: index * 0.1 + 0.2, 
+                                duration: 0.8,
+                                ease: "backOut"
+                              }}
+                              style={{
+                                transformOrigin: 'bottom',
+                                width: '18px',
+                                height: `${Math.max((100 - day.stress) * 1.2, 15)}px`,
+                                background: 'linear-gradient(to top, #B71C1C 0%, #DC143C 100%)',
+                                borderRadius: '4px',
+                                boxShadow: '0 2px 6px rgba(183,28,28,0.3)',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          </Tooltip>
                         </Box>
                       </Box>
                     </Grid>
@@ -1281,7 +1367,7 @@ const Productivity: React.FC = () => {
                       width: 16, 
                       height: 16, 
                       borderRadius: '4px', 
-                      background: '#8B0000',
+                      background: 'linear-gradient(to top, #8B0000 0%, #A52A2A 100%)',
                       boxShadow: '0 2px 4px rgba(139,0,0,0.3)'
                     }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>Настроение</Typography>
@@ -1291,7 +1377,7 @@ const Productivity: React.FC = () => {
                       width: 16, 
                       height: 16, 
                       borderRadius: '4px', 
-                      background: '#A0000A',
+                      background: 'linear-gradient(to top, #A0000A 0%, #C41E3A 100%)',
                       boxShadow: '0 2px 4px rgba(178,34,34,0.3)'
                     }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>Энергия</Typography>
@@ -1301,7 +1387,7 @@ const Productivity: React.FC = () => {
                       width: 16, 
                       height: 16, 
                       borderRadius: '4px', 
-                      background: '#B71C1C',
+                      background: 'linear-gradient(to top, #B71C1C 0%, #DC143C 100%)',
                       boxShadow: '0 2px 4px rgba(183,28,28,0.3)'
                     }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>Спокойствие</Typography>

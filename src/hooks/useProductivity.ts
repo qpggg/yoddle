@@ -76,6 +76,19 @@ interface WeeklyData {
   activity_entries_count: number;
 }
 
+interface MoodPercentages {
+  mood: number;
+  energy: number;
+  calmness: number;
+}
+
+interface DailyMoodData {
+  date: string;
+  mood_percentage: number;
+  energy_percentage: number;
+  calmness_percentage: number;
+}
+
 interface MoodCheckData {
   mood: number;
   energy: number;
@@ -106,6 +119,8 @@ export const useProductivity = () => {
   const [progress, setProgress] = useState<ProductivityProgress | null>(null);
   const [achievements, setAchievements] = useState<ProductivityAchievement[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
+  const [moodPercentages, setMoodPercentages] = useState<MoodPercentages | null>(null);
+  const [dailyMoodData, setDailyMoodData] = useState<DailyMoodData[]>([]);
 
   // Базовый URL для API
   const API_BASE = '/api/productivity';
@@ -230,6 +245,7 @@ export const useProductivity = () => {
 
       if (result.success) {
         setStats(result.stats);
+        console.log('📊 Загружена статистика из БД:', result.stats);
       } else {
         setError(result.message || 'Ошибка при загрузке статистики');
       }
@@ -253,6 +269,7 @@ export const useProductivity = () => {
 
       if (result.success) {
         setDashboard(result.dashboard);
+        console.log('📊 Загружен дашборд из БД:', result.dashboard);
       } else {
         setError(result.message || 'Ошибка при загрузке дашборда');
       }
@@ -276,7 +293,7 @@ export const useProductivity = () => {
       const result = await response.json();
 
       if (result.success) {
-        console.log('✅ Progress loaded:', result.progress);
+        console.log('✅ Progress loaded from DB:', result.progress);
         setProgress(result.progress);
       } else {
         console.error('❌ Progress load failed:', result.message);
@@ -303,6 +320,7 @@ export const useProductivity = () => {
 
       if (result.success) {
         setAchievements(result.achievements);
+        console.log('🏆 Загружены достижения из БД:', result.achievements.length);
       } else {
         setError(result.message || 'Ошибка при загрузке достижений');
       }
@@ -326,11 +344,38 @@ export const useProductivity = () => {
 
       if (result.success) {
         setWeeklyData(result.weeklyData);
+        console.log('📊 Загружены недельные данные из БД:', result.weeklyData.length, 'дней');
       } else {
         setError(result.message || 'Ошибка при загрузке недельных данных');
       }
     } catch (err: any) {
       handleError(err, 'Ошибка при загрузке недельных данных');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  // Загрузка процентов настроения, энергии и спокойствия
+  const loadMoodPercentages = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/mood-percentages/${user.id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setMoodPercentages(result.percentages);
+        setDailyMoodData(result.dailyData);
+        console.log('📊 Загружены проценты настроения из БД:', result.percentages);
+        console.log('📊 Ежедневные данные настроения:', result.dailyData.length, 'дней');
+      } else {
+        setError(result.message || 'Ошибка при загрузке процентов настроения');
+      }
+    } catch (err: any) {
+      handleError(err, 'Ошибка при загрузке процентов настроения');
     } finally {
       setLoading(false);
     }
@@ -386,8 +431,9 @@ export const useProductivity = () => {
       loadProgress();
       loadAchievements();
       loadWeeklyData();
+      loadMoodPercentages();
     }
-  }, [user?.id, loadStats, loadDashboard, loadProgress, loadAchievements, loadWeeklyData]);
+  }, [user?.id, loadStats, loadDashboard, loadProgress, loadAchievements, loadWeeklyData, loadMoodPercentages]);
 
   // Функция для получения цвета уровня
   const getLevelColor = (tier: string) => {
@@ -433,6 +479,8 @@ export const useProductivity = () => {
     progress,
     achievements,
     weeklyData,
+    moodPercentages,
+    dailyMoodData,
     
     // Функции
     checkMood,
@@ -442,6 +490,7 @@ export const useProductivity = () => {
     loadProgress,
     loadAchievements,
     loadWeeklyData,
+    loadMoodPercentages,
     calculateProductivity,
     clearError,
     

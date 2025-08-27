@@ -164,30 +164,55 @@ router.get('/stats/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log('📊 Stats request for user:', userId);
     
-    // Пока возвращаем mock данные
-    const mockStats = {
-      current_score: 7.8,
-      current_level: 'Стажер',
-      current_tier: 'silver',
-      xp_multiplier: 1.1,
-      weekly_average: 7.5,
-      monthly_average: 7.2,
-      mood_stability: 0.8,
-      energy_consistency: 0.7,
-      stress_management: 0.6,
-      total_achievements: 8,
-      productivity_achievements: 3
-    };
+    // Проверяем существование функции
+    const functionExists = await db.query(`
+      SELECT 1 FROM pg_proc WHERE proname = 'get_user_productivity_stats'
+    `);
     
-    console.log('📊 Returning mock stats:', mockStats);
+    if (functionExists.rows.length === 0) {
+      console.error('❌ Function get_user_productivity_stats does not exist');
+      return res.status(500).json({
+        success: false,
+        message: 'Функция расчета статистики не найдена в БД'
+      });
+    }
+    
+    // Используем реальную функцию из БД
+    const statsResult = await db.query(`
+      SELECT * FROM get_user_productivity_stats($1)
+    `, [userId]);
+    
+    if (statsResult.rows.length === 0) {
+      console.log('📊 No stats found for user:', userId);
+      // Возвращаем базовые данные если статистики нет
+      return res.json({
+        success: true,
+        stats: {
+          current_score: 0,
+          current_level: 'Новичок',
+          current_tier: 'bronze',
+          xp_multiplier: 1.0,
+          weekly_average: 0,
+          monthly_average: 0,
+          mood_stability: 0,
+          energy_consistency: 0,
+          stress_management: 0,
+          total_achievements: 0,
+          productivity_achievements: 0
+        }
+      });
+    }
+    
+    const stats = statsResult.rows[0];
+    console.log('📊 Returning real stats from DB:', stats);
     
     res.json({
       success: true,
-      stats: mockStats
+      stats: stats
     });
     
   } catch (error) {
-    console.error('Error getting productivity stats:', error);
+    console.error('❌ Error getting productivity stats:', error);
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении статистики',
@@ -202,37 +227,69 @@ router.get('/dashboard/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log('📊 Dashboard request for user:', userId);
     
-    // Пока возвращаем mock данные, пока не создана таблица productivity_dashboard
-    const mockDashboard = {
-      user_id: parseInt(userId),
-      user_name: 'Пользователь',
-      productivity_score: 7.8,
-      productivity_level: 'Стажер',
-      productivity_tier: 'silver',
-      xp_multiplier: 1.1,
-      level_icon: '🚀',
-      level_color: '#4682B4',
-      level_description: 'Стабильный прогресс',
-      weekly_productivity: 7.5,
-      monthly_productivity: 7.2,
-      mood_stability: 0.8,
-      energy_consistency: 0.7,
-      stress_management: 0.6,
-      daily_entries_count: 2,
-      weekly_entries_count: 12,
-      days_tracked_this_week: 5,
-      productivity_achievements_count: 3
-    };
+    // Проверяем существование функции
+    const functionExists = await db.query(`
+      SELECT 1 FROM pg_proc WHERE proname = 'get_user_productivity_stats'
+    `);
     
-    console.log('📊 Returning mock dashboard data:', mockDashboard);
+    if (functionExists.rows.length === 0) {
+      console.error('❌ Function get_user_productivity_stats does not exist');
+      return res.status(500).json({
+        success: false,
+        message: 'Функция расчета статистики не найдена в БД'
+      });
+    }
+    
+    // Используем реальную функцию из БД для получения данных дашборда
+    const statsResult = await db.query(`
+      SELECT * FROM get_user_productivity_stats($1)
+    `, [userId]);
+    
+    if (statsResult.rows.length === 0) {
+      console.log('📊 No stats found for user:', userId);
+      // Возвращаем базовые данные если статистики нет
+      return res.json({
+        success: true,
+        dashboard: {
+          productivity_level: 'Новичок',
+          level_icon: '🌱',
+          level_description: 'Начинающий путь к продуктивности',
+          current_score: 0,
+          current_level: 'Новичок',
+          current_tier: 'bronze',
+          xp_multiplier: 1.0,
+          weekly_average: 0,
+          monthly_average: 0,
+          mood_stability: 0,
+          energy_consistency: 0,
+          stress_management: 0,
+          total_achievements: 0,
+          productivity_achievements: 0,
+          // Добавляем недостающие поля для совместимости
+          level: 'Новичок',
+          tier: 'bronze'
+        }
+      });
+    }
+    
+    const stats = statsResult.rows[0];
+    console.log('📊 Returning dashboard data from DB function:', stats);
+    
+    // Преобразуем данные в формат дашборда
+    const dashboard = {
+      productivity_level: stats.current_level || 'Новичок',
+      level_icon: getLevelIcon(stats.current_level, stats.current_tier),
+      level_description: getLevelDescription(stats.current_level),
+      ...stats
+    };
     
     res.json({
       success: true,
-      dashboard: mockDashboard
+      dashboard: dashboard
     });
     
   } catch (error) {
-    console.error('Error getting dashboard data:', error);
+    console.error('❌ Error getting dashboard:', error);
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении данных дашборда',
@@ -241,34 +298,67 @@ router.get('/dashboard/:userId', async (req, res) => {
   }
 });
 
+// Вспомогательные функции для форматирования данных
+function getLevelIcon(level, tier) {
+  const icons = {
+    'Новичок': '🌱',
+    'Стажер': '🌿',
+    'Специалист': '🌳',
+    'Эксперт': '🏆',
+    'Мастер': '👑'
+  };
+  
+  // Если уровень не найден, возвращаем иконку по умолчанию
+  if (!icons[level]) {
+    return '🌱';
+  }
+  
+  // Добавляем цветовую индикацию для тиров
+  const tierColors = {
+    'bronze': '🥉',
+    'silver': '🥈', 
+    'gold': '🥇',
+    'platinum': '💎'
+  };
+  
+  return icons[level] + (tierColors[tier] || '');
+}
+
+function getLevelDescription(level) {
+  const descriptions = {
+    'Новичок': 'Начинающий путь к продуктивности',
+    'Стажер': 'Осваиваете основы продуктивности',
+    'Специалист': 'Уверенно движетесь к целям',
+    'Эксперт': 'Достигли высокого уровня продуктивности',
+    'Мастер': 'Владеете искусством продуктивности'
+  };
+  return descriptions[level] || 'Начинающий путь к продуктивности';
+}
+
 // GET /api/productivity/progress/:userId - Данные для страницы прогресса
 router.get('/progress/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     console.log('📊 Progress request for user:', userId);
     
-    // Пока возвращаем mock данные
-    const mockProgress = {
-      user_id: parseInt(userId),
-      user_name: 'Пользователь',
-      xp: 1250,
-      level: 3,
-      productivity_score: 7.8,
-      productivity_level: 'Стажер',
-      productivity_tier: 'silver',
-      xp_multiplier: 1.1,
-      level_icon: '🚀',
-      level_color: '#4682B4',
-      progress_percentage: 78,
-      next_level: 'Специалист',
-      score_to_next_level: 2.2
-    };
+    // Используем реальное представление из БД
+    const progressResult = await db.query(`
+      SELECT * FROM productivity_progress WHERE user_id = $1
+    `, [userId]);
     
-    console.log('📊 Returning mock progress data:', mockProgress);
+    if (progressResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Данные прогресса не найдены'
+      });
+    }
+    
+    const progress = progressResult.rows[0];
+    console.log('📊 Returning real progress data from DB:', progress);
     
     res.json({
       success: true,
-      progress: mockProgress
+      progress: progress
     });
     
   } catch (error) {
@@ -287,57 +377,30 @@ router.get('/achievements/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log('🏆 Achievements request for user:', userId);
     
-    // Пока возвращаем mock данные
-    const mockAchievements = [
-      {
-        code: 'mood_master',
-        name: 'Мастер настроения',
-        description: 'Записывал настроение 7 дней подряд',
-        category: 'mood',
-        xp_reward: 100,
-        icon: '😊',
-        tier: 'bronze',
-        unlocked: true,
-        unlocked_at: '2024-12-20T10:00:00Z'
-      },
-      {
-        code: 'consistency',
-        name: 'Стабильность',
-        description: 'Поддерживал продуктивность выше 7.0 неделю',
-        category: 'productivity',
-        xp_reward: 150,
-        icon: '📈',
-        tier: 'silver',
-        unlocked: true,
-        unlocked_at: '2024-12-19T15:30:00Z'
-      },
-      {
-        code: 'energy_boost',
-        name: 'Энерджайзер',
-        description: 'Достиг высокого уровня энергии 5 дней подряд',
-        category: 'energy',
-        xp_reward: 200,
-        icon: '⚡',
-        tier: 'gold',
-        unlocked: false
-      },
-      {
-        code: 'stress_master',
-        name: 'Антистресс',
-        description: 'Управлял стрессом на уровне ниже 3.0 неделю',
-        category: 'stress',
-        xp_reward: 250,
-        icon: '🧘',
-        tier: 'platinum',
-        unlocked: false
-      }
-    ];
+    // Получаем все достижения продуктивности из БД
+    const achievementsResult = await db.query(`
+      SELECT 
+        pa.code,
+        pa.name,
+        pa.description,
+        pa.category,
+        pa.xp_reward,
+        pa.icon,
+        pa.tier,
+        CASE WHEN ua.user_id IS NOT NULL THEN true ELSE false END as unlocked,
+        ua.unlocked_at
+      FROM productivity_achievements pa
+      LEFT JOIN user_achievements ua ON pa.code = ua.achievement_id AND ua.user_id = $1
+      WHERE pa.is_active = true
+      ORDER BY pa.tier, pa.xp_reward DESC
+    `, [userId]);
     
-    console.log('🏆 Returning mock achievements:', mockAchievements.length);
+    const achievements = achievementsResult.rows;
+    console.log('🏆 Returning real achievements from DB:', achievements.length);
     
     res.json({
       success: true,
-      achievements: mockAchievements
+      achievements: achievements
     });
     
   } catch (error) {
@@ -390,45 +453,29 @@ router.get('/weekly/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log('📊 Weekly data request for user:', userId);
     
-    // Пока возвращаем mock данные
-    const mockWeeklyData = [
-      {
-        date: '2024-12-20',
-        final_score: 8.2,
-        mood_component: 7.8,
-        activity_component: 8.5,
-        quality_multiplier: 0.9,
-        platform_activity_coefficient: 1.0,
-        mood_entries_count: 2,
-        activity_entries_count: 1
-      },
-      {
-        date: '2024-12-19',
-        final_score: 7.9,
-        mood_component: 7.5,
-        activity_component: 8.2,
-        quality_multiplier: 0.8,
-        platform_activity_coefficient: 1.0,
-        mood_entries_count: 1,
-        activity_entries_count: 2
-      },
-      {
-        date: '2024-12-18',
-        final_score: 8.1,
-        mood_component: 8.0,
-        activity_component: 8.1,
-        quality_multiplier: 1.0,
-        platform_activity_coefficient: 1.0,
-        mood_entries_count: 2,
-        activity_entries_count: 1
-      }
-    ];
+    // Получаем реальные недельные данные из БД
+    const weeklyResult = await db.query(`
+      SELECT 
+        date,
+        final_score,
+        mood_component,
+        activity_component,
+        quality_multiplier,
+        platform_activity_coefficient,
+        mood_entries_count,
+        activity_entries_count
+      FROM productivity_scores 
+      WHERE user_id = $1 
+      AND date >= CURRENT_DATE - INTERVAL '7 days'
+      ORDER BY date DESC
+    `, [userId]);
     
-    console.log('📊 Returning mock weekly data:', mockWeeklyData.length, 'days');
+    const weeklyData = weeklyResult.rows;
+    console.log('📊 Returning real weekly data from DB:', weeklyData.length, 'days');
     
     res.json({
       success: true,
-      weeklyData: mockWeeklyData
+      weeklyData: weeklyData
     });
     
   } catch (error) {
@@ -436,6 +483,75 @@ router.get('/weekly/:userId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении недельных данных',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/productivity/mood-percentages/:userId - Проценты настроения, энергии и спокойствия
+router.get('/mood-percentages/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('📊 Mood percentages request for user:', userId);
+    
+    // Проверяем существование функций
+    const functionExists = await db.query(`
+      SELECT 1 FROM pg_proc WHERE proname = 'get_weekly_average_percentages'
+    `);
+    
+    if (functionExists.rows.length === 0) {
+      console.error('❌ Function get_weekly_average_percentages does not exist');
+      return res.status(500).json({
+        success: false,
+        message: 'Функции расчета процентов не найдены в БД'
+      });
+    }
+    
+    // Получаем средние недельные проценты
+    const averageResult = await db.query(`
+      SELECT * FROM get_weekly_average_percentages($1)
+    `, [userId]);
+    
+    // Получаем ежедневные проценты
+    const dailyResult = await db.query(`
+      SELECT * FROM get_weekly_mood_percentages($1)
+    `, [userId]);
+    
+    if (averageResult.rows.length === 0) {
+      console.log('📊 No mood percentages found for user:', userId);
+      // Возвращаем базовые данные если процентов нет
+      return res.json({
+        success: true,
+        percentages: {
+          mood: 0,
+          energy: 0,
+          calmness: 0
+        },
+        dailyData: []
+      });
+    }
+    
+    const percentages = averageResult.rows[0];
+    const dailyData = dailyResult.rows;
+    
+    console.log('📊 Returning mood percentages from DB:', percentages);
+    console.log('📊 Daily data count:', dailyData.length);
+    
+    res.json({
+      success: true,
+      percentages: {
+        mood: percentages.mood_average || 0,
+        energy: percentages.energy_average || 0,
+        calmness: percentages.calmness_average || 0
+      },
+      dailyData: dailyData
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting mood percentages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении процентов настроения',
       error: error.message
     });
   }
