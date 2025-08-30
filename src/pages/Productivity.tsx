@@ -444,7 +444,8 @@ const Productivity: React.FC = () => {
     notes: '',
     mood: 7,
     energy: 7,
-    stress: 3
+    stress: 3,
+    success_rating: 5
   });
 
   // Ref для формы
@@ -453,7 +454,6 @@ const Productivity: React.FC = () => {
   // Загрузка данных при монтировании
   useEffect(() => {
     console.log('Productivity page mounted, loading data...');
-    loadProductivityData();
     
     // Принудительно загружаем данные продуктивности
     if (user?.id) {
@@ -638,7 +638,8 @@ const Productivity: React.FC = () => {
           notes: '',
           mood: 7,
           energy: 7,
-          stress: 3
+          stress: 3,
+          success_rating: 5
         });
         setFormType(null);
         setShowQuickEntry(false);
@@ -1026,7 +1027,7 @@ const Productivity: React.FC = () => {
                           letterSpacing: '-0.03em',
                           mb: 1
                         }}>
-                          {dashboard.productivity_score?.toFixed(1) || '0.0'}
+                          {dashboard?.productivity_score ? Number(dashboard.productivity_score).toFixed(1) : '0.0'}
                         </Typography>
                         <Typography variant="body2" sx={{ 
                           color: '#666', 
@@ -1079,7 +1080,7 @@ const Productivity: React.FC = () => {
                             color: '#8B0000',
                             fontSize: '1.8rem'
                           }}>
-                            {dashboard.weekly_productivity?.toFixed(1) || '0.0'}
+                            {dashboard?.weekly_productivity ? Number(dashboard.weekly_productivity).toFixed(1) : '0.0'}
                           </Typography>
                           <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
                             За неделю
@@ -1094,7 +1095,7 @@ const Productivity: React.FC = () => {
                             color: '#8B0000',
                             fontSize: '1.8rem'
                           }}>
-                            {dashboard.monthly_productivity?.toFixed(1) || '0.0'}
+                            {dashboard?.monthly_productivity ? Number(dashboard.monthly_productivity).toFixed(1) : '0.0'}
                           </Typography>
                           <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
                             За месяц
@@ -1109,7 +1110,7 @@ const Productivity: React.FC = () => {
                             color: '#8B0000',
                             fontSize: '1.8rem'
                           }}>
-                            {dashboard.days_tracked_this_week || 0}
+                            {dashboard?.days_tracked_this_week || 0}
                           </Typography>
                           <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
                             Дней отслежено

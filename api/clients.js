@@ -14,8 +14,8 @@ export default async function handler(req, res) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Yoddle <noreply@yoddle.ru>',
-      to: ['your-email@gmail.com'], // Замените на ваш Gmail
+      from: 'noreply@yoddle.ru',
+      to: 'misapolskov9@gmail.com',
       subject: `Новая заявка от ${name} - Yoddle`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 12px;">

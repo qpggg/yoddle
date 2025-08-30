@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import aiRouter from './api/ai.js';
 import productivityRouter from './api/productivity.js';
+import clientsRouter from './api/clients.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 import { createDbClient, getDbClient } from './db.js';
 import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
@@ -1087,27 +1088,7 @@ app.delete('/api/user-benefits', async (req, res) => {
   }
 });
 
-// POST /api/clients - точно как в api/clients.js
-app.post('/api/clients', async (req, res) => {
-  const { name, email, company, message } = req.body;
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'Имя, email и сообщение обязательны' });
-  }
-
-  const client = createDbClient();
-
-  try {
-    await client.connect();
-    await client.query(
-      'INSERT INTO clients (name, email, company, message) VALUES ($1, $2, $3, $4)',
-      [name, email, company, message]
-    );
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    console.error('Ошибка базы данных:', error);
-    return res.status(500).json({ error: 'Ошибка базы данных' });
-  }
-});
+// POST /api/clients - удален дублирующий код, теперь используется api/clients.js с Resend
 
 // GET/PATCH /api/profile - точно как в api/profile.js
 app.get('/api/profile', async (req, res) => {
@@ -1517,6 +1498,9 @@ app.use('/api/productivity', productivityRouter);
 
 // Подключаем API новостей
 app.use('/api/news', newsRouter);
+
+// Подключаем API клиентов
+app.use('/api/clients', clientsRouter);
 
 // Запуск сервера
 const HOST = '0.0.0.0';

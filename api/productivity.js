@@ -77,7 +77,13 @@ router.post('/mood-check', async (req, res) => {
       success: true,
       message: 'Настроение записано и проанализировано',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
-      stats: stats.rows[0]
+      stats: {
+        current_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: stats.rows[0]?.overall_rating || 0,
+        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        tracked_days: stats.rows[0]?.total_records || 0,
+        achievements_count: 0
+      }
     });
     
   } catch (error) {
@@ -145,7 +151,13 @@ router.post('/activity-log', async (req, res) => {
       success: true,
       message: 'Активность записана и проанализирована',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
-      stats: stats.rows[0]
+      stats: {
+        current_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: stats.rows[0]?.overall_rating || 0,
+        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        tracked_days: stats.rows[0]?.total_records || 0,
+        achievements_count: 0
+      }
     });
     
   } catch (error) {
@@ -208,7 +220,13 @@ router.get('/stats/:userId', async (req, res) => {
     
     res.json({
       success: true,
-      stats: stats
+      stats: {
+        current_rating: stats.overall_rating || 0,
+        weekly_rating: stats.overall_rating || 0,
+        monthly_rating: stats.overall_rating || 0,
+        tracked_days: stats.total_records || 0,
+        achievements_count: 0
+      }
     });
     
   } catch (error) {
@@ -276,11 +294,32 @@ router.get('/dashboard/:userId', async (req, res) => {
     console.log('📊 Returning dashboard data from DB function:', stats);
     
     // Преобразуем данные в формат дашборда
+    const overallRating = stats.overall_rating || 0;
+    const calculatedLevel = calculateLevelFromRating(overallRating);
+    const calculatedTier = calculateTierFromRating(overallRating);
+    
     const dashboard = {
-      productivity_level: stats.current_level || 'Новичок',
-      level_icon: getLevelIcon(stats.current_level, stats.current_tier),
-      level_description: getLevelDescription(stats.current_level),
-      ...stats
+      productivity_level: calculatedLevel,
+      level_icon: getLevelIcon(calculatedLevel, calculatedTier),
+      level_description: getLevelDescription(calculatedLevel),
+      current_score: overallRating,
+      current_level: calculatedLevel,
+      current_tier: calculatedTier,
+      xp_multiplier: stats.xp_multiplier || 1.0,
+      weekly_average: overallRating,
+      monthly_average: overallRating,
+      mood_stability: stats.mood_stability || 0,
+      energy_consistency: stats.energy_consistency || 0,
+      stress_management: stats.stress_management || 0,
+      total_achievements: stats.total_achievements || 0,
+      productivity_achievements: stats.productivity_achievements || 0,
+      level: calculatedLevel,
+      tier: calculatedTier,
+      // Добавляем поля для фронтенда
+      productivity_score: overallRating,
+      weekly_productivity: overallRating,
+      monthly_productivity: overallRating,
+      days_tracked_this_week: stats.total_records || 0
     };
     
     res.json({
@@ -299,6 +338,21 @@ router.get('/dashboard/:userId', async (req, res) => {
 });
 
 // Вспомогательные функции для форматирования данных
+function calculateLevelFromRating(rating) {
+  if (rating >= 9.0) return 'Мастер';
+  if (rating >= 8.0) return 'Эксперт';
+  if (rating >= 7.0) return 'Специалист';
+  if (rating >= 6.0) return 'Стажер';
+  return 'Новичок';
+}
+
+function calculateTierFromRating(rating) {
+  if (rating >= 9.5) return 'platinum';
+  if (rating >= 8.5) return 'gold';
+  if (rating >= 7.5) return 'silver';
+  return 'bronze';
+}
+
 function getLevelIcon(level, tier) {
   const icons = {
     'Новичок': '🌱',
@@ -313,15 +367,8 @@ function getLevelIcon(level, tier) {
     return '🌱';
   }
   
-  // Добавляем цветовую индикацию для тиров
-  const tierColors = {
-    'bronze': '🥉',
-    'silver': '🥈', 
-    'gold': '🥇',
-    'platinum': '💎'
-  };
-  
-  return icons[level] + (tierColors[tier] || '');
+  // Возвращаем только иконку уровня без дополнительных эмодзи
+  return icons[level];
 }
 
 function getLevelDescription(level) {
@@ -434,7 +481,13 @@ router.post('/calculate/:userId', async (req, res) => {
       success: true,
       message: 'Продуктивность пересчитана',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
-      stats: stats.rows[0]
+      stats: {
+        current_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: stats.rows[0]?.overall_rating || 0,
+        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        tracked_days: stats.rows[0]?.total_records || 0,
+        achievements_count: 0
+      }
     });
     
   } catch (error) {

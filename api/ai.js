@@ -39,32 +39,106 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Функция для расчета качества данных
+function calculateDataQuality(mood, notes, activities) {
+  let score = 0.0;
+  
+  // Балл за настроение (0-10)
+  if (mood !== undefined && mood !== null) {
+    score += 0.3;
+  }
+  
+  // Балл за заметки (чем длиннее, тем лучше)
+  if (notes && notes.trim().length > 0) {
+    if (notes.length >= 50) score += 0.4;
+    else if (notes.length >= 20) score += 0.3;
+    else if (notes.length >= 10) score += 0.2;
+    else score += 0.1;
+  }
+  
+  // Балл за активности
+  if (activities && activities.length > 0) {
+    if (Array.isArray(activities)) {
+      score += Math.min(activities.length * 0.1, 0.3);
+    } else {
+      score += 0.1;
+    }
+  }
+  
+  return Math.min(score, 1.0);
+}
+
+// Функция для расчета качества активности
+function calculateActivityQuality(activity, category, duration, success, notes) {
+  let score = 0.0;
+  
+  // Балл за название активности
+  if (activity && activity.trim().length > 0) {
+    score += 0.2;
+  }
+  
+  // Балл за категорию
+  if (category && category.trim().length > 0) {
+    score += 0.2;
+  }
+  
+  // Балл за длительность
+  if (duration && duration > 0) {
+    if (duration >= 60) score += 0.3;
+    else if (duration >= 30) score += 0.2;
+    else score += 0.1;
+  }
+  
+  // Балл за успешность
+  if (success !== undefined) {
+    score += 0.2;
+  }
+  
+  // Балл за заметки
+  if (notes && notes.trim().length > 0) {
+    if (notes.length >= 30) score += 0.1;
+    else if (notes.length >= 10) score += 0.05;
+  }
+  
+  return Math.min(score, 1.0);
+}
+
 // POST /api/ai/analyze-mood - Анализ настроения пользователя
 router.post('/analyze-mood', async (req, res) => {
   try {
     const { mood, activities, notes, stressLevel } = req.body;
     const userId = req.body.userId || 1; // Временно используем ID = 1
 
-    // Сохраняем сигнал в БД
+    // Сохраняем сигнал в БД с использованием всех доступных полей
     const signalQuery = `
-      INSERT INTO ai_signals (user_id, type, data, timestamp)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO ai_signals (
+        user_id, type, data, timestamp, 
+        mood_rating, stress_rating, notes, quality_score
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
     `;
     
     const signalData = {
       mood,
-      activities,
+      activities: Array.isArray(activities) ? activities : [activities],
       notes,
       stressLevel,
       timestamp: new Date()
     };
 
+    // Рассчитываем quality_score на основе качества данных
+    const qualityScore = calculateDataQuality(mood, notes, activities);
+
     const signalResult = await pool.query(signalQuery, [
       userId,
       'mood',
       JSON.stringify(signalData),
-      new Date()
+      new Date(),
+      mood || 0,
+      stressLevel || 0,
+      notes || '',
+      qualityScore
     ]);
 
     // Анализируем с помощью Claude
@@ -73,65 +147,67 @@ router.post('/analyze-mood', async (req, res) => {
 
 Here is the user's input:
 
+<notes>{{NOTES}}</notes>
 <mood>{{MOOD}}</mood>
 <activities>{{ACTIVITIES}}</activities>
-<notes>{{NOTES}}</notes>
 <stress_level>{{STRESS_LEVEL}}</stress_level>
 
-Before crafting your response, please analyze the user's input and plan your approach. Conduct your analysis inside <situation_assessment> tags:
+Begin by analyzing the user's situation and planning your response. Wrap this process inside <emotional_analysis> tags:
 
-<situation_assessment>
-1. Evaluate the user's mood and stress level:
-   - Note specific words or phrases indicating emotional state
-   - Consider the intensity of emotions expressed
-   - Assess how the stress level aligns with the described mood
-2. Identify main points from the notes section:
-   - List key issues or concerns mentioned
-   - Note any recurring themes or patterns
-3. Analyze how the activities relate to the user's current state:
-   - Are activities contributing to stress or helping to alleviate it?
-   - Identify potential connections between activities and mood
-4. Consider cultural context:
-   - Think of Russian-specific idioms or proverbs that might be relevant
-   - Note any cultural factors that might influence the situation
-5. Plan an emotional reaction with an appropriate emoji (🎉, 😊, or 💪)
-6. Outline a brief analysis of the user's situation
-7. Prepare a thought-provoking question for self-reflection
-8. Develop three pieces of tailored advice
-9. Craft a short, optimistic forecast
-10. Generate 2-3 creative metaphors or analogies related to the user's situation:
-    - Consider aspects of Russian nature, literature, or daily life for inspiration
-11. Ensure the total response is no more than 80 words and can be divided into 4 paragraphs
-</situation_assessment>
+<emotional_analysis>
+1. Write down relevant quotes from the notes section
+2. Count and list each activity
+3. Classify the mood and stress level, considering arguments for different categories
+4. Evaluate how the activities relate to the user's current state
+5. Consider cultural context (Russian-specific idioms, proverbs, or cultural factors)
+6. Choose an appropriate emoji (🎉, 😊, or 💪)
+7. Prepare a brief analysis of the user's situation
+8. Craft a thought-provoking question for self-reflection
+9. Develop three pieces of tailored advice
+10. Create a short, optimistic forecast
+11. Generate 2-3 creative metaphors or analogies related to the user's situation (consider Russian nature, literature, or daily life)
+12. Consider potential tool calls (e.g., for translation or cultural references) and note required parameters
+</emotional_analysis>
 
-Now, provide your response in Russian. Your response should follow this structure, but without numbering or headers:
+After completing your analysis, provide your response in Russian. IMPORTANT: Your response MUST contain exactly 4 paragraphs, separated by empty lines. The total response must not exceed 80 words.
 
-1. Emotional reaction: Use an appropriate emoji and 1-2 sentences reacting to the user's situation.
-2. Analysis and discussion: Brief analysis, engagement with main points, and a thought-provoking question.
-3. Advice: Three specific pieces of advice related to the main topic, mood/stress, and a plan for tomorrow.
-4. Forecast: Short, optimistic prediction and words of support.
+Response structure:
+Paragraph 1: Emotional reaction with emoji (1-2 sentences)
+Paragraph 2: Situation analysis and thought-provoking question (2-3 sentences)
+Paragraph 3: Three specific pieces of advice (3-4 sentences)
+Paragraph 4: Optimistic forecast and words of support (1-2 sentences)
 
-Remember:
+Example format (content-free):
+
+Абзац 1
+
+Абзац 2
+
+Абзац 3
+
+Абзац 4
+
+Guidelines for your response:
 - Write in a friendly, empathetic tone
 - Focus on emotions rather than formality
 - Avoid using numbers in your text
 - Use creative metaphors or analogies when appropriate
 - Ensure variety in your responses across different interactions
-- Occasionally include a relevant quote or proverb
+- Occasionally include a relevant Russian quote or proverb
 
-Your entire response must not exceed 80 words in total and should be divided into four paragraphs without explicit labeling or numbering.
+IMPORTANT: Each response must be UNIQUE. Do not repeat phrases, metaphors, or structures from previous responses.
 
-Example structure (generic, without content):
+Vary your approach:
+- Use DIFFERENT emojis, metaphors, Russian proverbs, and cultural references in each response
+- Avoid cliché phrases like "как говорится", "уверен", "справитесь"
+- Vary the emotional tone from enthusiastic to calmly supportive
+- Use different types of support: motivation, empathy, admiration, calmness
+- Vary metaphors: nature (spring, sea, mountains, forest, river, sun, stars), culture (Russian birch, matryoshka, balalaika, samovar), professional (growth, development, achievements, success)
+- Ask DIFFERENT types of questions: reflective, planning, emotional, practical
 
-[Emoji] [Emotional reaction sentences]
+BEFORE SENDING: Ensure that your response is unique, diverse, and contains exactly 4 paragraphs separated by empty lines. The response must be ready for direct display to the user.
 
-[Analysis of situation, engagement with main points, and thought-provoking question]
-
-[Three pieces of advice: main topic, mood/stress, plan for tomorrow]
-
-[Optimistic prediction and words of support]
-
-Please provide your response in Russian based on this structure and the given user input.`;
+Now, please provide your response in Russian based on this structure and the given user input.`;
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
@@ -162,10 +238,15 @@ Please provide your response in Russian based on this structure and the given us
       new Date()
     ]);
 
+    // ВРЕМЕННО ОТКЛЮЧЕНО: Интеграция с системой продуктивности
+    // TODO: Исправить проблему с достижениями перед включением
+    console.log('ℹ️ Интеграция с продуктивностью временно отключена (проблема с достижениями)');
+
     res.json({
       success: true,
       analysis,
-      signalId: signalResult.rows[0].id
+      signalId: signalResult.rows[0].id,
+      message: 'Настроение проанализировано и сохранено'
     });
 
   } catch (error) {
@@ -218,10 +299,13 @@ router.post('/log-activity', async (req, res) => {
     
     console.log('📊 Получены данные активности:', { activity, category, duration, success, notes, userId });
 
-    // Сохраняем активность
+    // Сохраняем активность с использованием всех доступных полей
     const activityQuery = `
-      INSERT INTO ai_signals (user_id, type, data, timestamp)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO ai_signals (
+        user_id, type, data, timestamp,
+        activity_category, duration_minutes, success_rating, notes, quality_score
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
 
@@ -234,13 +318,21 @@ router.post('/log-activity', async (req, res) => {
       timestamp: new Date()
     };
 
+    // Рассчитываем quality_score для активности
+    const activityQualityScore = calculateActivityQuality(activity, category, duration, success, notes);
+
     console.log('💾 Сохраняем активность в ai_signals:', activityData);
     
     const activityResult = await pool.query(activityQuery, [
       userId,
       'activity',
       JSON.stringify(activityData),
-      new Date()
+      new Date(),
+      category || '',
+      duration || 0,
+      req.body.success_rating || 5, // Принимаем success_rating с фронтенда (0-10), по умолчанию 5
+      notes || '',
+      activityQualityScore
     ]);
     
     console.log('✅ Активность сохранена в ai_signals, ID:', activityResult.rows[0]?.id);
@@ -311,23 +403,24 @@ Provide your response directly without any XML tags.
     console.log('✅ AI рекомендация получена, длина:', recommendation.length);
     console.log('📝 Полный ответ:', recommendation);
 
-    // Сохраняем рекомендацию
-    const recQuery = `
+    // Сохраняем AI рекомендацию
+    const recommendationQuery = `
       INSERT INTO ai_recommendations (user_id, category, message, priority, created_at)
       VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
     `;
 
-    console.log('💾 Сохраняем рекомендацию в ai_recommendations...');
-    
-    const recResult = await pool.query(recQuery, [
+    await pool.query(recommendationQuery, [
       userId,
-      category,
+      category || 'general',
       recommendation,
-      success ? 'low' : 'high',
+      'medium',
       new Date()
     ]);
-    
-    console.log('✅ Рекомендация сохранена в ai_recommendations, ID:', recResult.rows[0]?.id);
+
+    // ВРЕМЕННО ОТКЛЮЧЕНО: Интеграция с системой продуктивности
+    // TODO: Исправить проблему с достижениями перед включением
+    console.log('ℹ️ Интеграция с продуктивностью временно отключена (проблема с достижениями)');
 
     // Сохраняем инсайт об активности
     const insightQuery = `
