@@ -485,6 +485,156 @@ Provide your response directly without any XML tags.
   }
 });
 
+// POST /api/ai/recommendations/generate — гибридная генерация (тест + free-form + сигналы) с использованием Claude
+router.post('/recommendations/generate', async (req, res) => {
+  try {
+    const userId = req.body.user_id || req.body.userId || 1;
+    const variant = (req.query.variant || 'hybrid_v1').toString();
+
+    // 1) Загружаем свободные предпочтения (последнюю запись)
+    const prefQuery = `
+      SELECT data FROM ai_signals 
+      WHERE user_id = $1 AND type = 'preferences_free' 
+      ORDER BY timestamp DESC LIMIT 1
+    `;
+    const prefRes = await pool.query(prefQuery, [userId]);
+    const prefs = prefRes.rows[0]?.data ? JSON.parse(prefRes.rows[0].data) : { tags: [], avoid: [], free_text: '', constraints: {} };
+
+    // 2) Загружаем недавние сигналы (14 дней)
+    const signalsQuery = `
+      SELECT type, data FROM ai_signals 
+      WHERE user_id = $1 AND timestamp >= NOW() - INTERVAL '14 days'
+      ORDER BY timestamp DESC
+    `;
+    const sigRes = await pool.query(signalsQuery, [userId]);
+    const moods = sigRes.rows.filter(r => r.type === 'mood').map(r => { try { return JSON.parse(r.data); } catch(_) { return null; } }).filter(Boolean);
+    const acts = sigRes.rows.filter(r => r.type === 'activity').map(r => { try { return JSON.parse(r.data); } catch(_) { return null; } }).filter(Boolean);
+
+    // 3) Загружаем текущий список льгот для маппинга (id, name, category)
+    const benefitsQuery = `SELECT id, name, category FROM benefits`;
+    const benefitsRes = await pool.query(benefitsQuery);
+    const benefits = benefitsRes.rows || [];
+
+    const findBenefitId = (name, category) => {
+      if (!benefits.length) return null;
+      // Сначала по точному имени
+      const byName = benefits.find(b => (b.name || '').toLowerCase() === String(name || '').toLowerCase());
+      if (byName) return byName.id;
+      // Потом по категории (первый подходящий)
+      const byCat = benefits.find(b => (b.category || '').toLowerCase() === String(category || '').toLowerCase());
+      return byCat ? byCat.id : null;
+    };
+
+    // 4) Загружаем тестовые результаты (если есть) как "test_score"
+    // Берём последние записи из benefit_recommendations и строим веса 1.0, 0.66, 0.33
+    const testQuery = `
+      SELECT benefit_id, priority FROM benefit_recommendations
+      WHERE user_id = $1
+      ORDER BY created_at DESC, priority ASC
+      LIMIT 3
+    `;
+    let testScores = {};
+    try {
+      const testRes = await pool.query(testQuery, [userId]);
+      const weights = { 1: 1.0, 2: 0.66, 3: 0.33 };
+      testRes.rows.forEach(r => { testScores[r.benefit_id] = weights[r.priority] || 0.33; });
+    } catch (_) {
+      testScores = {};
+    }
+
+    // 5) Формируем промпт для Claude с требованием STRICT JSON
+    const compactMoods = moods.slice(0, 10).map(m => ({ mood: m.mood, stress: m.stressLevel, notes: (m.notes||'').slice(0,60) }));
+    const compactActs = acts.slice(0, 10).map(a => ({ activity: a.activity, category: a.category, duration: a.duration, success: a.success }));
+
+    const prompt = `Ты — HR‑ИИ. На основе данных пользователя верни СТРОГИЙ JSON без пояснений:
+{
+  "variant": "hybrid_v1",
+  "candidates": [
+    { "category": "Психология", "benefit_name": "Психологическая поддержка", "reason_short": ["стресс ↑", "онлайн"], "ai_score": 0.9, "confidence": 0.75 }
+  ]
+}
+
+Данные (сжато):
+- Свободные предпочтения: free_text="${(prefs.free_text||'').slice(0,200)}", tags=${JSON.stringify(prefs.tags||[])}, avoid=${JSON.stringify(prefs.avoid||[])}, constraints=${JSON.stringify(prefs.constraints||{})}
+- Настроение (последние): ${JSON.stringify(compactMoods)}
+- Активности (последние): ${JSON.stringify(compactActs)}
+
+Правила:
+- Верни 3 кандидата максимум.
+- reason_short: 2–3 короткие причины, используй свободные предпочтения и недавние сигналы.
+- Учитывай avoid: такие льготы не предлагать.
+- ai_score в 0..1, confidence в 0..1.
+- Только JSON, без текста вне JSON.`;
+
+    const message = await retryApiCall(async () => {
+      return await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      });
+    });
+
+    let parsed;
+    try {
+      parsed = JSON.parse(message.content?.[0]?.text || '{}');
+    } catch (e) {
+      // В случае нарушения формата пытаемся очистить и распарсить
+      try { parsed = JSON.parse(cleanClaudeOutput(message.content?.[0]?.text || '{}')); } catch (_) { parsed = { candidates: [] }; }
+    }
+
+    const candidates = Array.isArray(parsed?.candidates) ? parsed.candidates.slice(0,3) : [];
+
+    // 6) Подсчет итогового score и подготовка записей к сохранению
+    const items = candidates.map((c) => {
+      const benefitId = findBenefitId(c.benefit_name, c.category);
+      const aiScore = Math.max(0, Math.min(Number(c.ai_score || 0), 1));
+      const testScore = benefitId && testScores[benefitId] ? testScores[benefitId] : 0;
+      const finalScore = (Object.keys(testScores).length ? (0.6 * testScore + 0.4 * aiScore) : aiScore);
+      const reasons = Array.isArray(c.reason_short) ? c.reason_short : [];
+      const confidence = Math.max(0, Math.min(Number(c.confidence || 0.6), 1));
+      return { benefitId, finalScore, testScore, aiScore, reasons, confidence, name: c.benefit_name, category: c.category };
+    }).filter(i => i.benefitId);
+
+    // Фильтруем по avoid с безопасной проверкой
+    const avoidList = Array.isArray(prefs.avoid) ? prefs.avoid.map(s => String(s).toLowerCase()) : [];
+    const filtered = items.filter(i => {
+      const nameL = String(i.name||'').toLowerCase();
+      const catL  = String(i.category||'').toLowerCase();
+      return !avoidList.some(a => nameL.includes(a) || catL.includes(a));
+    });
+
+    // Сортировка и ограничение Top-3
+    const top = filtered.sort((a,b) => b.finalScore - a.finalScore).slice(0,3);
+
+    // Очищаем предыдущие рекомендации пользователя (только variant=hybrid_v1)
+    await pool.query(`DELETE FROM benefit_recommendations WHERE user_id = $1`, [userId]);
+
+    // Сохраняем новые рекомендации с расширенными полями
+    for (let i = 0; i < top.length; i++) {
+      const t = top[i];
+      const insert = `
+        INSERT INTO benefit_recommendations (user_id, benefit_id, priority, answers, explanations, confidence, algorithm_variant, score_breakdown)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `;
+      await pool.query(insert, [
+        userId,
+        t.benefitId,
+        i + 1,
+        JSON.stringify({ from: 'hybrid', tags: prefs.tags || [] }),
+        JSON.stringify(t.reasons || []),
+        t.confidence,
+        variant,
+        JSON.stringify({ test_score: t.testScore, ai_score: t.aiScore, final: t.finalScore })
+      ]);
+    }
+
+    res.json({ success: true, variant, generatedAt: new Date().toISOString(), saved: top.length });
+  } catch (error) {
+    console.error('Hybrid recommendations generation error:', error);
+    res.status(500).json({ success: false, error: 'Ошибка генерации рекомендаций' });
+  }
+});
+
 // POST /api/ai/preferences — сохранение свободных предпочтений (без миграций, в ai_signals)
 router.post('/preferences', async (req, res) => {
   try {

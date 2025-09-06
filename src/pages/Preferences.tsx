@@ -59,6 +59,8 @@ interface BenefitRecommendation {
   title: string;
   description: string;
   examples: string[];
+  explanations?: string[];
+  confidence?: number;
 }
 
 const questions: Question[] = [
@@ -174,7 +176,9 @@ const Preferences: React.FC = () => {
             icon: categoryIcons[rec.category] || <FaBook />,
             title: rec.name,
             description: rec.description,
-            examples: benefitExamples[rec.benefit_id] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка']
+            examples: benefitExamples[rec.benefit_id] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
+            explanations: Array.isArray(rec.explanations) ? rec.explanations : undefined,
+            confidence: typeof rec.confidence === 'number' ? rec.confidence : undefined
           }));
 
           console.log('Loaded specific benefits for display:', loadedRecommendations);
@@ -564,7 +568,7 @@ const Preferences: React.FC = () => {
                 Умные рекомендации льгот
               </Typography>
               <Typography variant="h6" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500, color: '#666', maxWidth: '700px', mx: 'auto', lineHeight: 1.6 }}>
-                ИИ подберёт льготы на основе ваших целей, настроения и активности. Начните с короткого теста и при желании уточните свободные предпочтения.
+                ИИ подберёт льготы на основе ваших целей, свободных предпочтений и активности. Советуем чаще писать в свободной форме и логировать активности — так рекомендации будут точнее.
               </Typography>
               <Box sx={{ mt: 4 }}>
                 <Button
@@ -604,6 +608,31 @@ const Preferences: React.FC = () => {
     const recommendations = hasExistingResults && savedRecommendations.length > 0 
       ? savedRecommendations 
       : getRecommendations();
+
+    const answerReasonMap: Record<string, string> = {
+      health: 'Ответы теста: здоровье',
+      education: 'Ответы теста: развитие',
+      wellness: 'Ответы теста: баланс',
+      social: 'Ответы теста: социальная поддержка',
+      sports: 'Ответы теста: спорт',
+      psychology: 'Ответы теста: стресс/психология'
+    };
+
+    const buildFallbackExplanations = (): string[] => {
+      const reasons: string[] = [];
+      // из ответов теста берем последние 2 уникальные
+      const uniqueAns = Array.from(new Set(answers.slice(-3)));
+      uniqueAns.forEach(a => {
+        if (answerReasonMap[a]) reasons.push(answerReasonMap[a]);
+      });
+      // из свободных предпочтений добавим 1–2 причины
+      if (wantTags.length > 0) reasons.push(`Теги: ${wantTags.slice(0, 2).join(', ')}`);
+      if (formatPref !== 'any') reasons.push(`Формат: ${formatPref === 'online' ? 'онлайн' : 'офлайн'}`);
+      if (budgetPref !== 'any') reasons.push(`Бюджет: ${budgetPref}`);
+      if (timePref !== 'any') reasons.push(`Время: ${timePref}`);
+      if (reasons.length === 0 && freeText.trim()) reasons.push('Учтены свободные предпочтения');
+      return reasons.slice(0, 3);
+    };
     
     return (
       <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
@@ -739,6 +768,41 @@ const Preferences: React.FC = () => {
                         {rec.description}
                       </Typography>
                       
+                      {(() => {
+                        const reasons = Array.isArray((rec as any).explanations) && (rec as any).explanations.length > 0 
+                          ? (rec as any).explanations
+                          : buildFallbackExplanations();
+                        if (!reasons || reasons.length === 0) return null;
+                        return (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#8B0000', fontWeight: 700, mb: 1 }}
+                          >
+                            Почему подобрано:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {reasons.map((e: string, idx: number) => (
+                              <Chip key={idx} label={e} size="small" sx={{ borderRadius: '10px' }} />
+                            ))}
+                          </Box>
+                        </Box>
+                        );
+                      })()}
+
+                      {typeof (rec as any).confidence === 'number' && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="caption" sx={{ color: '#666', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600 }}>
+                            Уверенность: {Math.round(((rec as any).confidence as number) * 100)}%
+                          </Typography>
+                          <LinearProgress
+                            variant="determinate"
+                            value={Math.max(0, Math.min(100, ((rec as any).confidence as number) * 100))}
+                            sx={{ height: 6, borderRadius: 3, mt: 0.5, '& .MuiLinearProgress-bar': { background: 'linear-gradient(45deg, #8B0000, #B22222)' } }}
+                          />
+                        </Box>
+                      )}
+
                       <Box sx={{ mb: 3 }}>
                         <Typography
                           variant="subtitle2"
