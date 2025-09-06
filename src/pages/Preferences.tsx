@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress, TextField, Chip, MenuItem, InputAdornment, Divider, Snackbar, Alert } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye, FaBook } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye, FaBook, FaFeatherAlt, FaTags, FaBan, FaLaptop, FaMoneyBillWave, FaRegClock, FaCheck } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
 import { useUser } from '../hooks/useUser';
 
@@ -142,6 +142,18 @@ const Preferences: React.FC = () => {
   const [savedRecommendations, setSavedRecommendations] = useState<BenefitRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasExistingResults, setHasExistingResults] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
+
+  // Состояние формы свободных предпочтений
+  const [freeText, setFreeText] = useState('');
+  const [wantTags, setWantTags] = useState<string[]>([]);
+  const [avoidTags, setAvoidTags] = useState<string[]>([]);
+  const [formatPref, setFormatPref] = useState<'any' | 'online' | 'offline'>('any');
+  const [budgetPref, setBudgetPref] = useState<'any' | 'low' | 'medium' | 'high'>('any');
+  const [timePref, setTimePref] = useState<'any' | 'morning' | 'day' | 'evening'>('any');
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
 
   // Загрузка существующих рекомендаций при загрузке компонента
   useEffect(() => {
@@ -170,6 +182,7 @@ const Preferences: React.FC = () => {
           setSavedRecommendations(loadedRecommendations);
           setHasExistingResults(true);
           setShowResults(true);
+          setShowIntro(false);
         }
       } catch (error) {
         console.error('Error loading recommendations:', error);
@@ -288,9 +301,214 @@ const Preferences: React.FC = () => {
     setShowResults(false);
     setHasExistingResults(false);
     setSavedRecommendations([]);
+    setShowIntro(true);
   };
 
   const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+  // Сохранение свободных предпочтений
+  const handleSaveFreePreferences = async () => {
+    if (!user?.id) return;
+    setPrefsSaving(true);
+    setPrefsSaved(false);
+    try {
+      const payload = {
+        user_id: user.id,
+        free_text: freeText,
+        tags: wantTags,
+        avoid: avoidTags,
+        constraints: {
+          format: formatPref,
+          budget: budgetPref,
+          time: timePref
+        }
+      };
+      const res = await fetch('/ai/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to save preferences');
+      setPrefsSaved(true);
+      setTimeout(() => setPrefsSaved(false), 3000);
+      setToastOpen(true);
+    } catch (e) {
+      console.error('Failed to save free preferences', e);
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
+  // Компонент формы свободных предпочтений (нижний блок)
+  const FreePreferencesForm = () => {
+    const presetWant = ['психология', 'спорт', 'обучение', 'онлайн', 'сон'];
+    const presetAvoid = ['массаж', 'вечеринки', 'групповые занятия'];
+    const pillSx = {
+      borderRadius: '14px',
+      '& .MuiOutlinedInput-root': {
+        borderRadius: '14px',
+        background: '#fff',
+        transition: 'border-color 180ms ease',
+        '& fieldset': { borderColor: '#E5E5E5' },
+        '&:hover fieldset': { borderColor: 'rgba(139,0,0,0.35)' },
+        '&.Mui-focused fieldset': {
+          borderColor: 'rgba(139,0,0,0.6) !important'
+        }
+      }
+    } as const;
+
+    return (
+      <Box sx={{ mt: 8 }}>
+        <Box
+          sx={{
+            position: 'relative',
+            p: { xs: 3, md: 4 },
+            borderRadius: '24px',
+            border: '1px solid rgba(139,0,0,0.12)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(249,250,251,0.92) 100%)',
+            boxShadow: '0 20px 50px rgba(139,0,0,0.08)',
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ position: 'absolute', top: -60, left: -60, width: 180, height: 180, borderRadius: '50%', background: 'rgba(139,0,0,0.06)' }} />
+          <Box sx={{ position: 'absolute', bottom: -70, right: -70, width: 200, height: 200, borderRadius: '50%', background: 'rgba(139,0,0,0.05)' }} />
+
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Box sx={{
+              width: 64,
+              height: 64,
+              borderRadius: '18px',
+              background: 'linear-gradient(180deg, #9C0F0F 0%, #7E0A0A 100%)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              boxShadow: '0 12px 30px rgba(139,0,0,0.25)'
+            }}>
+              <FaFeatherAlt />
+            </Box>
+            <Typography variant="h4" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 900, color: '#1A1A1A', mt: 2 }}>
+              Свободные предпочтения
+            </Typography>
+            <Typography variant="h6" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500, color: '#666', maxWidth: '800px', mx: 'auto', mt: 1 }}>
+              Расскажите, что важно именно вам — мы учтём это при формировании умных рекомендаций.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                label="Что вам важно?"
+                placeholder="Например: хочу онлайн‑психолога, избегаю групповых активностей"
+                multiline
+                minRows={3}
+                fullWidth
+                value={freeText}
+                onChange={(e) => setFreeText(e.target.value)}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaFeatherAlt style={{ color: '#8B0000' }} /></InputAdornment>) }}
+                sx={pillSx}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Хочу (через запятую)"
+                placeholder="психология, спорт, удалёнка"
+                fullWidth
+                value={wantTags.join(', ')}
+                onChange={(e) => setWantTags(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaTags style={{ color: '#8B0000' }} /></InputAdornment>) }}
+                sx={pillSx}
+              />
+              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {presetWant.map(tag => (
+                  <Chip key={tag} label={tag} variant="outlined" onClick={() => !wantTags.includes(tag) && setWantTags([...wantTags, tag])} />
+                ))}
+                {wantTags.map(tag => (
+                  <Chip key={tag} label={tag} color="default" onDelete={() => setWantTags(wantTags.filter(t => t !== tag))} />
+                ))}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Не хочу (через запятую)"
+                placeholder="массаж, вечеринки"
+                fullWidth
+                value={avoidTags.join(', ')}
+                onChange={(e) => setAvoidTags(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaBan style={{ color: '#B00000' }} /></InputAdornment>) }}
+                sx={pillSx}
+              />
+              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {presetAvoid.map(tag => (
+                  <Chip key={tag} label={tag} variant="outlined" onClick={() => !avoidTags.includes(tag) && setAvoidTags([...avoidTags, tag])} />
+                ))}
+                {avoidTags.map(tag => (
+                  <Chip key={tag} label={tag} color="default" onDelete={() => setAvoidTags(avoidTags.filter(t => t !== tag))} />
+                ))}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField select fullWidth label="Формат" value={formatPref} onChange={(e) => setFormatPref(e.target.value as any)} sx={pillSx}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaLaptop style={{ color: '#8B0000' }} /></InputAdornment>) }}>
+                <MenuItem value="any">Не важно</MenuItem>
+                <MenuItem value="online">Онлайн</MenuItem>
+                <MenuItem value="offline">Офлайн</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField select fullWidth label="Бюджет" value={budgetPref} onChange={(e) => setBudgetPref(e.target.value as any)} sx={pillSx}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaMoneyBillWave style={{ color: '#8B0000' }} /></InputAdornment>) }}>
+                <MenuItem value="any">Любой</MenuItem>
+                <MenuItem value="low">Низкий</MenuItem>
+                <MenuItem value="medium">Средний</MenuItem>
+                <MenuItem value="high">Высокий</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField select fullWidth label="Время" value={timePref} onChange={(e) => setTimePref(e.target.value as any)} sx={pillSx}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><FaRegClock style={{ color: '#8B0000' }} /></InputAdornment>) }}>
+                <MenuItem value="any">Не важно</MenuItem>
+                <MenuItem value="morning">Утро</MenuItem>
+                <MenuItem value="day">День</MenuItem>
+                <MenuItem value="evening">Вечер</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Button
+                onClick={handleSaveFreePreferences}
+                disabled={prefsSaving}
+                sx={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                  color: '#fff',
+                  borderRadius: '14px',
+                  padding: '14px 32px',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  boxShadow: '0 16px 40px rgba(139,0,0,0.25)',
+                  transition: 'transform 120ms ease, box-shadow 200ms ease',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #A00000 0%, #D32222 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 24px 50px rgba(139,0,0,0.30)'
+                  }
+                }}
+                startIcon={prefsSaved ? <FaCheck /> : undefined}
+              >
+                {prefsSaving ? 'Сохранение…' : (prefsSaved ? 'Сохранено' : 'Сохранить предпочтения')}
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+    );
+  };
 
   // Показываем загрузку пока данные загружаются
   if (isLoading) {
@@ -303,6 +521,80 @@ const Preferences: React.FC = () => {
         background: '#f9fafb' 
       }}>
         <CircularProgress sx={{ color: '#8B0000' }} />
+      </Box>
+    );
+  }
+
+  const toast = (
+    <Snackbar
+      open={toastOpen}
+      autoHideDuration={2800}
+      onClose={() => setToastOpen(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert onClose={() => setToastOpen(false)} severity="success" variant="filled" sx={{ borderRadius: '12px' }}>
+        Предпочтения сохранены
+      </Alert>
+    </Snackbar>
+  );
+
+  // Начальный экран с CTA «Пройти тест» и описанием умных рекомендаций
+  if (showIntro && !showResults && !hasExistingResults && answers.length === 0) {
+    return (
+      <Box sx={{ minHeight: '100vh', background: '#f9fafb' }}>
+        <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <Box sx={{ textAlign: 'center', mb: 6 }}>
+              <Box
+                sx={{
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '20px',
+                  background: 'linear-gradient(135deg, rgba(139,0,0,0.08), rgba(178,34,34,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3
+                }}
+              >
+                <FaBullseye style={{ color: '#8B0000', fontSize: 40 }} />
+              </Box>
+              <Typography variant="h3" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 900, color: '#1A1A1A', mb: 2, fontSize: { xs: '2rem', md: '3rem' } }}>
+                Умные рекомендации льгот
+              </Typography>
+              <Typography variant="h6" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500, color: '#666', maxWidth: '700px', mx: 'auto', lineHeight: 1.6 }}>
+                ИИ подберёт льготы на основе ваших целей, настроения и активности. Начните с короткого теста и при желании уточните свободные предпочтения.
+              </Typography>
+              <Box sx={{ mt: 4 }}>
+                <Button
+                  onClick={() => setShowIntro(false)}
+                  sx={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '14px 32px',
+                    fontWeight: 800,
+                    fontSize: '1.1rem',
+                    textTransform: 'none',
+                    boxShadow: '0 10px 30px rgba(139,0,0,0.25)',
+                    '&:hover': { background: 'linear-gradient(135deg, #A00000 0%, #D32222 100%)' }
+                  }}
+                  startIcon={<FaBullseye />}
+                >
+                  Пройти тест
+                </Button>
+              </Box>
+            </Box>
+
+            {/* Форма свободных предпочтений внизу начального экрана (без внешней белой карточки) */}
+            <Box sx={{ maxWidth: '1000px', mx: 'auto' }}>
+              <FreePreferencesForm />
+            </Box>
+            {toast}
+          </motion.div>
+        </Container>
       </Box>
     );
   }
@@ -491,16 +783,16 @@ const Preferences: React.FC = () => {
                 onClick={resetTest}
                 sx={{
                   fontFamily: 'Inter, system-ui, sans-serif',
-                  background: 'linear-gradient(45deg, #8B0000, #B22222)',
+                  background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                   color: '#fff',
                   borderRadius: '50px',
                   padding: '12px 36px',
                   fontWeight: 700,
                   fontSize: '1.1rem',
                   textTransform: 'none',
-                  boxShadow: '0 4px 15px rgba(139,0,0,0.2)',
+                  boxShadow: '0 10px 30px rgba(139,0,0,0.25)',
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #A00000, #D32222)',
+                    background: 'linear-gradient(135deg, #A00000 0%, #D32222 100%)',
                     transform: 'translateY(-2px)',
                     boxShadow: '0 6px 20px rgba(139,0,0,0.3)'
                   }
@@ -510,6 +802,12 @@ const Preferences: React.FC = () => {
                 Пройти тест заново
               </Button>
             </Box>
+
+            {/* Форма свободных предпочтений под результатами (без внешней белой карточки) */}
+            <Box sx={{ mt: 6 }}>
+              <FreePreferencesForm />
+            </Box>
+            {toast}
           </motion.div>
         </Container>
       </Box>
@@ -555,7 +853,7 @@ const Preferences: React.FC = () => {
                 fontSize: { xs: '2rem', md: '3rem' }
               }}
             >
-              Тест на льготы
+              Умные рекомендации льгот
             </Typography>
             <Typography
               variant="h6"
@@ -569,7 +867,7 @@ const Preferences: React.FC = () => {
                 mb: 4
               }}
             >
-              Ответьте на несколько вопросов, и мы подберем льготы специально для вас
+              Ответьте на 4 вопроса — ИИ подберёт льготы под ваши цели и контекст
             </Typography>
             
             <Box sx={{ mb: 4 }}>
@@ -608,7 +906,20 @@ const Preferences: React.FC = () => {
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3 }}
             >
-              <Paper elevation={0} sx={{ ...cardStyle, textAlign: 'center', maxWidth: '700px', mx: 'auto' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  ...cardStyle,
+                  textAlign: 'center',
+                  maxWidth: '760px',
+                  mx: 'auto',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(139,0,0,0.12)',
+                  background:
+                    'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(249,250,251,0.96) 100%)',
+                  boxShadow: '0 20px 50px rgba(139,0,0,0.08)'
+                }}
+              >
                 <Box
                   sx={{
                     width: '60px',
@@ -646,10 +957,7 @@ const Preferences: React.FC = () => {
                   {questions[currentQuestion].options.map((option, index) => (
                     <Grid item xs={12} sm={6} key={index}>
                       <motion.div
-                        whileHover={{ 
-                          scale: 1.02,
-                          borderRadius: '16px'
-                        }}
+                        whileHover={{ y: -4, borderRadius: '16px' }}
                         whileTap={{ scale: 0.98 }}
                         style={{ borderRadius: '16px' }}
                       >
@@ -659,10 +967,11 @@ const Preferences: React.FC = () => {
                             fontFamily: 'Inter, system-ui, sans-serif',
                             width: '100%',
                             height: '100px',
-                            padding: '20px 16px',
-                            borderRadius: '16px',
+                            padding: '20px 18px',
+                            borderRadius: '18px',
                             border: '1px solid #E5E5E5',
-                            backgroundColor: '#fff',
+                            background:
+                              'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(249,250,251,1) 100%)',
                             color: '#1A1A1A',
                             textTransform: 'none',
                             fontWeight: 700,
@@ -672,17 +981,17 @@ const Preferences: React.FC = () => {
                             gap: 2,
                             transition: 'none',
                             '&:hover': {
-                              backgroundColor: 'rgba(139, 0, 0, 0.05)',
-                              borderColor: '#8B0000',
-                              boxShadow: '0 4px 15px rgba(139,0,0,0.1)',
-                              transform: 'none'
+                              background:
+                                'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(253,243,243,1) 100%)',
+                              borderColor: 'rgba(139,0,0,0.35)',
+                              boxShadow: '0 10px 24px rgba(139,0,0,0.12)'
                             }
                           }}
                         >
                           <Box
                             sx={{
                               color: '#8B0000',
-                              '& svg': { fontSize: '20px' }
+                              '& svg': { fontSize: '22px' }
                             }}
                           >
                             {option.icon}
@@ -690,7 +999,7 @@ const Preferences: React.FC = () => {
                           <Typography sx={{ 
                             fontFamily: 'Inter, system-ui, sans-serif',
                             fontWeight: 700,
-                            fontSize: '1rem', 
+                            fontSize: '1.05rem', 
                             textAlign: 'left' 
                           }}>
                             {option.text}
@@ -705,6 +1014,7 @@ const Preferences: React.FC = () => {
           </AnimatePresence>
         </motion.div>
       </Container>
+      {toast}
     </Box>
   );
 };
