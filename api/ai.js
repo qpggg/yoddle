@@ -7,6 +7,8 @@ const router = express.Router();
 // Инициализация Claude API
 const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
+  // Позволяет направлять трафик через внешний прокси (например, Cloudflare Worker)
+  baseURL: process.env.CLAUDE_BASE_URL || undefined,
 });
 
 // Функция для повторных попыток API запросов
@@ -31,6 +33,24 @@ async function retryApiCall(apiCall, maxRetries = 3, delay = 1000) {
         throw error;
       }
     }
+  }
+}
+
+// Удаляет служебный разбор и XML-теги из ответа Claude
+function cleanClaudeOutput(text) {
+  if (!text) return '';
+  try {
+    let result = String(text);
+    // Удалить блок эмоционального разбора
+    result = result.replace(/<emotional_analysis>[\s\S]*?<\/emotional_analysis>/gi, '');
+    // Удалить любые оставшиеся XML/HTML теги
+    result = result.replace(/<[^>]+>/g, '');
+    // Сжать лишние пробелы и переводы строк
+    result = result.replace(/[\t\x0B\f\r ]{2,}/g, ' ');
+    result = result.replace(/\n{3,}/g, '\n\n');
+    return result.trim();
+  } catch (_) {
+    return String(text);
   }
 }
 
@@ -209,6 +229,14 @@ BEFORE SENDING: Ensure that your response is unique, diverse, and contains exact
 
 Now, please provide your response in Russian based on this structure and the given user input.`;
 
+    // Подставляем фактические значения в плейсхолдеры шаблона
+    const activitiesStr = Array.isArray(activities) ? activities.join(', ') : (activities ? String(activities) : 'Нет');
+    const filledPrompt = (prompt || '')
+      .replace('{{NOTES}}', (notes && String(notes)) || 'Нет')
+      .replace('{{MOOD}}', (mood ?? '') === '' ? 'N/A' : String(mood))
+      .replace('{{ACTIVITIES}}', activitiesStr)
+      .replace('{{STRESS_LEVEL}}', (stressLevel ?? '') === '' ? 'N/A' : String(stressLevel));
+
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
@@ -216,13 +244,13 @@ Now, please provide your response in Russian based on this structure and the giv
       messages: [
         {
           role: 'user',
-          content: prompt
+          content: filledPrompt
         }
       ]
       });
     });
 
-    const analysis = message.content[0].text;
+    const analysis = cleanClaudeOutput(message.content[0].text);
 
     // Сохраняем инсайт
     const insightQuery = `
@@ -399,7 +427,7 @@ Provide your response directly without any XML tags.
       });
     });
 
-    const recommendation = message.content[0].text;
+    const recommendation = cleanClaudeOutput(message.content[0].text);
     console.log('✅ AI рекомендация получена, длина:', recommendation.length);
     console.log('📝 Полный ответ:', recommendation);
 
@@ -454,6 +482,74 @@ Provide your response directly without any XML tags.
       success: false,
       error: 'Ошибка логирования активности'
     });
+  }
+});
+
+// POST /api/ai/preferences — сохранение свободных предпочтений (без миграций, в ai_signals)
+router.post('/preferences', async (req, res) => {
+  try {
+    const { user_id, free_text = '', tags = [], avoid = [], constraints = {} } = req.body;
+    const userId = user_id || req.body.userId || 1;
+
+    const payload = {
+      free_text,
+      tags: Array.isArray(tags) ? tags : String(tags).split(',').map(s => s.trim()).filter(Boolean),
+      avoid: Array.isArray(avoid) ? avoid : String(avoid).split(',').map(s => s.trim()).filter(Boolean),
+      constraints,
+      timestamp: new Date().toISOString()
+    };
+
+    const insertQuery = `
+      INSERT INTO ai_signals (user_id, type, data, timestamp)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id
+    `;
+
+    const result = await pool.query(insertQuery, [
+      userId,
+      'preferences_free',
+      JSON.stringify(payload),
+      new Date()
+    ]);
+
+    res.json({ success: true, id: result.rows[0]?.id });
+  } catch (error) {
+    console.error('Save free preferences error:', error);
+    res.status(500).json({ success: false, error: 'Ошибка сохранения предпочтений' });
+  }
+});
+
+// POST /api/ai/recommendations/feedback — фидбек по карточкам льгот
+router.post('/recommendations/feedback', async (req, res) => {
+  try {
+    const { user_id, benefit_id, label, reason, context = {} } = req.body;
+    const userId = user_id || req.body.userId || 1;
+
+    // Пытаемся записать в ai_feedback, если таблицы нет — логируем в ai_signals
+    try {
+      const q = `
+        INSERT INTO ai_feedback (user_id, benefit_id, label, context, created_at)
+        VALUES ($1, $2, $3, $4, $5)
+      `;
+      await pool.query(q, [userId, benefit_id || null, label || 'unknown', JSON.stringify({ reason, ...context }), new Date()]);
+      return res.json({ success: true, stored: 'ai_feedback' });
+    } catch (e) {
+      console.log('ai_feedback not available, fallback to ai_signals:', e.message);
+      const fallback = `
+        INSERT INTO ai_signals (user_id, type, data, timestamp)
+        VALUES ($1, $2, $3, $4)
+      `;
+      await pool.query(fallback, [
+        userId,
+        'benefit_feedback',
+        JSON.stringify({ benefit_id, label, reason, context, via: 'fallback' }),
+        new Date()
+      ]);
+      return res.json({ success: true, stored: 'ai_signals' });
+    }
+  } catch (error) {
+    console.error('Feedback save error:', error);
+    res.status(500).json({ success: false, error: 'Ошибка сохранения фидбека' });
   }
 });
 
@@ -585,7 +681,7 @@ router.post('/generate-personal-recommendations', async (req, res) => {
       });
     });
 
-    const recommendations = message.content[0].text;
+    const recommendations = cleanClaudeOutput(message.content[0].text);
     console.log('✅ Персональные рекомендации сгенерированы');
 
     // Сохраняем рекомендации
@@ -777,7 +873,7 @@ router.post('/generate-daily-insight', async (req, res) => {
       });
     });
 
-    const insight = message.content[0].text;
+    const insight = cleanClaudeOutput(message.content[0].text);
     console.log('✅ AI ответ получен, длина:', insight.length);
 
     // Сохраняем инсайт
@@ -1138,7 +1234,7 @@ async function generateWeeklyInsight(userId, weekStart, weekEnd) {
       });
     });
 
-    const insight = message.content[0].text;
+    const insight = cleanClaudeOutput(message.content[0].text);
 
     // Сохраняем инсайт
     const insightQuery = `
