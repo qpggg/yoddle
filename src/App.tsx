@@ -25,6 +25,7 @@ import MyBenefits from './pages/MyBenefits';
 import Progress from './pages/Progress';
 import Preferences from './pages/Preferences';
 import Productivity from './pages/Productivity';
+import Metrics from './pages/Metrics';
 import BalancePage from './pages/Balance';
 import ContactsPage from './pages/Contacts';
 import TermsPage from './pages/Terms';
@@ -113,6 +114,7 @@ const App = () => {
               <Route path="/my-benefits" element={<MyBenefits />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/preferences" element={<Preferences />} />
+              <Route path="/metrics" element={<Metrics />} />
               <Route path="/balance" element={<BalancePage />} />
             </Routes>
             <Footer />

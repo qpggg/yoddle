@@ -5,6 +5,7 @@ class AIService {
   constructor() {
     this.anthropic = new Anthropic({
       apiKey: process.env.CLAUDE_API_KEY,
+      baseURL: process.env.CLAUDE_BASE_URL || undefined,
     });
     
     this.pool = new Pool({

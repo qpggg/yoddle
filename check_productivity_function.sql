@@ -87,3 +87,6 @@ SELECT '=== ПОВТОРНОЕ ТЕСТИРОВАНИЕ ФУНКЦИИ ===' as i
 SELECT * FROM get_user_productivity_stats(3);
 
 
+
+
+

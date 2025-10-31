@@ -679,3 +679,6 @@ COMMENT ON FUNCTION check_productivity_achievements IS 'Функция пров�
 -- =====================================================
 
 
+
+
+

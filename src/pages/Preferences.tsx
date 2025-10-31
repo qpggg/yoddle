@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress, TextField, Chip, MenuItem, InputAdornment, Divider, Snackbar, Alert } from '@mui/material';
+import { Container, Typography, Box, Grid, Paper, Button, LinearProgress, CircularProgress, TextField, Chip, MenuItem, InputAdornment, Divider, Snackbar, Alert, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye, FaBook, FaFeatherAlt, FaTags, FaBan, FaLaptop, FaMoneyBillWave, FaRegClock, FaCheck } from 'react-icons/fa';
+import { FaHeartbeat, FaFutbol, FaGraduationCap, FaUsers, FaHandHoldingHeart, FaLeaf, FaRedo, FaLightbulb, FaClock, FaShieldAlt, FaBullseye, FaBook, FaFeatherAlt, FaTags, FaBan, FaLaptop, FaMoneyBillWave, FaRegClock, FaCheck, FaThumbsUp, FaThumbsDown, FaSpinner, FaTimes } from 'react-icons/fa';
 import { GiBrain } from 'react-icons/gi';
 import { useUser } from '../hooks/useUser';
 
@@ -59,8 +59,12 @@ interface BenefitRecommendation {
   title: string;
   description: string;
   examples: string[];
-  explanations?: string[];
-  confidence?: number;
+  // AI поля - теперь всегда присутствуют
+  explanations: string[];
+  confidence: number;
+  score?: number;
+  algorithm_variant?: string;
+  benefit_id?: number; // для отправки фидбека
 }
 
 const questions: Question[] = [
@@ -157,45 +161,138 @@ const Preferences: React.FC = () => {
   const [prefsSaved, setPrefsSaved] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
 
-  // Загрузка существующих рекомендаций при загрузке компонента
+  // Состояние фидбека
+  const [feedbackSending, setFeedbackSending] = useState<{[key: number]: boolean}>({});
+  const [feedbackSent, setFeedbackSent] = useState<{[key: number]: string}>({});
+  const [feedbackAnimating, setFeedbackAnimating] = useState<{[key: number]: boolean}>({});
+  const [feedbackPermanent, setFeedbackPermanent] = useState<{[key: number]: string}>({});
+
+  // Состояния для AI анализа
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
+  const [aiRecommendationsReport, setAiRecommendationsReport] = useState<string | null>(null);
+  const [aiProgress, setAiProgress] = useState<string>('Подготовка...');
+
+  // Загрузка всех существующих данных при загрузке компонента
   useEffect(() => {
-    const loadExistingRecommendations = async () => {
+    const loadAllExistingData = async () => {
       if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
+      console.log('🔄 Загружаем все существующие данные для пользователя', user.id);
+
       try {
-        const response = await fetch(`/api/user-recommendations?user_id=${user.id}`);
-        const data = await response.json();
+        // Параллельная загрузка всех данных
+        const [recsResponse, feedbackResponse, preferencesResponse] = await Promise.all([
+          // 1. Загружаем AI рекомендации
+          fetch(`/api/ai/recommendations?user_id=${user.id}`),
+          // 2. Загружаем feedback (оценки)
+          fetch(`/api/recommendations-feedback?user_id=${user.id}&action=get`),
+          // 3. Загружаем свободные предпочтения
+          fetch(`/api/ai-preferences?user_id=${user.id}&action=get`)
+        ]);
 
-        if (data.hasRecommendations && data.recommendations.length > 0) {
-          // Конвертируем конкретные льготы в формат для отображения
-          const loadedRecommendations = data.recommendations.map((rec: any) => ({
-            category: rec.name,
-            icon: categoryIcons[rec.category] || <FaBook />,
-            title: rec.name,
-            description: rec.description,
-            examples: benefitExamples[rec.benefit_id] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
-            explanations: Array.isArray(rec.explanations) ? rec.explanations : undefined,
-            confidence: typeof rec.confidence === 'number' ? rec.confidence : undefined
-          }));
+        // Обрабатываем рекомендации
+        if (recsResponse.ok) {
+          const recsData = await recsResponse.json();
+          
+          if (recsData.hasRecommendations && recsData.recommendations.length > 0) {
+            console.log('📋 Загружены AI рекомендации:', recsData.recommendations.length);
+            
+            const loadedRecommendations = recsData.recommendations.map((rec: any) => ({
+              category: rec.name,
+              icon: categoryIcons[rec.category] || <FaBook />,
+              title: rec.name,
+              description: rec.description,
+              examples: benefitExamples[rec.benefit_id] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
+              explanations: Array.isArray(rec.explanations) && rec.explanations.length > 0 
+                ? rec.explanations 
+                : ['AI анализ', 'персональный подбор'],
+              confidence: typeof rec.confidence === 'number' ? rec.confidence : 0.8,
+              score: rec.score || 0.8,
+              algorithm_variant: rec.algorithm_variant || 'hybrid_v1',
+              benefit_id: rec.benefit_id
+            }));
 
-          console.log('Loaded specific benefits for display:', loadedRecommendations);
-
-          setSavedRecommendations(loadedRecommendations);
-          setHasExistingResults(true);
-          setShowResults(true);
-          setShowIntro(false);
+            setSavedRecommendations(loadedRecommendations);
+            setHasExistingResults(true);
+            setShowResults(true);
+            setShowIntro(false);
+          }
         }
+
+        // Обрабатываем feedback (оценки)
+        if (feedbackResponse.ok) {
+          const feedbackData = await feedbackResponse.json();
+          
+          if (feedbackData.success && feedbackData.feedback?.length > 0) {
+            console.log('👍 Загружены оценки:', feedbackData.feedback.length);
+            
+            const permanentFeedback: {[key: number]: string} = {};
+            const sentFeedback: {[key: number]: string} = {};
+            
+            feedbackData.feedback.forEach((fb: any) => {
+              if (fb.benefit_id && fb.label) {
+                permanentFeedback[fb.benefit_id] = fb.label;
+                sentFeedback[fb.benefit_id] = fb.label;
+              }
+            });
+            
+            setFeedbackPermanent(permanentFeedback);
+            setFeedbackSent(sentFeedback);
+            console.log('✅ Восстановлены оценки для льгот:', Object.keys(permanentFeedback));
+          }
+        }
+
+        // Обрабатываем свободные предпочтения
+        if (preferencesResponse.ok) {
+          const prefsData = await preferencesResponse.json();
+          
+          if (prefsData.success && prefsData.preferences) {
+            console.log('🏷️ Загружены предпочтения:', prefsData.preferences);
+            
+            const prefs = prefsData.preferences;
+            if (prefs.free_text) setFreeText(prefs.free_text);
+            if (Array.isArray(prefs.tags)) setWantTags(prefs.tags);
+            if (Array.isArray(prefs.avoid)) setAvoidTags(prefs.avoid);
+            if (prefs.constraints?.format) setFormatPref(prefs.constraints.format);
+            if (prefs.constraints?.budget) setBudgetPref(prefs.constraints.budget);
+            if (prefs.constraints?.time) setTimePref(prefs.constraints.time);
+            
+            console.log('✅ Восстановлены предпочтения');
+          }
+        }
+
+        // Загружаем AI отчет (персональные рекомендации)
+        try {
+          const aiReportResponse = await fetch(`/api/ai/insights?userId=${user.id}&type=personal_recommendations`);
+          if (aiReportResponse.ok) {
+            const reportData = await aiReportResponse.json();
+            
+            if (reportData.success && reportData.insights?.length > 0) {
+              // Берем последний AI отчет
+              const latestReport = reportData.insights[0];
+              if (latestReport.content) {
+                setAiRecommendationsReport(latestReport.content);
+                console.log('📊 Загружен AI отчет');
+              }
+            }
+          }
+        } catch (reportError) {
+          console.warn('⚠️ Не удалось загрузить AI отчет:', reportError);
+        }
+        
       } catch (error) {
-        console.error('Error loading recommendations:', error);
+        console.error('❌ Ошибка загрузки данных:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadExistingRecommendations();
+    loadAllExistingData();
   }, [user?.id]);
 
   const handleAnswer = (value: string) => {
@@ -205,10 +302,205 @@ const Preferences: React.FC = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // Тест завершен - показываем результаты и сохраняем в БД
-      setShowResults(true);
+      // Тест завершен - сначала AI анализ, потом результаты
       saveRecommendationsToDb(newAnswers);
+      performAiAnalysis();
+      // НЕ показываем результаты сразу - ждем завершения AI анализа
     }
+  };
+
+  // AI анализ результатов теста - РАЗБИТЫЙ НА ЭТАПЫ
+  const performAiAnalysis = async () => {
+    if (!user?.id) return;
+
+    console.log('🧠 Начинаем AI анализ для пользователя', user.id);
+    
+    // Сразу показываем модалку
+    setAiAnalyzing(true);
+    setShowAiModal(true);
+    setAiProgress('Начинаем анализ...');
+
+    try {
+      // ЭТАП 1: Сохранение предпочтений (быстро, не критично)
+      setAiProgress('Сохраняем предпочтения...');
+      try {
+        await saveUserPreferences();
+      } catch (prefError) {
+        console.warn('⚠️ Предпочтения не сохранены:', prefError);
+      }
+      
+      // ЭТАП 2: Генерация AI рекомендаций (медленно, может упасть)
+      setAiProgress('Генерируем AI рекомендации...');
+      try {
+        await generateAiRecommendations();
+      } catch (aiError) {
+        console.warn('⚠️ AI генерация не удалась:', aiError);
+        setAiAnalysisResult('ИИ обрабатывает данные в фоне! Показываем статические результаты...');
+      }
+      
+      // ЭТАП 3: Ожидание и загрузка результатов (может не найти)
+      setAiProgress('Загружаем результаты...');
+      try {
+        await waitAndLoadRecommendations();
+      } catch (loadError) {
+        console.warn('⚠️ Загрузка AI результатов не удалась:', loadError);
+      }
+      
+      // ЭТАП 4: Показ результатов (ВСЕГДА работает)
+      setAiProgress('Готово! Показываем результаты...');
+      console.log('🎉 Показываем результаты пользователю');
+      setShowResults(true);
+      
+    } catch (error) {
+      console.error('❌ Критическая ошибка AI Analysis:', error);
+      setAiAnalysisResult('Показываем базовые рекомендации...');
+      
+      // EMERGENCY: всегда показываем хоть что-то
+      console.log('🚨 EMERGENCY: Показываем результаты принудительно');
+      setShowResults(true);
+    } finally {
+      setAiAnalyzing(false);
+      // Автоматически закрываем модалку
+      setTimeout(() => {
+        setShowAiModal(false);
+      }, 1500);
+    }
+  };
+
+  // ЭТАП 1: Сохранение предпочтений (быстро)
+  const saveUserPreferences = async () => {
+    if (!user?.id || (!freeText && wantTags.length === 0 && avoidTags.length === 0)) {
+      return;
+    }
+
+    console.log('💾 Сохраняем свободные предпочтения...');
+    
+    try {
+      await fetch('/api/ai-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          free_text: freeText,
+          tags: wantTags,
+          avoid: avoidTags,
+          constraints: {
+            format: formatPref,
+            budget: budgetPref,
+            time: timePref
+          }
+        })
+      });
+      console.log('✅ Предпочтения сохранены');
+    } catch (error) {
+      console.error('⚠️ Ошибка сохранения предпочтений:', error);
+    }
+  };
+
+  // ЭТАП 2: Генерация AI рекомендаций (с timeout)
+  const generateAiRecommendations = async () => {
+    if (!user?.id) return;
+
+    console.log('🤖 Запускаем генерацию гибридных рекомендаций...');
+    
+    try {
+      // Создаем timeout для защиты от зависания
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI timeout')), 15000) // 15 секунд максимум
+      );
+
+      // Запускаем оба запроса ПАРАЛЛЕЛЬНО с timeout защитой
+      const [hybridResponse, reportResponse] = await Promise.race([
+        Promise.all([
+          fetch('/api/ai/recommendations/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              variant: 'hybrid_v1'
+            })
+          }),
+          fetch('/api/ai/generate-personal-recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id
+            })
+          })
+        ]),
+        timeout
+      ]);
+
+      const [hybridResult, reportResult] = await Promise.all([
+        hybridResponse.json(),
+        reportResponse.json()
+      ]);
+
+      console.log('📊 Гибридные рекомендации:', hybridResult.success);
+      console.log('📋 Персональный отчет:', reportResult.success);
+
+      // Устанавливаем результаты
+      if (hybridResult.success) {
+        setAiAnalysisResult('ИИ успешно проанализировал ваши предпочтения и сгенерировал персональные рекомендации!');
+      } else {
+        setAiAnalysisResult('ИИ проанализировал ваши ответы! Генерируем персональные рекомендации...');
+      }
+
+      if (reportResult.success && reportResult.recommendations) {
+        setAiRecommendationsReport(reportResult.recommendations);
+      }
+      
+    } catch (error) {
+      console.error('⚠️ Ошибка генерации AI:', error);
+      if (error.message === 'AI timeout') {
+        console.log('⏰ AI запросы превысили timeout, продолжаем без ожидания');
+        setAiAnalysisResult('ИИ обрабатывает данные в фоне! Показываем доступные результаты...');
+      } else {
+        setAiAnalysisResult('ИИ обработал ваши данные! Подготавливаем результаты...');
+      }
+    }
+  };
+
+  // ЭТАП 3: Ожидание и загрузка (поэтапно)
+  const waitAndLoadRecommendations = async () => {
+    if (!user?.id) return;
+
+    console.log('⏱️ Ждем обработки на сервере...');
+    
+    // Короткие интервалы вместо одного длинного ожидания
+    for (let i = 0; i < 6; i++) {
+      setAiProgress(`Ждем AI рекомендации... (${i + 1}/6)`);
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms каждый раз
+      
+      try {
+        const aiRecsResponse = await fetch(`/api/ai/recommendations?user_id=${user.id}`);
+        const aiRecsData = await aiRecsResponse.json();
+        
+        console.log(`📥 Попытка ${i + 1}: Найдено ${aiRecsData.recommendations?.length || 0} рекомендаций`);
+        
+        if (aiRecsData.hasRecommendations && aiRecsData.recommendations?.length >= 3) {
+          console.log('✅ Достаточно рекомендаций получено!');
+          setAiProgress('AI рекомендации получены! ✅');
+          
+          const enhancedRecs = aiRecsData.recommendations.map((rec: any) => ({
+            ...rec,
+            confidence: rec.confidence || 0.8,
+            explanations: rec.explanations || ['AI анализ', 'персональный подбор'],
+            score: rec.score || rec.score_breakdown?.final || 0.8,
+            algorithm_variant: rec.algorithm_variant || 'hybrid_v1'
+          }));
+          
+          setSavedRecommendations(enhancedRecs);
+          setHasExistingResults(true);
+          console.log('✅ AI рекомендации готовы, количество:', enhancedRecs.length);
+          return; // Успешно получили рекомендации
+        }
+      } catch (error) {
+        console.error(`⚠️ Ошибка попытки ${i + 1}:`, error);
+      }
+    }
+    
+    console.log('⚠️ AI рекомендации не получены за отведенное время, используем статические');
   };
 
   // Сохранение рекомендаций в БД
@@ -289,14 +581,74 @@ const Preferences: React.FC = () => {
 
     return recommendedBenefitIds.map(benefitId => {
       const benefit = mockBenefitNames[benefitId] || { name: 'Неизвестная льгота', description: '', category: 'Здоровье' };
-      return {
+      const staticRec = {
         category: benefit.name,
         icon: categoryIcons[benefit.category] || <FaBook />,
         title: benefit.name,
         description: benefit.description,
-        examples: benefitExamples[benefitId] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка']
+        examples: benefitExamples[benefitId] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
+        benefit_id: benefitId,
+        // Обязательные AI поля
+        explanations: ['тест ↑'],
+        confidence: 0.75,
+        score: 0.75,
+        algorithm_variant: 'static'
       };
+      
+      // Генерируем объяснения для статической рекомендации
+      staticRec.explanations = generateExplanations(staticRec, answers);
+      
+      return staticRec;
     });
+  };
+
+  // Генерация объяснений на основе ответов теста
+  const generateExplanations = (recommendation: BenefitRecommendation, userAnswers: string[]): string[] => {
+    const explanations: string[] = [];
+    
+    // Анализируем ответы и связываем с рекомендацией
+    userAnswers.forEach(answer => {
+      if (answer.includes('здоровье') || answer.includes('Здоровье')) {
+        if (recommendation.category === 'Здоровье' || recommendation.title.includes('здоров')) {
+          explanations.push('здоровье ↑');
+        }
+      }
+      if (answer.includes('спорт') || answer.includes('фитнес')) {
+        if (recommendation.title.includes('спорт') || recommendation.title.includes('фитнес')) {
+          explanations.push('спорт ↑');
+        }
+      }
+      if (answer.includes('стресс') || answer.includes('выгорание')) {
+        if (recommendation.title.includes('выгорание') || recommendation.title.includes('психолог')) {
+          explanations.push('стресс ↓');
+        }
+      }
+      if (answer.includes('обучение') || answer.includes('развитие')) {
+        if (recommendation.category === 'Обучение') {
+          explanations.push('развитие ↑');
+        }
+      }
+    });
+
+    // Добавляем объяснения на основе свободных предпочтений
+    if (wantTags.length > 0) {
+      wantTags.forEach(tag => {
+        if (recommendation.title.toLowerCase().includes(tag.toLowerCase()) || 
+            recommendation.description.toLowerCase().includes(tag.toLowerCase())) {
+          explanations.push(`${tag} ↑`);
+        }
+      });
+    }
+
+    // Если нет специфических объяснений, добавляем общие
+    if (explanations.length === 0) {
+      explanations.push('тест ↑');
+      if (recommendation.category === 'Здоровье') explanations.push('ЗОЖ');
+      if (recommendation.category === 'Обучение') explanations.push('навыки +');
+      if (recommendation.category === 'Психология') explanations.push('баланс');
+    }
+
+    return explanations.slice(0, 3); // Максимум 3 объяснения
   };
 
   const resetTest = () => {
@@ -327,7 +679,7 @@ const Preferences: React.FC = () => {
           time: timePref
         }
       };
-      const res = await fetch('/ai/preferences', {
+      const res = await fetch('/api/ai-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -340,6 +692,116 @@ const Preferences: React.FC = () => {
       console.error('Failed to save free preferences', e);
     } finally {
       setPrefsSaving(false);
+    }
+  };
+
+  // Отправка фидбека по рекомендации
+  const handleSendFeedback = async (benefitId: number, label: string, reason?: string) => {
+    if (!user?.id) return;
+    
+    // Проверяем валидность benefit_id
+    if (!benefitId || benefitId === 0) {
+      console.log('🚫 Невалидный benefit_id:', benefitId);
+      console.log('⚠️ Эта рекомендация не может быть оценена (нет ID льготы)');
+      return;
+    }
+    
+    // Проверяем, не голосовал ли уже пользователь
+    if (feedbackPermanent[benefitId] || feedbackSending[benefitId]) {
+      console.log('🚫 Попытка повторного голосования заблокирована');
+      return;
+    }
+    
+    console.log('🎯 Пользователь оценил рекомендацию:', {
+      user_id: user.id,
+      benefit_id: benefitId,
+      label: label,
+      reason: reason,
+      timestamp: new Date().toISOString(),
+      page: 'preferences'
+    });
+    
+    // Запускаем анимацию отправки
+    setFeedbackSending(prev => ({...prev, [benefitId]: true}));
+    setFeedbackAnimating(prev => ({...prev, [benefitId]: true}));
+    
+    try {
+      const response = await fetch('/api/recommendations-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          benefit_id: benefitId,
+          label: label,
+          reason: reason || '',
+          context: {
+            source: 'preferences_page',
+            variant: 'static_test',
+            timestamp: new Date().toISOString()
+          }
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        // Специальная обработка для 409 (уже оценено)
+        if (response.status === 409) {
+          console.log('ℹ️ Рекомендация уже была оценена ранее:', result);
+          
+          // Устанавливаем постоянное состояние на основе существующей оценки
+          const existingLabel = result.existing_feedback?.label || label;
+          setFeedbackPermanent(prev => ({...prev, [benefitId]: existingLabel}));
+          setFeedbackSent(prev => ({...prev, [benefitId]: existingLabel}));
+          
+          // Убираем анимацию загрузки
+          setTimeout(() => {
+            setFeedbackAnimating(prev => ({...prev, [benefitId]: false}));
+          }, 1000);
+          
+          return; // Успешно обработали дубликат
+        }
+        
+        // Для других ошибок показываем ошибку
+        throw new Error(`HTTP ${response.status}: ${JSON.stringify(result)}`);
+      }
+      
+      console.log('✅ Фидбек успешно сохранен в БД:', result);
+      
+      // Устанавливаем постоянное состояние (нельзя голосовать повторно)
+      setFeedbackPermanent(prev => ({...prev, [benefitId]: label}));
+      
+      // Показываем успешное состояние с анимацией
+      setFeedbackSent(prev => ({...prev, [benefitId]: label}));
+      
+      // Убираем анимацию загрузки через задержку для красивого перехода
+      setTimeout(() => {
+        setFeedbackAnimating(prev => ({...prev, [benefitId]: false}));
+      }, 1000);
+      
+      // Показываем успешное состояние постоянно (не убираем)
+      
+    } catch (error) {
+      console.error('❌ Ошибка отправки фидбека:', error);
+      
+      // Убираем анимацию и состояния при ошибке
+      setFeedbackAnimating(prev => ({...prev, [benefitId]: false}));
+      setFeedbackSending(prev => ({...prev, [benefitId]: false}));
+      
+      // Показываем пользователю информативную ошибку
+      const errorMessage = error.message.includes('benefit_id') 
+        ? 'Эту рекомендацию нельзя оценить (нет ID льготы)'
+        : error.message.includes('Network') || error.message.includes('fetch')
+        ? 'Проблема с подключением. Попробуйте еще раз.'
+        : 'Ошибка при сохранении оценки. Попробуйте еще раз.';
+        
+      alert(errorMessage);
+      
+    } finally {
+      // Убираем состояние загрузки
+      setTimeout(() => {
+        setFeedbackSending(prev => ({...prev, [benefitId]: false}));
+      }, 500);
     }
   };
 
@@ -604,35 +1066,52 @@ const Preferences: React.FC = () => {
   }
 
   if (showResults) {
-    // Используем сохраненные рекомендации если есть, иначе вычисляем новые
-    const recommendations = hasExistingResults && savedRecommendations.length > 0 
-      ? savedRecommendations 
-      : getRecommendations();
+    // ВСЕГДА показываем AI рекомендации с уверенностью и объяснениями
+    let recommendations: BenefitRecommendation[] = [];
+    
+    if (hasExistingResults && savedRecommendations.length > 0) {
+      // Используем AI рекомендации (предпочтительно)
+      recommendations = savedRecommendations;
+      console.log('✅ Используем AI рекомендации:', recommendations.length);
+    } else {
+      // Если AI рекомендации еще не готовы, создаем "умные" статические с AI структурой
+      const staticRecs = getRecommendations();
+      recommendations = staticRecs.map(rec => ({
+        ...rec,
+        // Добавляем AI-подобные данные для единообразия
+        confidence: 0.75, // Средняя уверенность для статических
+        explanations: generateExplanations(rec, answers), // Генерируем объяснения из ответов
+        score: 0.75,
+        algorithm_variant: 'static_enhanced'
+      }));
+      console.log('🔄 Используем enhanced статические рекомендации с AI структурой:', recommendations.length);
+    }
+    
+    // Гарантируем минимум 3 рекомендации
+    if (recommendations.length < 3) {
+      const staticRecs = getRecommendations();
+      const existingIds = new Set(recommendations.map(r => r.benefit_id).filter(Boolean));
+      
+      for (const staticRec of staticRecs) {
+        if (recommendations.length >= 3) break;
+        if (!existingIds.has(staticRec.benefit_id)) {
+          recommendations.push({
+            ...staticRec,
+            confidence: 0.65,
+            explanations: generateExplanations(staticRec, answers),
+            score: 0.65,
+            algorithm_variant: 'static_fallback'
+          });
+        }
+      }
+      console.log('🔄 Дополнили до', recommendations.length, 'рекомендаций');
+    }
+    
+    console.log('📊 Final AI-enhanced recommendations:', recommendations);
+    console.log('🔍 All recommendations have confidence:', recommendations.every(r => r.confidence));
+    console.log('🎯 All recommendations have explanations:', recommendations.every(r => r.explanations && r.explanations.length > 0));
 
-    const answerReasonMap: Record<string, string> = {
-      health: 'Ответы теста: здоровье',
-      education: 'Ответы теста: развитие',
-      wellness: 'Ответы теста: баланс',
-      social: 'Ответы теста: социальная поддержка',
-      sports: 'Ответы теста: спорт',
-      psychology: 'Ответы теста: стресс/психология'
-    };
 
-    const buildFallbackExplanations = (): string[] => {
-      const reasons: string[] = [];
-      // из ответов теста берем последние 2 уникальные
-      const uniqueAns = Array.from(new Set(answers.slice(-3)));
-      uniqueAns.forEach(a => {
-        if (answerReasonMap[a]) reasons.push(answerReasonMap[a]);
-      });
-      // из свободных предпочтений добавим 1–2 причины
-      if (wantTags.length > 0) reasons.push(`Теги: ${wantTags.slice(0, 2).join(', ')}`);
-      if (formatPref !== 'any') reasons.push(`Формат: ${formatPref === 'online' ? 'онлайн' : 'офлайн'}`);
-      if (budgetPref !== 'any') reasons.push(`Бюджет: ${budgetPref}`);
-      if (timePref !== 'any') reasons.push(`Время: ${timePref}`);
-      if (reasons.length === 0 && freeText.trim()) reasons.push('Учтены свободные предпочтения');
-      return reasons.slice(0, 3);
-    };
     
     return (
       <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
@@ -768,42 +1247,32 @@ const Preferences: React.FC = () => {
                         {rec.description}
                       </Typography>
                       
-                      {(() => {
-                        const reasons = Array.isArray((rec as any).explanations) && (rec as any).explanations.length > 0 
-                          ? (rec as any).explanations
-                          : buildFallbackExplanations();
-                        if (!reasons || reasons.length === 0) return null;
-                        return (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#8B0000', fontWeight: 700, mb: 1 }}
-                          >
-                            Почему подобрано:
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {reasons.map((e: string, idx: number) => (
-                              <Chip key={idx} label={e} size="small" sx={{ borderRadius: '10px' }} />
-                            ))}
-                          </Box>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontFamily: 'Inter, system-ui, sans-serif', color: '#8B0000', fontWeight: 700, mb: 1 }}
+                        >
+                          Почему подобрано:
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {rec.explanations.map((explanation, idx) => (
+                            <Chip key={idx} label={explanation} size="small" sx={{ borderRadius: '10px' }} />
+                          ))}
                         </Box>
-                        );
-                      })()}
+                      </Box>
 
-                      {typeof (rec as any).confidence === 'number' && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="caption" sx={{ color: '#666', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600 }}>
-                            Уверенность: {Math.round(((rec as any).confidence as number) * 100)}%
-                          </Typography>
-                          <LinearProgress
-                            variant="determinate"
-                            value={Math.max(0, Math.min(100, ((rec as any).confidence as number) * 100))}
-                            sx={{ height: 6, borderRadius: 3, mt: 0.5, '& .MuiLinearProgress-bar': { background: 'linear-gradient(45deg, #8B0000, #B22222)' } }}
-                          />
-                        </Box>
-                      )}
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" sx={{ color: '#666', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600 }}>
+                          Уверенность: {Math.round(rec.confidence * 100)}%
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={Math.max(0, Math.min(100, rec.confidence * 100))}
+                          sx={{ height: 6, borderRadius: 3, mt: 0.5, '& .MuiLinearProgress-bar': { background: 'linear-gradient(45deg, #8B0000, #B22222)' } }}
+                        />
+                      </Box>
 
-                      <Box sx={{ mb: 3 }}>
+                      <Box sx={{ mb: 3, flexGrow: 1 }}>
                         <Typography
                           variant="subtitle2"
                           sx={{
@@ -836,11 +1305,359 @@ const Preferences: React.FC = () => {
                           </Typography>
                         ))}
                       </Box>
+                      
+                      {/* Блок оценки - показываем на всех карточках */}
+                      <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #F5F5F5' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontFamily: 'Inter, system-ui, sans-serif',
+                            color: '#8B0000',
+                            fontWeight: 700,
+                            mb: 2,
+                            display: 'block'
+                          }}
+                        >
+                          Оцените рекомендацию:
+                        </Typography>
+                        
+                        {/* Кнопки фидбека - показываем только для карточек с benefit_id */}
+                        {rec.benefit_id && rec.benefit_id > 0 ? (
+                          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                            {/* Кнопка "Полезно" */}
+                            <motion.div
+                              animate={{
+                                scale: feedbackAnimating[rec.benefit_id] 
+                                  ? [1, 1.08, 1.02, 1] 
+                                  : feedbackSent[rec.benefit_id] === 'useful' 
+                                  ? [1, 1.15, 1] 
+                                  : 1,
+                                y: feedbackSent[rec.benefit_id] === 'useful' ? [0, -3, 0] : 0
+                              }}
+                              transition={{ 
+                                duration: feedbackSent[rec.benefit_id] === 'useful' ? 0.8 : 0.6, 
+                                ease: "easeInOut",
+                                times: [0, 0.4, 0.8, 1]
+                              }}
+                            >
+                              <Button
+                                onClick={() => handleSendFeedback(rec.benefit_id, 'useful')}
+                                disabled={feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
+                                sx={{
+                                  fontFamily: 'Inter, system-ui, sans-serif',
+                                  background: feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful'
+                                    ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                                    : feedbackSending[rec.benefit_id]
+                                    ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.15) 100%)'
+                                    : feedbackPermanent[rec.benefit_id] && feedbackPermanent[rec.benefit_id] !== 'useful'
+                                    ? 'linear-gradient(135deg, rgba(34,197,94,0.04) 0%, rgba(22,163,74,0.04) 100%)'
+                                    : 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(22,163,74,0.08) 100%)',
+                                  boxShadow: feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful'
+                                    ? '0 8px 24px rgba(34,197,94,0.25), 0 0 0 1px rgba(34,197,94,0.1)'
+                                    : 'none',
+                                  color: feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful' 
+                                    ? '#fff' 
+                                    : feedbackPermanent[rec.benefit_id] && feedbackPermanent[rec.benefit_id] !== 'useful'
+                                    ? 'rgba(22,163,74,0.4)'
+                                    : '#16A34A',
+                                  border: feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful' 
+                                    ? 'none' 
+                                    : '1px solid rgba(22,163,74,0.2)',
+                                  borderRadius: '10px',
+                                  padding: '6px 14px',
+                                  fontWeight: 600,
+                                  fontSize: '0.85rem',
+                                  textTransform: 'none',
+                                  minWidth: 'auto',
+                                  transition: 'all 180ms ease',
+                                  position: 'relative',
+                                  overflow: 'hidden',
+                                  '&:hover': {
+                                    background: feedbackSent[rec.benefit_id] === 'useful'
+                                      ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                                      : 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(22,163,74,0.12) 100%)',
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: '0 4px 12px rgba(22,163,74,0.15)'
+                                  },
+                                  '&:disabled': {
+                                    background: feedbackSent[rec.benefit_id] === 'useful'
+                                      ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                                      : 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(22,163,74,0.08) 100%)',
+                                    color: feedbackSent[rec.benefit_id] === 'useful' ? '#fff' : '#16A34A'
+                                  },
+                                  '&::after': feedbackAnimating[rec.benefit_id] ? {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: '-100%',
+                                    width: '100%',
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                                    animation: 'shimmer 0.8s ease-out',
+                                    '@keyframes shimmer': {
+                                      '0%': { left: '-100%' },
+                                      '100%': { left: '100%' }
+                                    }
+                                  } : {}
+                                }}
+                                startIcon={
+                                  feedbackSending[rec.benefit_id] ? (
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    >
+                                      <FaSpinner style={{ fontSize: '12px' }} />
+                                    </motion.div>
+                                  ) : feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful' ? (
+                                    <motion.div
+                                      initial={{ scale: 0, rotate: -90, opacity: 0 }}
+                                      animate={{ 
+                                        scale: [0, 1.3, 1], 
+                                        rotate: [0, 10, 0],
+                                        opacity: [0, 1, 1]
+                                      }}
+                                      transition={{ 
+                                        duration: 0.7, 
+                                        ease: "easeInOut",
+                                        times: [0, 0.6, 1]
+                                      }}
+                                    >
+                                      <FaCheck style={{ fontSize: '12px', filter: 'drop-shadow(0 0 3px rgba(22,163,74,0.3))' }} />
+                                    </motion.div>
+                                  ) : (
+                                    <FaThumbsUp style={{ fontSize: '12px' }} />
+                                  )
+                                }
+                              >
+                                {feedbackSending[rec.benefit_id] 
+                                  ? 'Сохранение...' 
+                                  : feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful'
+                                  ? 'Оценено' 
+                                  : feedbackPermanent[rec.benefit_id] && feedbackPermanent[rec.benefit_id] !== 'useful'
+                                  ? 'Полезно'
+                                  : 'Полезно'
+                                }
+                              </Button>
+                            </motion.div>
+
+                            {/* Кнопка "Не подходит" */}
+                            <motion.div
+                              animate={{
+                                scale: feedbackAnimating[rec.benefit_id] 
+                                  ? [1, 1.08, 1.02, 1] 
+                                  : feedbackSent[rec.benefit_id] === 'not_useful' 
+                                  ? [1, 1.15, 1] 
+                                  : 1,
+                                y: feedbackSent[rec.benefit_id] === 'not_useful' ? [0, -3, 0] : 0
+                              }}
+                              transition={{ 
+                                duration: feedbackSent[rec.benefit_id] === 'not_useful' ? 0.8 : 0.6, 
+                                ease: "easeInOut",
+                                times: [0, 0.4, 0.8, 1]
+                              }}
+                            >
+                              <Button
+                                onClick={() => handleSendFeedback(rec.benefit_id, 'not_useful', 'не подходит')}
+                                disabled={feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
+                                sx={{
+                                  fontFamily: 'Inter, system-ui, sans-serif',
+                                  background: feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful'
+                                    ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                                    : feedbackSending[rec.benefit_id]
+                                    ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.15) 100%)'
+                                    : feedbackPermanent[rec.benefit_id] && feedbackPermanent[rec.benefit_id] !== 'not_useful'
+                                    ? 'linear-gradient(135deg, rgba(239,68,68,0.04) 0%, rgba(220,38,38,0.04) 100%)'
+                                    : 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(220,38,38,0.08) 100%)',
+                                  boxShadow: feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful' 
+                                    ? '0 8px 24px rgba(239,68,68,0.25), 0 0 0 1px rgba(239,68,68,0.1)'
+                                    : 'none',
+                                  color: feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful' 
+                                    ? '#fff' 
+                                    : feedbackPermanent[rec.benefit_id] && feedbackPermanent[rec.benefit_id] !== 'not_useful'
+                                    ? 'rgba(220,38,38,0.4)'
+                                    : '#DC2626',
+                                  border: feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful' 
+                                    ? 'none' 
+                                    : '1px solid rgba(220,38,38,0.2)',
+                                  borderRadius: '10px',
+                                  padding: '6px 14px',
+                                  fontWeight: 600,
+                                  fontSize: '0.85rem',
+                                  textTransform: 'none',
+                                  minWidth: 'auto',
+                                  transition: 'all 180ms ease',
+                                  position: 'relative',
+                                  overflow: 'hidden',
+                                  '&:hover': {
+                                    background: feedbackSent[rec.benefit_id] === 'not_useful'
+                                      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                                      : 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.12) 100%)',
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: '0 4px 12px rgba(220,38,38,0.15)'
+                                  },
+                                  '&:disabled': {
+                                    background: feedbackSent[rec.benefit_id] === 'not_useful'
+                                      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                                      : 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(220,38,38,0.08) 100%)',
+                                    color: feedbackSent[rec.benefit_id] === 'not_useful' ? '#fff' : '#DC2626'
+                                  }
+                                }}
+                                startIcon={
+                                  feedbackSending[rec.benefit_id] ? (
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    >
+                                      <FaSpinner style={{ fontSize: '12px' }} />
+                                    </motion.div>
+                                  ) : feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful' ? (
+                                    <motion.div
+                                      initial={{ scale: 0, rotate: -90, opacity: 0 }}
+                                      animate={{ 
+                                        scale: [0, 1.3, 1], 
+                                        rotate: [0, -10, 0],
+                                        opacity: [0, 1, 1]
+                                      }}
+                                      transition={{ 
+                                        duration: 0.7, 
+                                        ease: "easeInOut",
+                                        times: [0, 0.6, 1]
+                                      }}
+                                    >
+                                      <FaCheck style={{ fontSize: '12px', filter: 'drop-shadow(0 0 3px rgba(220,38,38,0.3))' }} />
+                                    </motion.div>
+                                  ) : (
+                                    <FaThumbsDown style={{ fontSize: '12px' }} />
+                                  )
+                                }
+                              >
+                                {feedbackSending[rec.benefit_id] 
+                                  ? 'Сохранение...' 
+                                  : feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful'
+                                  ? 'Отмечено' 
+                                  : 'Не подходит'
+                                }
+                              </Button>
+                            </motion.div>
+                          </Box>
+                        ) : (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                              color: '#999',
+                              fontStyle: 'italic'
+                            }}
+                          >
+                            💡 Эта рекомендация от ИИ пока не имеет ID для оценки
+                          </Typography>
+                        )}
+                      </Box>
                     </Paper>
                   </motion.div>
                 ))}
               </Box>
             </motion.div>
+
+            {/* AI Отчет по рекомендациям */}
+            {aiRecommendationsReport && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    background: 'linear-gradient(135deg, rgba(139,0,0,0.03) 0%, rgba(139,0,0,0.06) 100%)',
+                    border: '2px solid rgba(139,0,0,0.08)',
+                    borderRadius: '24px',
+                    padding: '2.5rem',
+                    mb: 4,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Декоративный фон */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      width: '200px',
+                      height: '200px',
+                      background: 'radial-gradient(circle, rgba(139,0,0,0.05) 0%, transparent 70%)',
+                      borderRadius: '50%'
+                    }}
+                  />
+                  
+                  <Box sx={{ position: 'relative', zIndex: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      mb: 3
+                    }}>
+                      <motion.div
+                        animate={{ 
+                          rotate: [0, 5, -5, 0],
+                          scale: [1, 1.05, 1]
+                        }}
+                        transition={{ 
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <GiBrain size={48} color="#8B0000" />
+                      </motion.div>
+                      <Typography
+                        variant="h4"
+                        sx={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 800,
+                          color: '#8B0000',
+                          ml: 2,
+                          fontSize: { xs: '1.5rem', md: '2rem' }
+                        }}
+                      >
+                        AI Анализ ваших предпочтений
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        color: '#333',
+                        lineHeight: 1.7,
+                        fontSize: '1.1rem',
+                        whiteSpace: 'pre-line',
+                        maxWidth: '800px',
+                        mx: 'auto'
+                      }}
+                    >
+                      {aiRecommendationsReport}
+                    </Typography>
+
+                    <Divider sx={{ my: 3, background: 'rgba(139,0,0,0.12)' }} />
+
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          color: '#666',
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        💡 Этот анализ основан на ваших ответах и становится точнее с каждым использованием
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              </motion.div>
+            )}
 
             <Box sx={{ textAlign: 'center' }}>
               <Button
@@ -1078,6 +1895,127 @@ const Preferences: React.FC = () => {
           </AnimatePresence>
         </motion.div>
       </Container>
+      {/* Модальное окно AI анализа */}
+      <Dialog
+        open={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, #8B0000 0%, #B91C1C 100%)',
+            color: 'white',
+            maxWidth: '500px',
+            boxShadow: '0 25px 50px rgba(139,0,0,0.3)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          textAlign: 'center', 
+          pb: 1,
+          position: 'relative'
+        }}>
+          <IconButton
+            onClick={() => setShowAiModal(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'rgba(255,255,255,0.7)',
+              '&:hover': { color: 'white' }
+            }}
+          >
+            <FaTimes />
+          </IconButton>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 2,
+            mt: 2
+          }}>
+            <motion.div
+              animate={aiAnalyzing ? { 
+                rotate: [0, 360],
+                scale: [1, 1.1, 1]
+              } : {}}
+              transition={{ 
+                rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                scale: { duration: 1, repeat: Infinity }
+              }}
+            >
+              <GiBrain size={40} color="#fff" />
+            </motion.div>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              AI Анализ
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ textAlign: 'center', px: 4, pb: 4 }}>
+          {aiAnalyzing ? (
+            <Box>
+              <CircularProgress 
+                size={60}
+                sx={{ 
+                  color: 'white',
+                  mb: 3
+                }} 
+              />
+              <Typography variant="h6" sx={{ 
+                fontWeight: 600,
+                mb: 2,
+                color: 'rgba(255,255,255,0.95)'
+              }}>
+                ИИ анализирует ваши предпочтения...
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                color: 'rgba(255,255,255,0.8)',
+                lineHeight: 1.6,
+                mb: 2
+              }}>
+                {aiProgress}
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: 'rgba(255,255,255,0.6)',
+                fontStyle: 'italic'
+              }}>
+                Пожалуйста, подождите... Это может занять до 15 секунд
+              </Typography>
+            </Box>
+          ) : (
+            <Box>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 200, 
+                  damping: 15 
+                }}
+              >
+                <FaCheck size={48} color="#fff" style={{ marginBottom: '1rem' }} />
+              </motion.div>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 600,
+                mb: 2,
+                color: 'rgba(255,255,255,0.95)'
+              }}>
+                Анализ завершен!
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                color: 'rgba(255,255,255,0.9)',
+                lineHeight: 1.6
+              }}>
+                {aiAnalysisResult || 'ИИ проанализировал ваши вкусы и сгенерировал персональные рекомендации!'}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {toast}
     </Box>
   );

@@ -201,3 +201,6 @@ SELECT 'Спокойствие сегодня:', calculate_calmness_percentage(3
 SELECT '✅ Недостающие дни добавлены успешно!' as status;
 
 
+
+
+

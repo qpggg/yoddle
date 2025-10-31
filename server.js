@@ -7,6 +7,8 @@ import { dirname, join } from 'path';
 import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import aiRouter from './api/ai.js';
+import aiPreferencesHandler from './api/ai-preferences.js';
+import recommendationsFeedbackHandler from './api/recommendations-feedback.js';
 import productivityRouter from './api/productivity.js';
 import clientsRouter from './api/clients.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
@@ -1492,6 +1494,10 @@ app.get('/health', (req, res) => {
 
 // Подключаем AI API
 app.use('/api/ai', aiRouter);
+
+// Подключаем отдельные AI endpoints
+app.use('/api/ai-preferences', aiPreferencesHandler);
+app.use('/api/recommendations-feedback', recommendationsFeedbackHandler);
 
 // Подключаем API продуктивности
 app.use('/api/productivity', productivityRouter);

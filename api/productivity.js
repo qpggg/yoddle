@@ -99,7 +99,7 @@ router.post('/mood-check', async (req, res) => {
 // POST /api/productivity/activity-log - Логирование активности
 router.post('/activity-log', async (req, res) => {
   try {
-    const { userId, activity, category, duration, success, notes, mood, energy, stress } = req.body;
+    const { userId, activity, category, duration, success, success_rating, notes, mood, energy, stress } = req.body;
     
     // Проверяем общий лимит записей в день (максимум 5)
     const dailyTotalCheck = await db.query(`
@@ -117,6 +117,11 @@ router.post('/activity-log', async (req, res) => {
     }
     
     // Сохраняем активность
+    // Нормализуем success_rating: поддерживаем как слайдер 0-10, так и старый boolean success
+    const normalizedSuccessRating = (Number.isFinite(Number(success_rating))
+      ? Math.max(0, Math.min(10, Number(success_rating)))
+      : (success === true ? 10 : (success === false ? 0 : 5)));
+
     const activityResult = await db.query(`
       INSERT INTO ai_signals (
         user_id, type, notes, activity_category, duration_minutes, 
@@ -130,7 +135,7 @@ router.post('/activity-log', async (req, res) => {
       notes,
       category,
       duration,
-      success ? 10 : 1, // Успех = 10, неудача = 1
+      normalizedSuccessRating,
       mood,
       energy,
       stress,

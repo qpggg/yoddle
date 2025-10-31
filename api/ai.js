@@ -129,6 +129,39 @@ router.post('/analyze-mood', async (req, res) => {
     const { mood, activities, notes, stressLevel } = req.body;
     const userId = req.body.userId || 1; // Временно используем ID = 1
 
+    // Проверяем лимит использования ИИ-советника (3 раза в день для обычных пользователей)
+    // Исключаем админов (userId = 1 - временно считается админом)
+    const isAdmin = userId === 1 || userId === parseInt(process.env.ADMIN_TELEGRAM_ID);
+    
+    if (!isAdmin) {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const limitCheck = await pool.query(`
+          SELECT COUNT(*) as count
+          FROM ai_signals
+          WHERE user_id = $1
+          AND type = 'mood'
+          AND timestamp >= $2
+        `, [userId, today]);
+        
+        const count = parseInt(limitCheck.rows[0]?.count || 0);
+        const limit = 3;
+        
+        if (count >= limit) {
+          return res.status(429).json({
+            success: false,
+            error: 'Достигнут лимит использования ИИ-советника',
+            message: `Вы использовали ИИ-советника ${count}/${limit} раз сегодня. Лимит обновится завтра.`
+          });
+        }
+      } catch (limitError) {
+        console.error('⚠️ Ошибка при проверке лимита (продолжаем работу):', limitError.message);
+        // Продолжаем работу, даже если проверка лимита не удалась
+      }
+    }
+
     // Сохраняем сигнал в БД с использованием всех доступных полей
     const signalQuery = `
       INSERT INTO ai_signals (
@@ -498,7 +531,7 @@ router.post('/recommendations/generate', async (req, res) => {
       ORDER BY timestamp DESC LIMIT 1
     `;
     const prefRes = await pool.query(prefQuery, [userId]);
-    const prefs = prefRes.rows[0]?.data ? JSON.parse(prefRes.rows[0].data) : { tags: [], avoid: [], free_text: '', constraints: {} };
+    const prefs = prefRes.rows[0]?.data || { tags: [], avoid: [], free_text: '', constraints: {} };
 
     // 2) Загружаем недавние сигналы (14 дней)
     const signalsQuery = `
@@ -507,8 +540,8 @@ router.post('/recommendations/generate', async (req, res) => {
       ORDER BY timestamp DESC
     `;
     const sigRes = await pool.query(signalsQuery, [userId]);
-    const moods = sigRes.rows.filter(r => r.type === 'mood').map(r => { try { return JSON.parse(r.data); } catch(_) { return null; } }).filter(Boolean);
-    const acts = sigRes.rows.filter(r => r.type === 'activity').map(r => { try { return JSON.parse(r.data); } catch(_) { return null; } }).filter(Boolean);
+    const moods = sigRes.rows.filter(r => r.type === 'mood').map(r => r.data).filter(Boolean);
+    const acts = sigRes.rows.filter(r => r.type === 'activity').map(r => r.data).filter(Boolean);
 
     // 3) Загружаем текущий список льгот для маппинга (id, name, category)
     const benefitsQuery = `SELECT id, name, category FROM benefits`;
@@ -517,12 +550,45 @@ router.post('/recommendations/generate', async (req, res) => {
 
     const findBenefitId = (name, category) => {
       if (!benefits.length) return null;
-      // Сначала по точному имени
-      const byName = benefits.find(b => (b.name || '').toLowerCase() === String(name || '').toLowerCase());
-      if (byName) return byName.id;
-      // Потом по категории (первый подходящий)
-      const byCat = benefits.find(b => (b.category || '').toLowerCase() === String(category || '').toLowerCase());
-      return byCat ? byCat.id : null;
+      
+      const searchName = String(name || '').toLowerCase().trim();
+      const searchCategory = String(category || '').toLowerCase().trim();
+      
+      // 1. Точное совпадение по имени
+      const exactMatch = benefits.find(b => (b.name || '').toLowerCase() === searchName);
+      if (exactMatch) return exactMatch.id;
+      
+      // 2. Частичное совпадение по имени (содержит ключевые слова)
+      const partialMatch = benefits.find(b => {
+        const benefitName = (b.name || '').toLowerCase();
+        return searchName.includes(benefitName) || benefitName.includes(searchName);
+      });
+      if (partialMatch) return partialMatch.id;
+      
+      // 3. Поиск по ключевым словам в названии
+      const keywords = searchName.split(/[\s\-,]+/).filter(w => w.length > 2);
+      const keywordMatch = benefits.find(b => {
+        const benefitName = (b.name || '').toLowerCase();
+        return keywords.some(keyword => benefitName.includes(keyword));
+      });
+      if (keywordMatch) return keywordMatch.id;
+      
+      // 4. По категории + приоритет по количеству льгот в категории (берем случайную)
+      const categoryMatches = benefits.filter(b => (b.category || '').toLowerCase() === searchCategory);
+      if (categoryMatches.length > 0) {
+        // Возвращаем случайную льготу из подходящей категории
+        const randomIndex = Math.floor(Math.random() * categoryMatches.length);
+        return categoryMatches[randomIndex].id;
+      }
+      
+      // 5. Fallback: возвращаем случайную льготу (лучше что-то, чем ничего)
+      if (benefits.length > 0) {
+        const randomIndex = Math.floor(Math.random() * benefits.length);
+        console.warn(`⚠️ Не найдена льгота "${name}" в категории "${category}", используем fallback: ${benefits[randomIndex].name}`);
+        return benefits[randomIndex].id;
+      }
+      
+      return null;
     };
 
     // 4) Загружаем тестовые результаты (если есть) как "test_score"
@@ -604,7 +670,35 @@ router.post('/recommendations/generate', async (req, res) => {
     });
 
     // Сортировка и ограничение Top-3
-    const top = filtered.sort((a,b) => b.finalScore - a.finalScore).slice(0,3);
+    let top = filtered.sort((a,b) => b.finalScore - a.finalScore).slice(0,3);
+    
+    // ГАРАНТИРУЕМ МИНИМУМ 3 РЕКОМЕНДАЦИИ: добавляем случайные льготы если не хватает
+    if (top.length < 3 && benefits.length > 0) {
+      console.warn(`⚠️ AI дал только ${top.length} рекомендаций, дополняем до 3 случайными льготами`);
+      
+      const usedBenefitIds = new Set(top.map(t => t.benefitId));
+      const availableBenefits = benefits.filter(b => !usedBenefitIds.has(b.id));
+      
+      while (top.length < 3 && availableBenefits.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableBenefits.length);
+        const randomBenefit = availableBenefits.splice(randomIndex, 1)[0];
+        
+        // Создаем fallback рекомендацию
+        const fallbackRec = {
+          benefitId: randomBenefit.id,
+          finalScore: 0.5, // Средний score для fallback
+          testScore: 0,
+          aiScore: 0.5,
+          reasons: ['рекомендация системы', 'дополнительная опция'],
+          confidence: 0.6,
+          name: randomBenefit.name,
+          category: randomBenefit.category
+        };
+        
+        top.push(fallbackRec);
+        console.log(`✅ Добавлена fallback рекомендация: ${randomBenefit.name}`);
+      }
+    }
 
     // Очищаем предыдущие рекомендации пользователя (только variant=hybrid_v1)
     await pool.query(`DELETE FROM benefit_recommendations WHERE user_id = $1`, [userId]);
@@ -635,101 +729,6 @@ router.post('/recommendations/generate', async (req, res) => {
   }
 });
 
-// POST /api/ai/preferences — сохранение свободных предпочтений (без миграций, в ai_signals)
-router.post('/preferences', async (req, res) => {
-  try {
-    const { user_id, free_text = '', tags = [], avoid = [], constraints = {} } = req.body;
-    const userId = user_id || req.body.userId || 1;
-
-    const payload = {
-      free_text,
-      tags: Array.isArray(tags) ? tags : String(tags).split(',').map(s => s.trim()).filter(Boolean),
-      avoid: Array.isArray(avoid) ? avoid : String(avoid).split(',').map(s => s.trim()).filter(Boolean),
-      constraints,
-      timestamp: new Date().toISOString()
-    };
-
-    const insertQuery = `
-      INSERT INTO ai_signals (user_id, type, data, timestamp)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id
-    `;
-
-    const result = await pool.query(insertQuery, [
-      userId,
-      'preferences_free',
-      JSON.stringify(payload),
-      new Date()
-    ]);
-
-    res.json({ success: true, id: result.rows[0]?.id });
-  } catch (error) {
-    console.error('Save free preferences error:', error);
-    res.status(500).json({ success: false, error: 'Ошибка сохранения предпочтений' });
-  }
-});
-
-// POST /api/ai/recommendations/feedback — фидбек по карточкам льгот
-router.post('/recommendations/feedback', async (req, res) => {
-  try {
-    const { user_id, benefit_id, label, reason, context = {} } = req.body;
-    const userId = user_id || req.body.userId || 1;
-
-    // Пытаемся записать в ai_feedback, если таблицы нет — логируем в ai_signals
-    try {
-      const q = `
-        INSERT INTO ai_feedback (user_id, benefit_id, label, context, created_at)
-        VALUES ($1, $2, $3, $4, $5)
-      `;
-      await pool.query(q, [userId, benefit_id || null, label || 'unknown', JSON.stringify({ reason, ...context }), new Date()]);
-      return res.json({ success: true, stored: 'ai_feedback' });
-    } catch (e) {
-      console.log('ai_feedback not available, fallback to ai_signals:', e.message);
-      const fallback = `
-        INSERT INTO ai_signals (user_id, type, data, timestamp)
-        VALUES ($1, $2, $3, $4)
-      `;
-      await pool.query(fallback, [
-        userId,
-        'benefit_feedback',
-        JSON.stringify({ benefit_id, label, reason, context, via: 'fallback' }),
-        new Date()
-      ]);
-      return res.json({ success: true, stored: 'ai_signals' });
-    }
-  } catch (error) {
-    console.error('Feedback save error:', error);
-    res.status(500).json({ success: false, error: 'Ошибка сохранения фидбека' });
-  }
-});
-
-// GET /api/ai/recommendations - Получение рекомендаций
-router.get('/recommendations', async (req, res) => {
-  try {
-    const userId = req.query.userId || 1; // Временно используем ID = 1
-
-    const recQuery = `
-      SELECT * FROM ai_recommendations 
-      WHERE user_id = $1 
-      ORDER BY priority DESC, created_at DESC 
-      LIMIT 5
-    `;
-
-    const recResult = await pool.query(recQuery, [userId]);
-
-    res.json({
-      success: true,
-      recommendations: recResult.rows
-    });
-
-  } catch (error) {
-    console.error('Get recommendations error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Ошибка получения рекомендаций'
-    });
-  }
-});
 
 // POST /api/ai/generate-personal-recommendations - Генерация персональных рекомендаций
 router.post('/generate-personal-recommendations', async (req, res) => {
@@ -1424,5 +1423,90 @@ async function generateWeeklyInsight(userId, weekStart, weekEnd) {
     };
   }
 }
+
+// GET /api/ai/recommendations — получить сохранённые рекомендации с объяснениями
+router.get('/recommendations', async (req, res) => {
+  try {
+    const userId = req.query.user_id || req.query.userId || 1;
+
+    // Получаем рекомендации с данными о льготах
+    const query = `
+      SELECT 
+        br.benefit_id,
+        br.priority,
+        br.explanations,
+        br.confidence,
+        br.algorithm_variant,
+        br.score_breakdown,
+        br.created_at,
+        b.name,
+        b.description,
+        b.category
+      FROM benefit_recommendations br
+      LEFT JOIN benefits b ON br.benefit_id = b.id
+      WHERE br.user_id = $1
+      ORDER BY br.priority ASC, br.created_at DESC
+    `;
+
+    const result = await pool.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.json({
+        hasRecommendations: false,
+        variant: null,
+        recommendations: []
+      });
+    }
+
+    // Преобразуем в формат для фронта
+    const recommendations = result.rows.map(row => {
+      let explanations = [];
+      let confidence = 0.6;
+      let scoreBreakdown = {};
+      let variant = row.algorithm_variant || 'static';
+
+      try {
+        explanations = Array.isArray(row.explanations) ? row.explanations : JSON.parse(row.explanations || '[]');
+      } catch (e) {
+        explanations = [];
+      }
+
+      try {
+        scoreBreakdown = typeof row.score_breakdown === 'object' ? row.score_breakdown : JSON.parse(row.score_breakdown || '{}');
+      } catch (e) {
+        scoreBreakdown = {};
+      }
+
+      if (typeof row.confidence === 'number') {
+        confidence = Math.max(0, Math.min(1, row.confidence));
+      }
+
+      return {
+        benefit_id: row.benefit_id,
+        name: row.name || 'Неизвестная льгота',
+        description: row.description || '',
+        category: row.category || 'Общее',
+        priority: row.priority,
+        score: scoreBreakdown.final || scoreBreakdown.test_score || 0.6,
+        confidence,
+        explanations,
+        score_breakdown: scoreBreakdown
+      };
+    });
+
+    res.json({
+      hasRecommendations: true,
+      variant: result.rows[0]?.algorithm_variant || 'static',
+      recommendations
+    });
+
+  } catch (error) {
+    console.error('Get AI recommendations error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка получения рекомендаций'
+    });
+  }
+});
 
 export default router;

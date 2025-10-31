@@ -574,7 +574,7 @@ const Productivity: React.FC = () => {
             activity: activityName,
             category: category,
             duration: activityEntry.duration,
-            success: activityEntry.success,
+            success_rating: activityEntry.success_rating,
             notes: activityEntry.notes
           });
           
@@ -2304,37 +2304,40 @@ const Productivity: React.FC = () => {
                                 Успешность
                               </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                              <Button
-                                variant={activityEntry.success ? 'contained' : 'outlined'}
-                                onClick={() => setActivityEntry({...activityEntry, success: true})}
+                            <Box sx={{ px: 1, mt: 1 }}>
+                              <Slider
+                                value={activityEntry.success_rating}
+                                onChange={(_, value) => setActivityEntry({ ...activityEntry, success_rating: value as number })}
+                                min={0}
+                                max={10}
+                                step={1}
+                                marks
                                 sx={{
-                                  background: activityEntry.success ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)' : 'transparent',
-                                  color: activityEntry.success ? '#fff' : '#4CAF50',
-                                  borderColor: '#4CAF50',
-                                  borderRadius: '12px',
-                                  textTransform: 'none',
-                                  fontWeight: 600
+                                  color: '#4CAF50',
+                                  height: 8,
+                                  '& .MuiSlider-track': {
+                                    background: 'linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%)',
+                                    border: 'none',
+                                    height: 8,
+                                    borderRadius: 4
+                                  },
+                                  '& .MuiSlider-thumb': {
+                                    width: 24,
+                                    height: 24,
+                                    backgroundColor: '#fff',
+                                    border: '3px solid #4CAF50',
+                                    boxShadow: '0 4px 12px rgba(76,175,80,0.4)'
+                                  },
+                                  '& .MuiSlider-rail': {
+                                    height: 8,
+                                    borderRadius: 4,
+                                    backgroundColor: '#f0f0f0'
+                                  }
                                 }}
-                              >
-                                                                 <CheckIcon size={16} style={{ marginRight: '8px' }} />
-                                 Успешно
-                              </Button>
-                              <Button
-                                variant={!activityEntry.success ? 'contained' : 'outlined'}
-                                onClick={() => setActivityEntry({...activityEntry, success: false})}
-                                sx={{
-                                  background: !activityEntry.success ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)' : 'transparent',
-                                  color: !activityEntry.success ? '#fff' : '#f44336',
-                                  borderColor: '#f44336',
-                                  borderRadius: '12px',
-                                  textTransform: 'none',
-                                  fontWeight: 600
-                                }}
-                              >
-                                                                 <XIcon size={16} style={{ marginRight: '8px' }} />
-                                 Неудача
-                              </Button>
+                              />
+                              <Box sx={{ textAlign: 'center', mt: 1, fontWeight: 700, color: '#2c3e50' }}>
+                                {activityEntry.success_rating}
+                              </Box>
                             </Box>
                           </Box>
                         )}
