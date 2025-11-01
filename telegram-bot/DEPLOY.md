@@ -1,298 +1,313 @@
-# 🚀 Деплой Telegram бота на сервер yoddle.ru
+# 🚀 Инструкция по развертыванию Telegram бота на сервере
 
-## 📋 Быстрый старт
+## ✅ Подготовка
 
-### Вариант 1: Через Git (рекомендуется)
+Убедитесь, что на сервере установлены:
+- Node.js (версия 14+)
+- npm
+- PM2 (глобально): `npm install -g pm2`
+- Git
+
+## 📋 Структура проектов
+
+Проект разделен на два независимых процесса PM2:
+
+1. **`yoddle-api`** — основной сайт и API (файл `ecosystem.config.js` в корне проекта)
+2. **`yoddle-telegram-bot`** — Telegram бот (файл `telegram-bot/ecosystem.config.js`)
+
+Каждый процесс запускается **независимо** из своей папки с отдельным конфигом.
+
+**⚠️ Важно:** Главная ветка проекта — **`stable`**. Все изменения деплоятся из этой ветки.
+
+## 📋 Шаги развертывания
+
+### 1. Обновление кода
 
 ```bash
-# 1. Подключитесь к серверу
-ssh root@yoddle.ru  # или IP адрес сервера
+# Зайдите в корневую папку проекта
+cd /path/to/yoddle1
 
-# 2. Перейдите в директорию проекта
-cd /var/www/yoddle/telegram-bot
+# Убедитесь, что вы на ветке stable (главная ветка)
+git checkout stable
 
-# 3. Получите последние изменения
-git pull origin main
+# Обновите код из репозитория
+git pull origin stable
+```
 
-# 4. Установите зависимости (если нужно)
+### 2. Развертывание основного сайта (yoddle-api)
+
+```bash
+# Оставайтесь в корневой папке проекта
+cd /path/to/yoddle1
+
+# Установите зависимости (если нужно)
 npm install
 
-# 5. Перезапустите бота
-pm2 restart yoddle-telegram-bot
+# Остановите старый процесс (если запущен)
+pm2 stop yoddle-api
+pm2 delete yoddle-api
 
-# Или если используете npm напрямую:
-pm2 restart bot-simple
+# Запустите основной сайт
+pm2 start ecosystem.config.js
+
+# Проверьте статус
+pm2 status
+pm2 logs yoddle-api
 ```
 
-### Вариант 2: Через SCP (загрузка файлов)
+### 3. Развертывание Telegram бота
 
 ```bash
-# С локального компьютера (Windows PowerShell)
-# Загрузите всю папку telegram-bot на сервер
+# Перейдите в папку с ботом
+cd /path/to/yoddle1/telegram-bot
 
-# 1. Создайте архив
-cd C:\Users\user\Desktop\yoddle1
-Compress-Archive -Path telegram-bot -DestinationPath telegram-bot.zip
-
-# 2. Загрузите на сервер
-scp telegram-bot.zip root@yoddle.ru:/tmp/
-
-# 3. На сервере распакуйте
-ssh root@yoddle.ru
-cd /var/www/yoddle
-unzip /tmp/telegram-bot.zip -d .
-cd telegram-bot
+# Установите зависимости бота (если еще не установлены)
 npm install
-pm2 restart yoddle-telegram-bot
+
+# Остановите старый процесс бота (если запущен)
+pm2 stop yoddle-telegram-bot
+pm2 delete yoddle-telegram-bot
+
+# Запустите бота с конфигурацией
+pm2 start ecosystem.config.js
+
+# Проверьте статус
+pm2 status
+pm2 logs yoddle-telegram-bot
 ```
 
-## 🔧 Настройка на сервере
+### 4. Проверка настроек
 
-### 1. Создание структуры директорий
-
-```bash
-mkdir -p /var/www/yoddle/telegram-bot
-cd /var/www/yoddle/telegram-bot
-```
-
-### 2. Установка зависимостей
-
-```bash
-# Если еще не установлены зависимости
-npm install
-```
-
-### 3. Настройка .env файла
-
-```bash
-nano /var/www/yoddle/telegram-bot/.env
-```
+Убедитесь, что файл `.env` в корне проекта (`yoddle1/.env`) содержит необходимые переменные:
 
 ```env
-# Telegram Bot Token
-BOT_TOKEN=8287973233:AAFWussCdMTQvptTnhA_a4eUgLV8iTZhoL8
-
-# Database (если используете)
+BOT_TOKEN=ваш_токен_от_botfather
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=yoddle_db
 DB_USER=postgres
-DB_PASSWORD=your_password
-
-# Presentation URL (для продакшена)
-PRESENTATION_URL=https://yoddle.ru/presentation.pdf
-
-# Или локальный путь (если файл загружен на сервер)
-# PRESENTATION_LOCAL_PATH=/var/www/yoddle/presentation.pdf
-
-# Website URL
+DB_PASSWORD=ваш_пароль
+CLAUDE_API_KEY=ваш_ключ_claude_api
+ADMIN_CHAT_ID=ваш_telegram_id
+API_BASE_URL=http://localhost:3000
 YODDLE_WEB_URL=https://yoddle.ru
 ```
 
-### 4. Загрузка PDF файла презентации (опционально)
+### 5. Альтернативный способ запуска (без ecosystem.config.js)
+
+Если хотите запустить напрямую без конфига:
 
 ```bash
-# Загрузите файл на сервер
-scp C:\Users\user\Desktop\yoddle1\01.07_Yoddle.pdf root@yoddle.ru:/var/www/yoddle/presentation.pdf
+# Для основного сайта (из корневой папки)
+cd /path/to/yoddle1
+pm2 start server.js --name yoddle-api
 
-# Или через веб-сервер (если файл доступен по URL)
-# Просто загрузите файл в папку public на вашем сайте
-```
-
-### 5. Настройка PM2 для автозапуска
-
-```bash
-# Создайте конфигурацию PM2
-nano /var/www/yoddle/ecosystem.config.js
-```
-
-```javascript
-module.exports = {
-  apps: [
-    {
-      name: 'yoddle-telegram-bot',
-      script: './src/bot-simple.js',
-      cwd: '/var/www/yoddle/telegram-bot',
-      instances: 1,
-      exec_mode: 'fork',
-      env: {
-        NODE_ENV: 'production'
-      },
-      error_file: '/var/log/pm2/telegram-bot-error.log',
-      out_file: '/var/log/pm2/telegram-bot-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '500M'
-    }
-  ]
-};
-```
-
-### 6. Запуск бота через PM2
-
-```bash
-cd /var/www/yoddle
-pm2 start ecosystem.config.js
-
-# Или напрямую:
-cd /var/www/yoddle/telegram-bot
+# Для Telegram бота (из папки telegram-bot)
+cd /path/to/yoddle1/telegram-bot
 pm2 start src/bot-simple.js --name yoddle-telegram-bot
+```
 
-# Просмотр статуса
-pm2 status
+### 6. Настройка автозапуска (если еще не настроено)
 
-# Просмотр логов
-pm2 logs yoddle-telegram-bot
-
-# Автозапуск при перезагрузке сервера
-pm2 startup
+```bash
+# Сохраните список всех процессов PM2
 pm2 save
+
+# Настройте автозапуск при перезагрузке системы (выполните команду, которую выведет PM2)
+pm2 startup
 ```
 
-## 🔄 Обновление кода
-
-### Быстрое обновление:
+### 7. Проверка статуса
 
 ```bash
-# На сервере
-cd /var/www/yoddle/telegram-bot
-git pull origin main  # или загрузите файлы через SCP
-npm install  # если были новые зависимости
-pm2 restart yoddle-telegram-bot
-```
-
-### Проверка работы:
-
-```bash
-# Смотрим логи
-pm2 logs yoddle-telegram-bot --lines 50
-
-# Проверяем статус
+# Проверьте статус всех процессов
 pm2 status
 
-# Тестируем бота в Telegram
-# Отправьте /start боту
-```
+# Посмотрите логи основного сайта
+pm2 logs yoddle-api
 
-## 🐛 Решение проблем
-
-### Бот не отвечает:
-
-```bash
-# Проверьте логи
+# Посмотрите логи Telegram бота
 pm2 logs yoddle-telegram-bot
 
-# Проверьте, что бот запущен
-pm2 status
+# Логи всех процессов
+pm2 logs
+```
 
-# Перезапустите бота
+## 🔄 Обновление проектов
+
+### Обновление основного сайта (yoddle-api)
+
+```bash
+# 1. Обновите код из ветки stable
+cd /path/to/yoddle1
+git checkout stable
+git pull origin stable
+
+# 2. Переустановите зависимости (если нужно)
+npm install
+
+# 3. Перезапустите сайт
+pm2 restart yoddle-api
+```
+
+### Обновление Telegram бота
+
+```bash
+# 1. Обновите код из ветки stable (если еще не обновили)
+cd /path/to/yoddle1
+git checkout stable
+git pull origin stable
+
+# 2. Переустановите зависимости бота (если нужно)
+cd telegram-bot
+npm install
+
+# 3. Перезапустите бота
 pm2 restart yoddle-telegram-bot
 ```
 
-### Ошибка подключения к БД:
+### Обновление обоих проектов одновременно
 
 ```bash
-# Проверьте настройки БД в .env
-cat /var/www/yoddle/telegram-bot/.env | grep DB_
+# 1. Обновите код из ветки stable
+cd /path/to/yoddle1
+git checkout stable
+git pull origin stable
 
-# Проверьте доступность PostgreSQL
-psql -U postgres -h localhost -c "SELECT 1;"
-```
+# 2. Переустановите зависимости основного сайта
+npm install
 
-### Файл презентации не отправляется:
+# 3. Переустановите зависимости бота
+cd telegram-bot
+npm install
 
-```bash
-# Проверьте наличие файла
-ls -la /var/www/yoddle/presentation.pdf
-
-# Проверьте URL в .env
-cat /var/www/yoddle/telegram-bot/.env | grep PRESENTATION_URL
-
-# Проверьте доступность URL
-curl -I https://yoddle.ru/presentation.pdf
-```
-
-## 📝 Полезные команды PM2
-
-```bash
-# Просмотр всех процессов
-pm2 list
-
-# Просмотр логов в реальном времени
-pm2 logs yoddle-telegram-bot --lines 100
-
-# Перезапуск
+# 4. Перезапустите оба процесса
+pm2 restart yoddle-api
 pm2 restart yoddle-telegram-bot
+```
 
-# Остановка
+## 📊 Полезные команды PM2
+
+### Управление основным сайтом (yoddle-api)
+
+```bash
+# Остановить сайт
+pm2 stop yoddle-api
+
+# Перезапустить сайт
+pm2 restart yoddle-api
+
+# Удалить процесс сайта
+pm2 delete yoddle-api
+
+# Логи сайта
+pm2 logs yoddle-api
+```
+
+### Управление Telegram ботом
+
+```bash
+# Остановить бота
 pm2 stop yoddle-telegram-bot
 
-# Удаление из PM2
+# Перезапустить бота
+pm2 restart yoddle-telegram-bot
+
+# Удалить процесс бота
 pm2 delete yoddle-telegram-bot
 
-# Мониторинг ресурсов
+# Логи бота
+pm2 logs yoddle-telegram-bot
+```
+
+### Общие команды
+
+```bash
+# Список всех процессов
+pm2 list
+
+# Статус всех процессов
+pm2 status
+
+# Логи всех процессов
+pm2 logs
+
+# Логи конкретного процесса за последние 100 строк
+pm2 logs yoddle-api --lines 100
+pm2 logs yoddle-telegram-bot --lines 100
+
+# Мониторинг (CPU, память) всех процессов
 pm2 monit
 
-# Сохранение текущей конфигурации
-pm2 save
+# Перезагрузить все процессы PM2
+pm2 reload all
+
+# Остановить все процессы
+pm2 stop all
+
+# Перезапустить все процессы
+pm2 restart all
 ```
 
-## 🔐 Безопасность
+## 🐛 Отладка
 
-1. **Не храните .env в Git** - используйте `.env.example`
-2. **Ограничьте доступ к .env файлу:**
+### Если сайт не запускается:
+
+1. **Проверьте логи:**
    ```bash
-   chmod 600 /var/www/yoddle/telegram-bot/.env
+   pm2 logs yoddle-api --lines 50
    ```
-3. **Используйте firewall** для защиты сервера
-4. **Регулярно обновляйте зависимости:**
+
+2. **Запустите сайт напрямую (без PM2) для отладки:**
    ```bash
-   npm audit
-   npm audit fix
+   cd /path/to/yoddle1
+   node server.js
    ```
 
-## 📦 Альтернативные варианты деплоя
+### Если бот не запускается:
 
-### Docker (если используете)
+1. **Проверьте логи:**
+   ```bash
+   pm2 logs yoddle-telegram-bot --lines 50
+   ```
 
-```bash
-# Создайте Dockerfile в telegram-bot/
-docker build -t yoddle-telegram-bot .
-docker run -d --name telegram-bot --env-file .env yoddle-telegram-bot
-```
+2. **Проверьте переменные окружения:**
+   ```bash
+   # Убедитесь, что .env файл существует и содержит BOT_TOKEN
+   cat /path/to/yoddle1/.env | grep BOT_TOKEN
+   ```
 
-### Systemd service (альтернатива PM2)
+3. **Проверьте подключение к базе данных:**
+   - Убедитесь, что PostgreSQL запущен
+   - Проверьте настройки подключения в `.env`
 
-```bash
-# Создайте service файл
-sudo nano /etc/systemd/system/yoddle-telegram-bot.service
-```
+4. **Запустите бота напрямую (без PM2) для отладки:**
+   ```bash
+   cd /path/to/yoddle1/telegram-bot
+   node src/bot-simple.js
+   # или
+   node src/bot.js
+   ```
 
-```ini
-[Unit]
-Description=Yoddle Telegram Bot
-After=network.target
+## 📝 Примечания
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/var/www/yoddle/telegram-bot
-ExecStart=/usr/bin/node src/bot-simple.js
-Restart=always
-RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=yoddle-telegram-bot
+- **Главная ветка:** Все изменения деплоятся из ветки **`stable`** (не `master` или `main`)
+- **Независимые процессы:** Сайт и бот работают как отдельные процессы PM2 с разными именами
+- **Конфигурации:** 
+  - Основной сайт использует `ecosystem.config.js` в корне проекта
+  - Telegram бот использует `telegram-bot/ecosystem.config.js`
+- **Общие настройки:** Оба процесса используют `.env` файл из корневой папки проекта (`yoddle1/.env`)
+- **Логи:** PM2 сохраняет логи в `~/.pm2/logs/` по умолчанию (или в `/var/log/pm2/` если настроено в конфигах)
+- **Версии бота:** 
+  - Для продакшена рекомендуется `bot-simple.js` (упрощенная версия без Scenes)
+  - Для полного функционала используйте `bot.js` (с Scenes и расширенными возможностями)
 
-[Install]
-WantedBy=multi-user.target
-```
+## ✅ Проверка работоспособности
 
-```bash
-# Запуск
-sudo systemctl enable yoddle-telegram-bot
-sudo systemctl start yoddle-telegram-bot
-sudo systemctl status yoddle-telegram-bot
-```
+После запуска:
 
+1. Найдите вашего бота в Telegram
+2. Отправьте команду `/start`
+3. Проверьте, что бот отвечает
+
+Если бот не отвечает, проверьте логи через `pm2 logs`.
