@@ -78,7 +78,42 @@ pm2 logs yoddle-tg
 
 ### 4. Проверка настроек
 
-Убедитесь, что файл `.env` в корне проекта (`yoddle1/.env`) содержит необходимые переменные:
+**⚠️ ВАЖНО:** Файл `.env` не включен в Git репозиторий (он в `.gitignore`). 
+Его нужно создать вручную на сервере.
+
+#### Создание .env файла на сервере:
+
+```bash
+# 1. Перейдите в корневую папку проекта
+cd /root/yoddle  # или /root/yoddle1 (в зависимости от вашего пути)
+
+# 2. Скопируйте шаблон .env.example в .env
+cp .env.example .env
+
+# 3. Отредактируйте .env файл и заполните реальные значения:
+nano .env
+
+# 4. Минимально необходимые переменные:
+#    BOT_TOKEN=ваш_токен_от_botfather
+#    DB_HOST=localhost
+#    DB_PORT=5432
+#    DB_NAME=yoddle_db
+#    DB_USER=postgres
+#    DB_PASSWORD=ваш_пароль
+#    API_BASE_URL=http://localhost:3000
+#    YODDLE_WEB_URL=https://yoddle.ru
+
+# 5. Сохраните файл (Ctrl+O, Enter, Ctrl+X)
+
+# 6. Установите правильные права доступа (безопасность)
+chmod 600 .env
+
+# 7. Проверьте, что файл создан:
+ls -la .env
+cat .env | grep BOT_TOKEN
+```
+
+Убедитесь, что файл `.env` в корне проекта содержит необходимые переменные:
 
 ```env
 BOT_TOKEN=ваш_токен_от_botfather

@@ -14,12 +14,14 @@ module.exports = {
       // error_file: '/var/log/pm2/telegram-bot-error.log',
       // out_file: '/var/log/pm2/telegram-bot-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      autorestart: true,
+      autorestart: true, // Временно отключите (false) если бот падает постоянно
       watch: false,
       max_memory_restart: '500M',
       // Важно: PM2 автоматически загружает .env из текущей директории,
       // но бот также ищет .env в корне проекта (на два уровня выше)
       // Убедитесь, что .env файл существует в корне проекта (yoddle1/.env)
+      // Если бот постоянно перезапускается, установите autorestart: false,
+      // исправьте проблему, затем верните autorestart: true
     }
   ]
 };
