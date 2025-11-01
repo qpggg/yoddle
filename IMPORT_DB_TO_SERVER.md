@@ -1,13 +1,22 @@
 # 🚀 ИМПОРТ БД НА СЕРВЕР И ПРОВЕРКА
 
-## 📤 Шаг 1: Загрузка файла на сервер
+## 📤 Шаг 1: Получение файла на сервере
 
 ```bash
-# С вашего компьютера загрузите файл на сервер
-scp backup_full1.sql root@your_server_ip:/tmp/
+# Подключитесь к серверу
+ssh root@your_server_ip
 
-# ИЛИ через WinSCP / FileZilla вручную
-# Загрузите backup_full1.sql в /tmp/ на сервере
+# Перейдите в папку проекта
+cd /root/yoddle
+
+# Обновите код из репозитория (файл backup_full1.sql будет в public/)
+git checkout stable
+git pull origin stable
+
+# Проверьте наличие файла
+ls -lh public/backup_full1.sql
+
+# ИЛИ если файл уже загружен вручную, можно использовать его напрямую
 ```
 
 ---
@@ -20,11 +29,17 @@ scp backup_full1.sql root@your_server_ip:/tmp/
 # Подключитесь к серверу
 ssh root@your_server_ip
 
-# Импортируйте БД
-sudo -u postgres psql yoddle_db < /tmp/backup_full1.sql
+# Перейдите в папку проекта
+cd /root/yoddle
+
+# Убедитесь, что файл есть (после git pull)
+ls -lh public/backup_full1.sql
+
+# Импортируйте БД из папки public
+sudo -u postgres psql yoddle_db < public/backup_full1.sql
 
 # ИЛИ через пользователя yoddle_user:
-psql -U yoddle_user -d yoddle_db -h localhost -f /tmp/backup_full1.sql
+psql -U yoddle_user -d yoddle_db -h localhost -f public/backup_full1.sql
 ```
 
 ### Вариант B: Если БД еще не создана
@@ -32,6 +47,12 @@ psql -U yoddle_user -d yoddle_db -h localhost -f /tmp/backup_full1.sql
 ```bash
 # Подключитесь к серверу
 ssh root@your_server_ip
+
+# Перейдите в папку проекта
+cd /root/yoddle
+
+# Убедитесь, что файл есть (после git pull)
+ls -lh public/backup_full1.sql
 
 # Создайте БД и пользователя (если еще не созданы)
 sudo -u postgres psql << EOF
@@ -41,8 +62,8 @@ GRANT ALL PRIVILEGES ON DATABASE yoddle_db TO yoddle_user;
 \q
 EOF
 
-# Импортируйте БД
-sudo -u postgres psql yoddle_db < /tmp/backup_full1.sql
+# Импортируйте БД из папки public
+sudo -u postgres psql yoddle_db < public/backup_full1.sql
 
 # Дайте права пользователю yoddle_user
 sudo -u postgres psql yoddle_db << EOF
@@ -138,10 +159,11 @@ psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM enter;" >
 
 ## 🎯 Чеклист после импорта:
 
-- [ ] Файл `backup_full1.sql` загружен на сервер
+- [ ] Код обновлен через `git pull origin stable` на сервере
+- [ ] Файл `public/backup_full1.sql` присутствует в проекте
 - [ ] БД `yoddle_db` создана на сервере
 - [ ] Пользователь `yoddle_user` создан с правами
-- [ ] БД импортирована без ошибок
+- [ ] БД импортирована из `public/backup_full1.sql` без ошибок
 - [ ] Проверка количества записей выполнена
 - [ ] Приложение `yoddle-api` подключается к БД
 - [ ] Telegram бот `yoddle-tg` подключается к БД
@@ -152,8 +174,11 @@ psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM enter;" >
 ## 🆘 Если возникли ошибки при импорте:
 
 ```bash
+# Перейдите в папку проекта
+cd /root/yoddle
+
 # Проверьте ошибки импорта
-sudo -u postgres psql yoddle_db < /tmp/backup_full1.sql 2>&1 | tee import_errors.log
+sudo -u postgres psql yoddle_db < public/backup_full1.sql 2>&1 | tee import_errors.log
 
 # Проверьте, какие таблицы создались
 psql -U yoddle_user -d yoddle_db -h localhost -c "\dt"
@@ -167,6 +192,6 @@ GRANT ALL PRIVILEGES ON DATABASE yoddle_db TO yoddle_user;
 EOF
 
 # Попробуйте импорт снова
-sudo -u postgres psql yoddle_db < /tmp/backup_full1.sql
+sudo -u postgres psql yoddle_db < public/backup_full1.sql
 ```
 
