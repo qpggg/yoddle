@@ -71,7 +71,22 @@ import path from 'path';
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Раздача файлов из public (для доступа к backup_full1.sql и другим файлам)
-app.use('/public', express.static(path.join(__dirname, 'public')));
+// Настраиваем поддержку всех типов файлов, включая SQL
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // Устанавливаем правильный MIME тип для SQL файлов
+    if (filePath.endsWith('.sql')) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', 'inline');
+    }
+    // Для PDF файлов
+    if (filePath.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+    }
+  },
+  dotfiles: 'allow', // Разрешаем доступ к файлам, начинающимся с точки
+  extensions: ['html', 'htm', 'json', 'xml', 'txt', 'sql', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'css', 'js'] // Явно указываем расширения
+}));
 
 // Для SPA: отдавать index.html на все не-API запросы (после API маршрутов)
 
