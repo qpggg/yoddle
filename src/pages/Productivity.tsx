@@ -571,6 +571,7 @@ const Productivity: React.FC = () => {
             activity: activityName,
             category: category,
             duration: activityEntry.duration,
+            success: activityEntry.success_rating >= 5, // Конвертируем рейтинг в boolean
             success_rating: activityEntry.success_rating,
             notes: activityEntry.notes
           });
