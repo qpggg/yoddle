@@ -70,6 +70,9 @@ app.post('/api/wallet/refresh', refreshHandler);
 import path from 'path';
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// Раздача файлов из public (для доступа к backup_full1.sql и другим файлам)
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 // Для SPA: отдавать index.html на все не-API запросы (после API маршрутов)
 
 // Обеспечиваем схему кошелька в БД (для локальной разработки и новых окружений)
