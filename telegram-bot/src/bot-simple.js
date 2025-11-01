@@ -1133,6 +1133,20 @@ bot.command('demo', async (ctx) => {
     console.log(`   • Bot Token: ${config.botToken ? '✓ Установлен' : '✗ НЕ НАСТРОЕН'}`);
     console.log(`   • Admin Chat ID: ${config.adminChatId || 'НЕ НАСТРОЕН'}`);
     
+    // КРИТИЧЕСКАЯ ПРОВЕРКА: BOT_TOKEN обязателен
+    if (!config.botToken || !process.env.BOT_TOKEN) {
+      console.error('❌ ОШИБКА: BOT_TOKEN не найден!');
+      console.error('💡 Инструкция по исправлению:');
+      console.error('   1. Убедитесь, что файл .env существует в корне проекта');
+      console.error(`   2. Путь к .env должен быть: ${rootEnvPath}`);
+      console.error('   3. Добавьте в .env строку: BOT_TOKEN=ваш_токен_от_botfather');
+      console.error('   4. Перезапустите бота: pm2 restart yoddle-tg');
+      console.error('');
+      console.error('⚠️  Бот остановлен. Исправьте конфигурацию и перезапустите.');
+      // Останавливаем процесс, чтобы PM2 не перезапускал его бесконечно
+      process.exit(1);
+    }
+    
     if (!config.apiBaseUrl || config.apiBaseUrl === 'http://localhost:3000') {
       console.log('⚠️  ВНИМАНИЕ: API_BASE_URL не настроен или использует localhost');
       console.log('   Убедитесь, что API сервер запущен на указанном адресе');
@@ -1146,7 +1160,21 @@ bot.command('demo', async (ctx) => {
     console.log('📱 Найдите вашего бота в Telegram и отправьте /start');
   } catch (error) {
     console.error('❌ Ошибка запуска бота:', error);
-    console.log('💡 Проверьте BOT_TOKEN в файле .env');
+    
+    // Если ошибка связана с токеном
+    if (error.response && error.response.error_code === 401) {
+      console.error('');
+      console.error('💡 Проблема: Неверный или отсутствующий BOT_TOKEN');
+      console.error('   Инструкция:');
+      console.error('   1. Проверьте файл .env в корне проекта');
+      console.error(`   2. Путь: ${rootEnvPath}`);
+      console.error('   3. Убедитесь, что BOT_TOKEN указан правильно');
+      console.error('   4. Перезапустите бота: pm2 restart yoddle-tg');
+    } else {
+      console.log('💡 Проверьте BOT_TOKEN в файле .env');
+      console.log(`   Путь к .env: ${rootEnvPath}`);
+    }
+    
     process.exit(1);
   }
 })();

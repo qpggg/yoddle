@@ -13,7 +13,7 @@
 Проект разделен на два независимых процесса PM2:
 
 1. **`yoddle-api`** — основной сайт и API (файл `ecosystem.config.js` в корне проекта)
-2. **`yoddle-telegram-bot`** — Telegram бот (файл `telegram-bot/ecosystem.config.js`)
+2. **`yoddle-tg`** — Telegram бот (файл `telegram-bot/ecosystem.config.js`)
 
 Каждый процесс запускается **независимо** из своей папки с отдельным конфигом.
 
@@ -65,15 +65,15 @@ cd /path/to/yoddle1/telegram-bot
 npm install
 
 # Остановите старый процесс бота (если запущен)
-pm2 stop yoddle-telegram-bot
-pm2 delete yoddle-telegram-bot
+pm2 stop yoddle-tg
+pm2 delete yoddle-tg
 
 # Запустите бота с конфигурацией
 pm2 start ecosystem.config.js
 
 # Проверьте статус
 pm2 status
-pm2 logs yoddle-telegram-bot
+pm2 logs yoddle-tg
 ```
 
 ### 4. Проверка настроек
@@ -104,7 +104,7 @@ pm2 start server.js --name yoddle-api
 
 # Для Telegram бота (из папки telegram-bot)
 cd /path/to/yoddle1/telegram-bot
-pm2 start src/bot-simple.js --name yoddle-telegram-bot
+pm2 start src/bot-simple.js --name yoddle-tg
 ```
 
 ### 6. Настройка автозапуска (если еще не настроено)
@@ -127,7 +127,7 @@ pm2 status
 pm2 logs yoddle-api
 
 # Посмотрите логи Telegram бота
-pm2 logs yoddle-telegram-bot
+pm2 logs yoddle-tg
 
 # Логи всех процессов
 pm2 logs
@@ -163,7 +163,7 @@ cd telegram-bot
 npm install
 
 # 3. Перезапустите бота
-pm2 restart yoddle-telegram-bot
+pm2 restart yoddle-tg
 ```
 
 ### Обновление обоих проектов одновременно
@@ -183,7 +183,7 @@ npm install
 
 # 4. Перезапустите оба процесса
 pm2 restart yoddle-api
-pm2 restart yoddle-telegram-bot
+pm2 restart yoddle-tg
 ```
 
 ## 📊 Полезные команды PM2
@@ -208,16 +208,16 @@ pm2 logs yoddle-api
 
 ```bash
 # Остановить бота
-pm2 stop yoddle-telegram-bot
+pm2 stop yoddle-tg
 
 # Перезапустить бота
-pm2 restart yoddle-telegram-bot
+pm2 restart yoddle-tg
 
 # Удалить процесс бота
-pm2 delete yoddle-telegram-bot
+pm2 delete yoddle-tg
 
 # Логи бота
-pm2 logs yoddle-telegram-bot
+pm2 logs yoddle-tg
 ```
 
 ### Общие команды
@@ -234,7 +234,7 @@ pm2 logs
 
 # Логи конкретного процесса за последние 100 строк
 pm2 logs yoddle-api --lines 100
-pm2 logs yoddle-telegram-bot --lines 100
+pm2 logs yoddle-tg --lines 100
 
 # Мониторинг (CPU, память) всех процессов
 pm2 monit
@@ -268,26 +268,66 @@ pm2 restart all
 
 1. **Проверьте логи:**
    ```bash
-   pm2 logs yoddle-telegram-bot --lines 50
+   pm2 logs yoddle-tg --lines 50
    ```
 
-2. **Проверьте переменные окружения:**
+2. **Проверьте наличие и содержимое .env файла:**
    ```bash
-   # Убедитесь, что .env файл существует и содержит BOT_TOKEN
-   cat /path/to/yoddle1/.env | grep BOT_TOKEN
+   # Убедитесь, что .env файл существует в корне проекта
+   ls -la /path/to/yoddle1/.env
+   
+   # Проверьте, что BOT_TOKEN указан (НЕ показывайте токен в логах!)
+   grep -q "BOT_TOKEN=" /path/to/yoddle1/.env && echo "✅ BOT_TOKEN найден" || echo "❌ BOT_TOKEN отсутствует"
+   
+   # Проверьте полный путь (замените /path/to/yoddle1 на реальный путь)
+   echo "Путь к .env должен быть: /root/yoddle1/.env или /var/www/yoddle/.env"
    ```
 
-3. **Проверьте подключение к базе данных:**
+3. **Если .env файл отсутствует или BOT_TOKEN не настроен:**
+   ```bash
+   # Создайте или отредактируйте .env файл
+   cd /path/to/yoddle1
+   nano .env
+   
+   # Добавьте обязательные переменные:
+   # BOT_TOKEN=ваш_токен_от_botfather
+   # DB_HOST=localhost
+   # DB_PORT=5432
+   # DB_NAME=yoddle_db
+   # DB_USER=postgres
+   # DB_PASSWORD=ваш_пароль
+   # API_BASE_URL=http://localhost:3000
+   # YODDLE_WEB_URL=https://yoddle.ru
+   ```
+
+4. **Если бот постоянно перезапускается:**
+   ```bash
+   # Остановите бота временно
+   pm2 stop yoddle-tg
+   
+   # Проверьте логи для диагностики
+   pm2 logs yoddle-tg --lines 100
+   
+   # Исправьте проблему (обычно это отсутствие BOT_TOKEN в .env)
+   # Затем запустите снова
+   pm2 restart yoddle-tg
+   ```
+
+5. **Проверьте подключение к базе данных:**
    - Убедитесь, что PostgreSQL запущен
    - Проверьте настройки подключения в `.env`
 
-4. **Запустите бота напрямую (без PM2) для отладки:**
+6. **Запустите бота напрямую (без PM2) для отладки:**
    ```bash
    cd /path/to/yoddle1/telegram-bot
    node src/bot-simple.js
    # или
    node src/bot.js
    ```
+   
+   Если бот запускается напрямую, но не через PM2, проблема может быть в:
+   - Неправильном пути к `.env` (PM2 запускается из другой директории)
+   - Переменных окружения PM2 (используйте `env_file` в ecosystem.config.js или передайте env через PM2)
 
 ## 📝 Примечания
 
