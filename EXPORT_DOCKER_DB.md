@@ -1,30 +1,59 @@
-# 🚀 БЫСТРЫЙ ЭКСПОРТ БД ИЗ DOCKER
+# 🚀 ЭКСПОРТ БД ИЗ DOCKER КОНТЕЙНЕРА yoddle-pg
 
-## Команды для вашего случая:
+## ✅ Найденные параметры подключения:
 
-### 1. Экспорт БД из контейнера yoddle-pg
+- **Пользователь**: `f1111323_yoddle`
+- **Пароль**: `Nei3wmOK`
+- **База данных**: `supa_full`
+- **Порт хоста**: `6543`
+- **Порт в контейнере**: `5432`
+
+---
+
+## 📤 Команды для экспорта БД:
+
+### Вариант 1: Экспорт через порт хоста (рекомендуется)
 
 ```bash
 # Полный экспорт (схема + данные)
-docker exec -t yoddle-pg pg_dump -U postgres -d yoddle_db > backup_full.sql
+pg_dump -h localhost -p 6543 -U f1111323_yoddle -d supa_full > backup_full.sql
 
-# Только схема (структура таблиц)
-docker exec -t yoddle-pg pg_dump -U postgres -d yoddle_db --schema-only > backup_schema.sql
-
-# Только данные (без структуры)
-docker exec -t yoddle-pg pg_dump -U postgres -d yoddle_db --data-only > backup_data.sql
+# С указанием пароля в переменной окружения
+$env:PGPASSWORD="Nei3wmOK"; pg_dump -h localhost -p 6543 -U f1111323_yoddle -d supa_full > backup_full.sql
 
 # Сжатый вариант (рекомендуется для больших БД)
-docker exec -t yoddle-pg pg_dump -U postgres -d yoddle_db | gzip > backup_full.sql.gz
+$env:PGPASSWORD="Nei3wmOK"; pg_dump -h localhost -p 6543 -U f1111323_yoddle -d supa_full | gzip > backup_full.sql.gz
 ```
 
-### 2. Быстрая проверка БД перед экспортом
+### Вариант 2: Экспорт через строку подключения
 
 ```bash
-# Подключитесь к БД в контейнере
-docker exec -it yoddle-pg psql -U postgres -d yoddle_db
+# Используйте полную строку подключения
+pg_dump "postgresql://f1111323_yoddle:Nei3wmOK@localhost:6543/supa_full" > backup_full.sql
 
-# Выполните проверочные запросы:
+# Сжатый вариант
+pg_dump "postgresql://f1111323_yoddle:Nei3wmOK@localhost:6543/supa_full" | gzip > backup_full.sql.gz
+```
+
+### Вариант 3: Экспорт изнутри контейнера (через TCP)
+
+```bash
+# Через TCP соединение внутри контейнера
+docker exec -t yoddle-pg sh -c "PGPASSWORD=Nei3wmOK psql -h localhost -U f1111323_yoddle -d supa_full -c '\dt'" > tables_list.txt
+
+# Экспорт БД
+docker exec -t yoddle-pg sh -c "PGPASSWORD=Nei3wmOK pg_dump -h localhost -U f1111323_yoddle -d supa_full" > backup_full.sql
+```
+
+---
+
+## 🔍 Быстрая проверка БД перед экспортом:
+
+```bash
+# Подключитесь к БД для проверки
+$env:PGPASSWORD="Nei3wmOK"; psql -h localhost -p 6543 -U f1111323_yoddle -d supa_full
+
+# В psql выполните проверочные запросы:
 SELECT COUNT(*) FROM enter;
 SELECT COUNT(*) FROM benefits;
 SELECT COUNT(*) FROM telegram_leads;
@@ -37,65 +66,14 @@ SELECT COUNT(*) FROM user_progress;
 \q
 ```
 
-### 3. Проверка имени БД (если yoddle_db не подходит)
+---
+
+## 📊 Использование скрипта проверки:
 
 ```bash
-# Подключитесь к PostgreSQL
-docker exec -it yoddle-pg psql -U postgres
-
-# Посмотрите список баз данных
-\l
-
-# Подключитесь к нужной БД
-\c имя_базы_данных
-
-# Проверьте таблицы
-\dt
-
-# Выйдите
-\q
-```
-
-### 4. Загрузка на сервер
-
-```bash
-# Загрузите файл на сервер
-scp backup_full.sql root@your_server_ip:/tmp/
-
-# ИЛИ сжатый вариант
-scp backup_full.sql.gz root@your_server_ip:/tmp/
-```
-
-### 5. Импорт на сервере
-
-```bash
-# Подключитесь к серверу
-ssh root@your_server_ip
-
-# Импорт (обычный файл)
-sudo -u postgres psql yoddle_db < /tmp/backup_full.sql
-
-# ИЛИ импорт сжатого файла
-gunzip -c /tmp/backup_full.sql.gz | sudo -u postgres psql yoddle_db
-
-# ИЛИ через пользователя yoddle_user
-psql -U yoddle_user -d yoddle_db -h localhost -f /tmp/backup_full.sql
-```
-
-### 6. Проверка после импорта
-
-```bash
-# На сервере
-cd /root/yoddle
-git pull origin stable  # Получить скрипт проверки
-
-# Запустите скрипт проверки
+# После экспорта, на сервере загрузите backup_full.sql
+# Затем запустите скрипт проверки:
 psql -U yoddle_user -d yoddle_db -h localhost -f check_database_health.sql
-
-# ИЛИ быстрая проверка
-psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM enter;"
-psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM benefits;"
-psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM telegram_leads;"
 ```
 
 ---
@@ -104,15 +82,15 @@ psql -U yoddle_user -d yoddle_db -h localhost -c "SELECT COUNT(*) FROM telegram_
 
 ```bash
 # Экспорт + загрузка на сервер одной командой
-docker exec -t yoddle-pg pg_dump -U postgres -d yoddle_db | ssh root@your_server_ip "sudo -u postgres psql yoddle_db"
+$env:PGPASSWORD="Nei3wmOK"; pg_dump -h localhost -p 6543 -U f1111323_yoddle -d supa_full | ssh root@your_server_ip "sudo -u postgres psql yoddle_db"
 ```
 
 ---
 
 ## 📝 Примечания:
 
-- **Контейнер**: `yoddle-pg`
-- **Пользователь БД**: `postgres` (по умолчанию в контейнере)
+- **Имя БД в Docker**: `supa_full` (не `yoddle_db`)
+- **Пользователь**: `f1111323_yoddle` (не `postgres`)
 - **Порт на хосте**: `6543` (внутри контейнера `5432`)
-- **Имя БД**: возможно `yoddle_db` или другое (проверьте командой `\l`)
 
+После импорта на сервере база данных будет называться `yoddle_db`, но данные будут перенесены.
