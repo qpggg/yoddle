@@ -285,7 +285,6 @@ const StatCard = ({ title, value, subtitle, icon }: {
 
 const Progress: React.FC = () => {
   const { user } = useUser();
-  const { progress: productivityProgress } = useProductivity();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
 

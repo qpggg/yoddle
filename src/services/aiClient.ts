@@ -16,6 +16,7 @@ export interface ActivityEntry {
   mood?: number;
   energy?: number;
   stress?: number;
+  success_rating?: number;
 }
 
 export interface AIInsight {

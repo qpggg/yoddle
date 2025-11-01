@@ -410,7 +410,7 @@ const Preferences: React.FC = () => {
       );
 
       // Запускаем оба запроса ПАРАЛЛЕЛЬНО с timeout защитой
-      const [hybridResponse, reportResponse] = await Promise.race([
+      const result = await Promise.race([
         Promise.all([
           fetch('/api/ai/recommendations/generate', {
             method: 'POST',
@@ -429,7 +429,9 @@ const Preferences: React.FC = () => {
           })
         ]),
         timeout
-      ]);
+      ]) as [Response, Response];
+
+      const [hybridResponse, reportResponse] = result;
 
       const [hybridResult, reportResult] = await Promise.all([
         hybridResponse.json(),
@@ -452,7 +454,7 @@ const Preferences: React.FC = () => {
       
     } catch (error) {
       console.error('⚠️ Ошибка генерации AI:', error);
-      if (error.message === 'AI timeout') {
+      if (error instanceof Error && error.message === 'AI timeout') {
         console.log('⏰ AI запросы превысили timeout, продолжаем без ожидания');
         setAiAnalysisResult('ИИ обрабатывает данные в фоне! Показываем доступные результаты...');
       } else {
@@ -789,9 +791,9 @@ const Preferences: React.FC = () => {
       setFeedbackSending(prev => ({...prev, [benefitId]: false}));
       
       // Показываем пользователю информативную ошибку
-      const errorMessage = error.message.includes('benefit_id') 
+      const errorMessage = error instanceof Error && error.message.includes('benefit_id') 
         ? 'Эту рекомендацию нельзя оценить (нет ID льготы)'
-        : error.message.includes('Network') || error.message.includes('fetch')
+        : error instanceof Error && (error.message.includes('Network') || error.message.includes('fetch'))
         ? 'Проблема с подключением. Попробуйте еще раз.'
         : 'Ошибка при сохранении оценки. Попробуйте еще раз.';
         
@@ -1341,8 +1343,8 @@ const Preferences: React.FC = () => {
                               }}
                             >
                               <Button
-                                onClick={() => handleSendFeedback(rec.benefit_id, 'useful')}
-                                disabled={feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
+                                onClick={() => rec.benefit_id && handleSendFeedback(rec.benefit_id, 'useful')}
+                                disabled={!rec.benefit_id || feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
                                 sx={{
                                   fontFamily: 'Inter, system-ui, sans-serif',
                                   background: feedbackPermanent[rec.benefit_id] === 'useful' || feedbackSent[rec.benefit_id] === 'useful'
@@ -1457,8 +1459,8 @@ const Preferences: React.FC = () => {
                               }}
                             >
                               <Button
-                                onClick={() => handleSendFeedback(rec.benefit_id, 'not_useful', 'не подходит')}
-                                disabled={feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
+                                onClick={() => rec.benefit_id && handleSendFeedback(rec.benefit_id, 'not_useful', 'не подходит')}
+                                disabled={!rec.benefit_id || feedbackSending[rec.benefit_id] || !!feedbackPermanent[rec.benefit_id]}
                                 sx={{
                                   fontFamily: 'Inter, system-ui, sans-serif',
                                   background: feedbackPermanent[rec.benefit_id] === 'not_useful' || feedbackSent[rec.benefit_id] === 'not_useful'

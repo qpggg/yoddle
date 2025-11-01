@@ -23,12 +23,9 @@ import {
   BookOpenIcon,
   Building2Icon,
   GraduationCapIcon,
-  CheckIcon,
-  XIcon,
   PartyPopperIcon,
   TargetIcon,
-  RocketIcon,
-  TrendingUpIcon
+  RocketIcon
 } from 'lucide-react';
 
 // Компонент для отображения AI ответов с иконками
