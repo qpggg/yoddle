@@ -38,7 +38,7 @@ pm2 delete all
 ### ШАГ 5: Запустите приложение
 
 ```bash
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Проверьте статус
 pm2 status
@@ -58,7 +58,7 @@ npm install && \
 npm run build && \
 pm2 stop all && \
 pm2 delete all && \
-pm2 start ecosystem.config.js && \
+pm2 start ecosystem.config.cjs && \
 pm2 status && \
 pm2 logs yoddle-api --lines 30
 ```

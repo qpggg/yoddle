@@ -22,27 +22,18 @@ git pull origin stable
 
 Это загрузит исправленный `db.js` без обработчиков SIGINT/SIGTERM.
 
-### ШАГ 3: Исправьте ecosystem.config.js (порт должен быть 3001)
+### ШАГ 3: Соберите проект
 
 ```bash
 cd /root/yoddle
-nano ecosystem.config.js
+npm run build
 ```
 
-Убедитесь, что порт 3001 (как в .env):
-
-```javascript
-env: {
-  NODE_ENV: 'production',
-  PORT: 3001  // Должен совпадать с PORT в .env
-},
-```
-
-### ШАГ 5: Запустите приложение заново
+### ШАГ 4: Запустите приложение заново
 
 ```bash
 cd /root/yoddle
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Проверьте статус
 pm2 status
@@ -65,7 +56,7 @@ pm2 list
 pm2 delete server
 
 # Запустите правильный процесс
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 ```
 
 ### Проверьте, что код обновлен:
@@ -83,7 +74,8 @@ grep -A 5 "process.on('SIGINT'" /root/yoddle/db.js
 
 - [ ] Обработчики SIGINT/SIGTERM закомментированы в db.js
 - [ ] Код обновлен на сервере (git pull)
-- [ ] Порт в ecosystem.config.js совпадает с .env (3001)
+- [ ] Проект собран (`npm run build`)
+- [ ] Используется `ecosystem.config.cjs` (не .js)
 - [ ] Старые процессы PM2 удалены
 - [ ] Запущен правильный процесс (yoddle-api)
 - [ ] Приложение работает без перезапусков
