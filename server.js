@@ -1528,7 +1528,7 @@ app.use('/api/clients', clientsRouter);
 
 // Запуск сервера
 const HOST = '0.0.0.0';
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Local backend server running on http://localhost:${PORT}`);
   
   // 🔍 Показываем правильную информацию о подключении к БД
@@ -1545,6 +1545,24 @@ app.listen(PORT, HOST, () => {
   console.log(`👤 Profile API: Available at /api/profile`);
   console.log(`📢 Notifications API: Available at /api/notifications`);
   console.log(`🎯 Recommendations API: Available at /api/user-recommendations`);
+});
+
+// Обработка ошибок сервера
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  // Не завершаем процесс, пусть PM2 решает что делать
+});
+
+// Предотвращаем преждевременное завершение процесса
+// PM2 сам управляет жизненным циклом, не нужно обрабатывать сигналы
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Не завершаем процесс, пусть PM2 решает
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Не завершаем процесс, пусть PM2 решает
 }); 
 
 // === SPA fallback: отдавать index.html для всех не-API маршрутов ===
