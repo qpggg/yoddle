@@ -18,8 +18,16 @@ import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Сохраняем PORT из PM2/env до загрузки .env (если установлен)
+const pm2Port = process.env.PORT;
+
 // Load .env without overriding container-provided env (so compose env wins in Docker)
 dotenv.config({ override: false });
+
+// Если PORT был установлен из PM2/env, используем его (приоритет над .env)
+if (pm2Port) {
+  process.env.PORT = pm2Port;
+}
 
 // 🔍 ОТЛАДКА: Проверяем загрузку .env (маскируем пароль)
 if (process.env.PG_CONNECTION_STRING) {
@@ -36,6 +44,9 @@ if (process.env.PG_CONNECTION_STRING) {
 
 const app = express();
 const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3000) : (process.env.PORT || 3001);
+
+// 🔍 ОТЛАДКА: Показываем какой порт используется
+console.log(`🔍 DEBUG: Using PORT=${PORT} (NODE_ENV=${process.env.NODE_ENV}, process.env.PORT=${process.env.PORT})`);
 
 // Middleware
 // Настройка CORS в зависимости от окружения
@@ -1554,8 +1565,19 @@ const server = app.listen(PORT, HOST, () => {
 
 // Обработка ошибок сервера
 server.on('error', (error) => {
-  console.error('❌ Server error:', error);
-  // Не завершаем процесс, пусть PM2 решает что делать
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.error('💡 Решение:');
+    console.error('   1. Проверьте процессы PM2: pm2 list');
+    console.error('   2. Остановите все: pm2 stop all && pm2 delete all');
+    console.error(`   3. Или найдите процесс на порту ${PORT}: lsof -i :${PORT} или netstat -tulpn | grep ${PORT}`);
+    console.error('   4. Убейте процесс: kill -9 <PID>');
+    // Завершаем процесс с кодом ошибки, чтобы PM2 не перезапускал бесконечно
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', error);
+    // Для других ошибок не завершаем процесс, пусть PM2 решает
+  }
 });
 
 // Предотвращаем преждевременное завершение процесса
