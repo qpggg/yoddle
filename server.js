@@ -1545,6 +1545,11 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`👤 Profile API: Available at /api/profile`);
   console.log(`📢 Notifications API: Available at /api/notifications`);
   console.log(`🎯 Recommendations API: Available at /api/user-recommendations`);
+  
+  // Уведомляем PM2, что приложение готово (для wait_ready)
+  if (process.send) {
+    process.send('ready');
+  }
 });
 
 // Обработка ошибок сервера
