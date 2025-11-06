@@ -7,7 +7,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3001  // Должен совпадать с PORT в .env
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       autorestart: true,

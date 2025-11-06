@@ -84,6 +84,10 @@ export async function closePool() {
   await pool.end();
 }
 
+// Обработчики сигналов только для graceful shutdown (не для PM2)
+// PM2 сам управляет жизненным циклом процессов
+// Раскомментируйте только если нужно graceful shutdown при ручной остановке
+/*
 process.on('SIGTERM', () => {
   closePool().then(() => process.exit(0));
 });
@@ -91,3 +95,4 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   closePool().then(() => process.exit(0));
 });
+*/
