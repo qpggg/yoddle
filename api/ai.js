@@ -129,6 +129,7 @@ router.post('/analyze-mood', async (req, res) => {
   try {
     const { mood, activities, notes, stressLevel } = req.body;
     let userId = req.body.userId || 1; // По умолчанию используем ID = 1 (тестовый пользователь)
+    const originalUserId = userId; // Сохраняем оригинальный ID для логирования
     
     // Если userId выглядит как telegram_id (большое число), используем фиксированный user_id = 1
     // для Telegram пользователей, так как таблица enter только для пользователей сайта
@@ -136,8 +137,10 @@ router.post('/analyze-mood', async (req, res) => {
       // Это telegram_id, используем фиксированный user_id = 1 для всех Telegram пользователей
       // Данные telegram_id сохраняются в поле data JSONB для идентификации
       userId = 1;
-      console.log(`ℹ️ Telegram пользователь ${req.body.userId} использует user_id = 1 для AI системы`);
+      console.log(`ℹ️ Telegram пользователь ${originalUserId} использует user_id = 1 для AI системы`);
     }
+    
+    console.log(`🔍 AI analyze-mood: originalUserId=${originalUserId}, final userId=${userId}, mood=${mood}`);
 
     // Проверяем лимит использования ИИ-советника (3 раза в день для обычных пользователей)
     // Для Telegram пользователей проверяем по telegram_id в поле data
@@ -214,6 +217,8 @@ router.post('/analyze-mood', async (req, res) => {
     // Рассчитываем quality_score на основе качества данных
     const qualityScore = calculateDataQuality(mood, notes, activities);
 
+    console.log(`💾 Сохранение ai_signals: user_id=${userId}, telegram_id=${req.body.userId > 1000000 ? req.body.userId : 'N/A'}`);
+    
     const signalResult = await pool.query(signalQuery, [
       userId,
       'mood',
