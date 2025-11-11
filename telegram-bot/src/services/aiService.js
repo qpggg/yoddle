@@ -19,7 +19,7 @@ async function getAIAdvice({ mood, task, role }) {
       const response = await axios.post(
         'https://api.anthropic.com/v1/messages',
         {
-          model: 'claude-3-sonnet-20240229',
+          model: 'claude-3-5-haiku-20241022',
           max_tokens: 300,
           messages: [
             {
@@ -50,7 +50,7 @@ async function getAIAdvice({ mood, task, role }) {
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          model: 'anthropic/claude-3-sonnet',
+          model: 'anthropic/claude-3-5-haiku-20241022',
           messages: [
             {
               role: 'user',

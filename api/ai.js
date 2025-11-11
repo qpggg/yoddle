@@ -855,7 +855,7 @@ router.post('/generate-personal-recommendations', async (req, res) => {
     console.log('🤖 Генерируем персональные рекомендации...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 600,
         messages: [
           {
@@ -1199,7 +1199,7 @@ router.post('/analyze-trends', async (req, res) => {
     console.log('🤖 Анализируем тренды...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 500,
         messages: [
           {
