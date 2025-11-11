@@ -74,7 +74,8 @@ aiAdvisorScene.action(/task_(.+)/, async (ctx) => {
     const advice = await getAIAdvice({
       mood: ctx.session.aiAdvisor.mood.text,
       task: taskMap[task],
-      role: ctx.session.onboarding?.role || 'HR-специалист'
+      role: ctx.session.onboarding?.role || 'HR-специалист',
+      userId: ctx.from.id // Передаем telegram_id как userId
     });
     
     await ctx.editMessageText(

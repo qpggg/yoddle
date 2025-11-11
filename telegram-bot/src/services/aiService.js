@@ -1,81 +1,37 @@
 const axios = require('axios');
 const config = require('../config');
 
-// Генерация персонализированного совета через Claude API
-async function getAIAdvice({ mood, task, role }) {
-  const prompt = `Ты - ИИ-советник HR-платформы Yoddle. 
-
-Пользователь:
-- Роль: ${role}
-- Настроение: ${mood}
-- Главная задача: ${task}
-
-Дай краткий (3-4 предложения), персонализированный совет о том, как Yoddle может помочь в этой ситуации. 
-Используй эмоджи. Будь поддерживающим и конкретным. Упомяни конкретные модули платформы (льготы, геймификация, ИИ-аналитика).`;
-
-  // Попытка через Claude API
-  if (config.claudeApiKey) {
-    try {
-      const response = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        {
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 300,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ]
+// Генерация персонализированного совета через основной API
+async function getAIAdvice({ mood, task, role, userId }) {
+  try {
+    // Вызываем основной API endpoint для генерации рекомендаций
+    const response = await axios.post(
+      `${config.apiBaseUrl}/api/ai/generate-telegram-recommendations`,
+      {
+        mood,
+        task,
+        role,
+        userId // Передаем userId если есть (telegram_id)
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': config.claudeApiKey,
-            'anthropic-version': '2023-06-01'
-          },
-          timeout: 10000
-        }
-      );
+        timeout: 15000
+      }
+    );
 
-      return response.data.content[0].text;
-    } catch (error) {
-      console.error('Claude API error:', error.message);
+    if (response.data.success && response.data.advice) {
+      return response.data.advice;
+    } else {
+      throw new Error('Неверный формат ответа от API');
     }
+  } catch (error) {
+    console.error('❌ API error:', error.message);
+    
+    // Fallback: Rule-based ответы
+    return getRuleBasedAdvice({ mood, task, role });
   }
-
-  // Попытка через OpenRouter
-  if (config.openRouterApiKey) {
-    try {
-      const response = await axios.post(
-        'https://openrouter.ai/api/v1/chat/completions',
-        {
-          model: 'anthropic/claude-3-5-haiku-20241022',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 300
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${config.openRouterApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
-        }
-      );
-
-      return response.data.choices[0].message.content;
-    } catch (error) {
-      console.error('OpenRouter API error:', error.message);
-    }
-  }
-
-  // Fallback: Rule-based ответы
-  return getRuleBasedAdvice({ mood, task, role });
 }
 
 // Rule-based советы как fallback
