@@ -26,7 +26,18 @@ const fs = require('fs');
 const axios = require('axios');
 
 // Импортируем сервис для работы с БД
-const { getLeadByTelegramId, saveLead, initDatabase, checkAIUsageLimit } = require('./services/leadService');
+const { 
+  getLeadByTelegramId, 
+  saveLead, 
+  initDatabase, 
+  checkAIUsageLimit,
+  incrementAIUsage,
+  updatePresentationRequested,
+  updateDemoScheduled,
+  incrementDemoViews,
+  updateWebsiteClick,
+  updateLastBotActivity
+} = require('./services/leadService');
 
 // Импортируем конфигурацию
 const config = require('./config');
@@ -36,6 +47,17 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Middleware для session (сохранение состояния пользователя в рамках одного сеанса)
 bot.use(session());
+
+// Middleware для отслеживания активности в БД (при каждом взаимодействии)
+bot.use(async (ctx, next) => {
+  // Обновляем последнюю активность в БД (не блокируем выполнение если БД недоступна)
+  if (ctx.from && ctx.from.id) {
+    updateLastBotActivity(ctx.from.id).catch(() => {
+      // Игнорируем ошибки, чтобы не блокировать работу бота
+    });
+  }
+  return next();
+});
 
 // Обработка ошибок
 bot.catch((err, ctx) => {
@@ -58,7 +80,7 @@ function showMainMenu(ctx, firstName, role = null) {
       [Markup.button.callback('🤖 Попробовать ИИ-советника', 'try_ai')],
       [Markup.button.callback('📊 Получить презентацию', 'get_presentation')],
       [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-      [Markup.button.url('🌐 Открыть сайт', 'https://yoddle.ru')]
+      [Markup.button.url('🌐 Открыть сайт', `https://yoddle.ru?utm_source=telegram_bot&utm_medium=bot&telegram_id=${ctx.from.id}`)]
     ])
   );
 }
@@ -120,7 +142,7 @@ bot.command('start', async (ctx) => {
     `Давайте начнем знакомство!`,
     Markup.inlineKeyboard([
       [Markup.button.callback('🚀 Начать знакомство', 'start_onboarding')],
-      [Markup.button.url('🌐 Открыть сайт', 'https://yoddle.ru')]
+      [Markup.button.url('🌐 Открыть сайт', `https://yoddle.ru?utm_source=telegram_bot&utm_medium=bot&telegram_id=${ctx.from.id}`)]
     ])
   );
 });
@@ -236,7 +258,8 @@ bot.action(/interest_(.+)/, async (ctx) => {
       role: ctx.session.onboarding.role,
       email: ctx.session.onboarding.email,
       interests: ctx.session.onboarding.interests || [],
-      source: 'telegram_bot'
+      source: 'telegram', // Используем 'telegram' для совместимости с фильтрами
+      utm_source: 'telegram_bot' // UTM source для отслеживания источника
     };
     
     try {
@@ -271,7 +294,7 @@ bot.action(/interest_(.+)/, async (ctx) => {
           [Markup.button.callback('🤖 Попробовать ИИ-советника', 'try_ai')],
           [Markup.button.callback('📊 Получить презентацию', 'get_presentation')],
           [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-          [Markup.button.url('🌐 Открыть сайт', 'https://yoddle.ru')]
+          [Markup.button.url('🌐 Открыть сайт', `https://yoddle.ru?utm_source=telegram_bot&utm_medium=bot&telegram_id=${ctx.from.id}`)]
         ])
       }
     );
@@ -329,6 +352,11 @@ bot.action('show_demo', async (ctx) => {
 bot.action('demo_benefits', async (ctx) => {
   await ctx.answerCbQuery();
   
+  // Отслеживаем просмотр демо модуля
+  if (ctx.from && ctx.from.id) {
+    incrementDemoViews(ctx.from.id, 'benefits').catch(() => {});
+  }
+  
   // Отправляем текст с описанием модуля
   await ctx.editMessageText(
     '💰 <b>Модуль: Корпоративные льготы</b>\n\n' +
@@ -355,6 +383,11 @@ bot.action('demo_benefits', async (ctx) => {
 
 bot.action('demo_ai', async (ctx) => {
   await ctx.answerCbQuery();
+  
+  // Отслеживаем просмотр демо модуля
+  if (ctx.from && ctx.from.id) {
+    incrementDemoViews(ctx.from.id, 'ai').catch(() => {});
+  }
   
   // Отправляем текст с описанием модуля
   await ctx.editMessageText(
@@ -384,6 +417,11 @@ bot.action('demo_ai', async (ctx) => {
 bot.action('demo_gamification', async (ctx) => {
   await ctx.answerCbQuery();
   
+  // Отслеживаем просмотр демо модуля
+  if (ctx.from && ctx.from.id) {
+    incrementDemoViews(ctx.from.id, 'gamification').catch(() => {});
+  }
+  
   // Отправляем текст с описанием модуля
   await ctx.editMessageText(
     '🎮 <b>Модуль: Геймификация</b>\n\n' +
@@ -410,6 +448,11 @@ bot.action('demo_gamification', async (ctx) => {
 
 bot.action('demo_analytics', async (ctx) => {
   await ctx.answerCbQuery();
+  
+  // Отслеживаем просмотр демо модуля
+  if (ctx.from && ctx.from.id) {
+    incrementDemoViews(ctx.from.id, 'analytics').catch(() => {});
+  }
   
   // Отправляем текст с описанием модуля
   await ctx.editMessageText(
@@ -834,6 +877,13 @@ async function processAIAdvisor(ctx) {
       });
       
       if (response.data && response.data.success && response.data.analysis) {
+        // Отслеживаем использование ИИ-советника в БД
+        if (ctx.from && ctx.from.id) {
+          incrementAIUsage(ctx.from.id).catch(() => {
+            // Игнорируем ошибки, чтобы не блокировать работу бота
+          });
+        }
+        
         // API сам проверил лимит и сохранил данные в БД
         // Проверяем лимит ПОСЛЕ ответа только для информационного сообщения
         // (не критично, если БД недоступна)
@@ -986,6 +1036,11 @@ async function processAIAdvisor(ctx) {
 bot.action('get_presentation', async (ctx) => {
   await ctx.answerCbQuery();
   
+  // Отслеживаем запрос презентации в БД
+  if (ctx.from && ctx.from.id) {
+    updatePresentationRequested(ctx.from.id).catch(() => {});
+  }
+  
   try {
     // Вариант 1: Пытаемся использовать локальный файл (для разработки)
     let useLocalFile = false;
@@ -1052,6 +1107,12 @@ bot.action('get_presentation', async (ctx) => {
 // Обработка кнопки "Записаться на демо"
 bot.action('schedule_demo', async (ctx) => {
   await ctx.answerCbQuery();
+  
+  // Отслеживаем запись на демо в БД
+  if (ctx.from && ctx.from.id) {
+    updateDemoScheduled(ctx.from.id).catch(() => {});
+  }
+  
   await ctx.reply(
     '📞 Отлично! Давайте запланируем демо.\n\n' +
     '👉 Выберите удобное время: [Календарь](https://calendar.app.google/Aq2MweD78sfW5yof8)\n\n' +

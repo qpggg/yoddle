@@ -2,9 +2,24 @@ const { Pool } = require('pg');
 const config = require('../config');
 
 // Создаем pool с обработкой ошибок подключения
+// Используем ту же строку подключения, что и основной сайт (PG_CONNECTION_STRING)
 let pool;
 try {
+  // Pool автоматически поддерживает как connectionString, так и отдельные параметры
   pool = new Pool(config.db);
+  
+  // Логируем успешное подключение (без пароля)
+  if (config.db.connectionString) {
+    try {
+      const url = new URL(config.db.connectionString);
+      if (url.password) url.password = '****';
+      console.log(`✅ Telegram bot DB: Connected using PG_CONNECTION_STRING`);
+    } catch {
+      console.log(`✅ Telegram bot DB: Connected using connectionString`);
+    }
+  } else {
+    console.log(`✅ Telegram bot DB: Connected to ${config.db.host}:${config.db.port}/${config.db.database}`);
+  }
   
   // Обработка ошибок подключения pool
   pool.on('error', (err) => {
@@ -52,7 +67,8 @@ async function saveLead(leadData) {
     role,
     email,
     interests,
-    utm_source
+    utm_source,
+    source = 'telegram' // Используем переданное значение или 'telegram' по умолчанию
   } = leadData;
 
   // Формируем имя из telegram данных
@@ -90,7 +106,7 @@ async function saveLead(leadData) {
       last_name,
       role,
       interests || [],
-      'telegram', // source
+      source, // Используем переданное значение source
       utm_source || 'telegram_direct',
       'new', // status
       60 // начальный lead_score для telegram лидов
@@ -213,11 +229,177 @@ async function incrementAIUsage(telegramId) {
   }
 
   try {
-    // Счетчик увеличивается автоматически при создании записи в ai_signals через API
-    // Но мы можем добавить отдельную таблицу для счетчиков, если нужно
-    return true;
+    const query = `
+      UPDATE leads 
+      SET 
+        ai_advisor_uses = COALESCE(ai_advisor_uses, 0) + 1,
+        ai_advisor_last_used_at = CURRENT_TIMESTAMP,
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE telegram_id = $1
+      RETURNING ai_advisor_uses;
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
   } catch (error) {
     console.error('❌ Error incrementing AI usage:', error.message);
+    return false;
+  }
+}
+
+// Обновление запроса презентации
+async function updatePresentationRequested(telegramId) {
+  if (!pool) {
+    return false;
+  }
+
+  try {
+    const query = `
+      UPDATE leads 
+      SET 
+        presentation_requested = TRUE,
+        presentation_requested_at = CURRENT_TIMESTAMP,
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE telegram_id = $1
+      RETURNING id;
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('❌ Error updating presentation requested:', error.message);
+    return false;
+  }
+}
+
+// Обновление записи на демо
+async function updateDemoScheduled(telegramId) {
+  if (!pool) {
+    return false;
+  }
+
+  try {
+    const query = `
+      UPDATE leads 
+      SET 
+        demo_scheduled = TRUE,
+        demo_scheduled_at = CURRENT_TIMESTAMP,
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP,
+        status = CASE 
+          WHEN status = 'new' THEN 'demo'
+          ELSE status
+        END
+      WHERE telegram_id = $1
+      RETURNING id;
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('❌ Error updating demo scheduled:', error.message);
+    return false;
+  }
+}
+
+// Увеличение счетчика просмотров демо модулей
+async function incrementDemoViews(telegramId, moduleName) {
+  if (!pool) {
+    return false;
+  }
+
+  try {
+    // Определяем какое поле обновлять в зависимости от модуля
+    let fieldToUpdate = 'demo_views_count';
+    
+    switch (moduleName) {
+      case 'benefits':
+        fieldToUpdate = 'demo_benefits_views';
+        break;
+      case 'ai':
+        fieldToUpdate = 'demo_ai_views';
+        break;
+      case 'gamification':
+        fieldToUpdate = 'demo_gamification_views';
+        break;
+      case 'analytics':
+        fieldToUpdate = 'demo_analytics_views';
+        break;
+    }
+
+    const query = `
+      UPDATE leads 
+      SET 
+        ${fieldToUpdate} = COALESCE(${fieldToUpdate}, 0) + 1,
+        demo_views_count = COALESCE(demo_views_count, 0) + 1,
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE telegram_id = $1
+      RETURNING ${fieldToUpdate};
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('❌ Error incrementing demo views:', error.message);
+    return false;
+  }
+}
+
+// Обновление клика по ссылке на сайт
+async function updateWebsiteClick(telegramId) {
+  if (!pool) {
+    return false;
+  }
+
+  try {
+    const query = `
+      UPDATE leads 
+      SET 
+        website_clicks = COALESCE(website_clicks, 0) + 1,
+        website_last_click_at = CURRENT_TIMESTAMP,
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE telegram_id = $1
+      RETURNING website_clicks;
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('❌ Error updating website click:', error.message);
+    return false;
+  }
+}
+
+// Обновление последней активности в боте (при любом взаимодействии)
+async function updateLastBotActivity(telegramId) {
+  if (!pool) {
+    return false;
+  }
+
+  try {
+    const query = `
+      UPDATE leads 
+      SET 
+        last_bot_activity = CURRENT_TIMESTAMP,
+        bot_messages_count = COALESCE(bot_messages_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE telegram_id = $1
+      RETURNING id;
+    `;
+    
+    const result = await pool.query(query, [telegramId]);
+    return result.rows.length > 0;
+  } catch (error) {
+    // Не логируем ошибку, чтобы не засорять логи при каждом сообщении
     return false;
   }
 }
@@ -228,6 +410,11 @@ module.exports = {
   getLeadByTelegramId,
   getAllLeads,
   checkAIUsageLimit,
-  incrementAIUsage
+  incrementAIUsage,
+  updatePresentationRequested,
+  updateDemoScheduled,
+  incrementDemoViews,
+  updateWebsiteClick,
+  updateLastBotActivity
 };
 
