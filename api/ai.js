@@ -55,8 +55,9 @@ function cleanClaudeOutput(text) {
 }
 
 // Database connection
+// Используем PG_CONNECTION_STRING (как в db.js) или DATABASE_URL для обратной совместимости
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.PG_CONNECTION_STRING || process.env.DATABASE_URL,
 });
 
 // Функция для расчета качества данных
@@ -127,24 +128,49 @@ function calculateActivityQuality(activity, category, duration, success, notes) 
 router.post('/analyze-mood', async (req, res) => {
   try {
     const { mood, activities, notes, stressLevel } = req.body;
-    const userId = req.body.userId || 1; // Временно используем ID = 1
+    let userId = req.body.userId || 1; // По умолчанию используем ID = 1 (тестовый пользователь)
+    
+    // Если userId выглядит как telegram_id (большое число), используем фиксированный user_id = 1
+    // для Telegram пользователей, так как таблица enter только для пользователей сайта
+    if (userId > 1000000) {
+      // Это telegram_id, используем фиксированный user_id = 1 для всех Telegram пользователей
+      // Данные telegram_id сохраняются в поле data JSONB для идентификации
+      userId = 1;
+      console.log(`ℹ️ Telegram пользователь ${req.body.userId} использует user_id = 1 для AI системы`);
+    }
 
     // Проверяем лимит использования ИИ-советника (3 раза в день для обычных пользователей)
-    // Исключаем админов (userId = 1 - временно считается админом)
-    const isAdmin = userId === 1 || userId === parseInt(process.env.ADMIN_TELEGRAM_ID);
+    // Для Telegram пользователей проверяем по telegram_id в поле data
+    const isTelegramUser = req.body.userId > 1000000;
+    const isAdmin = userId === 1 && !isTelegramUser || req.body.userId === parseInt(process.env.ADMIN_TELEGRAM_ID);
     
     if (!isAdmin) {
       try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const limitCheck = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM ai_signals
-          WHERE user_id = $1
-          AND type = 'mood'
-          AND timestamp >= $2
-        `, [userId, today]);
+        let limitCheck;
+        if (isTelegramUser) {
+          // Для Telegram пользователей проверяем по telegram_id в поле data
+          limitCheck = await pool.query(`
+            SELECT COUNT(*) as count
+            FROM ai_signals
+            WHERE user_id = $1
+            AND type = 'mood'
+            AND timestamp >= $2
+            AND data->>'telegram_id' = $3
+          `, [userId, today, String(req.body.userId)]);
+        } else {
+          // Для обычных пользователей проверяем по user_id
+          limitCheck = await pool.query(`
+            SELECT COUNT(*) as count
+            FROM ai_signals
+            WHERE user_id = $1
+            AND type = 'mood'
+            AND timestamp >= $2
+            AND (data->>'telegram_id' IS NULL OR data->>'telegram_id' = '')
+          `, [userId, today]);
+        }
         
         const count = parseInt(limitCheck.rows[0]?.count || 0);
         const limit = 3;
@@ -179,6 +205,11 @@ router.post('/analyze-mood', async (req, res) => {
       stressLevel,
       timestamp: new Date()
     };
+    
+    // Если это Telegram пользователь, сохраняем telegram_id в data для идентификации
+    if (req.body.userId > 1000000) {
+      signalData.telegram_id = req.body.userId;
+    }
 
     // Рассчитываем quality_score на основе качества данных
     const qualityScore = calculateDataQuality(mood, notes, activities);
