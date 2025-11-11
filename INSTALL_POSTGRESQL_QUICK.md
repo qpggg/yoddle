@@ -138,3 +138,6 @@ PGPASSWORD=YOUR_PASSWORD psql -h localhost -U yoddle_user -d yoddle_db -c "SELEC
 
 Продолжите с импортом бэкапа (см. `CREATE_DB_ON_SERVER.md`, Шаг 5)
 
+
+
+

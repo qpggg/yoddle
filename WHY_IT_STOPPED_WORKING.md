@@ -103,3 +103,6 @@ pm2 start ecosystem.config.cjs
 
 Это стандартная и правильная конфигурация для production.
 
+
+
+

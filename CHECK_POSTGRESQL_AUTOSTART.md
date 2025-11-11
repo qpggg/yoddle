@@ -49,3 +49,6 @@ PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "\dt"
 
 Выполните команды на сервере и проверьте статус PostgreSQL!
 
+
+
+

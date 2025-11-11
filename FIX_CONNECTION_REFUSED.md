@@ -104,3 +104,6 @@ PGPASSWORD=lJS2b1O3 psql "host=YOUR_DB_HOST port=5432 dbname=f1111323_base user=
 
 Обновите `.env` файл с правильным хостом (см. `IMPORT_DB_TO_SERVER.md`)
 
+
+
+

@@ -187,3 +187,6 @@ psql -h localhost -d postgres
 
 Продолжите с импортом бэкапа (см. `CREATE_DB_ON_SERVER.md`, Шаг 5)
 
+
+
+

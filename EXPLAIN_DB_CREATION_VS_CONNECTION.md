@@ -134,3 +134,6 @@ PG_CONNECTION_STRING=postgresql://f1111323_base:lJS2b1O3@YOUR_DB_HOST:5432/f1111
 
 Найдите параметры подключения в GUI провайдера и используйте их вместо `localhost`!
 
+
+
+

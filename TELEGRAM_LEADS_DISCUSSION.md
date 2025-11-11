@@ -124,3 +124,6 @@ CREATE INDEX idx_telegram_lead_events_created_at ON telegram_lead_events(created
 
 Что думаешь? Что из этого приоритетно для твоей воронки?
 
+
+
+

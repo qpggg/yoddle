@@ -135,3 +135,6 @@ PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT C
 - Ошибки про `f1111323_yoddle` можно игнорировать, если импортируете от postgres
 - Главное - проверить, что таблицы созданы и данные импортированы
 
+
+
+

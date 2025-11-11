@@ -91,3 +91,6 @@ PGPASSWORD=lJS2b1O3 psql -h localhost -U f1111323_base -d f1111323_base -c "\dt"
 PGPASSWORD=lJS2b1O3 psql -h localhost -U f1111323_base -d f1111323_base -f public/backup_full1.sql
 ```
 
+
+
+

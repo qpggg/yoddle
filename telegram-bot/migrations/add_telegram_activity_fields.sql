@@ -1,9 +1,90 @@
 -- ===================================================================
 -- МИГРАЦИЯ: Добавление полей для Telegram активности и конверсии
--- Применяется к существующей таблице leads
+-- Создает таблицу leads если её нет, затем добавляет новые поля
 -- ===================================================================
 
--- Добавляем поля для событий конверсии
+-- Сначала создаем таблицу leads, если её нет
+CREATE TABLE IF NOT EXISTS leads (
+  id SERIAL PRIMARY KEY,
+  
+  -- Основная информация
+  name VARCHAR(255),
+  email VARCHAR(255) UNIQUE,
+  phone VARCHAR(50),
+  company VARCHAR(255),
+  company_size VARCHAR(50), -- '1-10', '11-50', '51-200', '200+'
+  role VARCHAR(100), -- 'HR', 'C-Level', 'Owner', 'Manager'
+  
+  -- Источник лида
+  source VARCHAR(100) NOT NULL DEFAULT 'telegram', -- 'landing', 'telegram', 'forum', 'seo', 'ads', 'referral', 'event'
+  
+  -- UTM параметры (для всех источников)
+  utm_source VARCHAR(100),
+  utm_medium VARCHAR(100),
+  utm_campaign VARCHAR(100),
+  utm_content VARCHAR(100),
+  utm_term VARCHAR(100),
+  
+  -- Telegram специфика (если источник telegram)
+  telegram_id BIGINT UNIQUE,
+  telegram_username VARCHAR(255),
+  telegram_first_name VARCHAR(255),
+  telegram_last_name VARCHAR(255),
+  
+  -- Интересы и данные
+  interests TEXT[], -- для telegram: ['benefits', 'ai', 'gamification']
+  message TEXT, -- для landing: комментарий из формы
+  
+  -- Метаданные
+  page_url TEXT,
+  referrer TEXT,
+  ip_address VARCHAR(50),
+  user_agent TEXT,
+  
+  -- Статус в воронке
+  status VARCHAR(50) DEFAULT 'new', 
+  -- 'new', 'contacted', 'qualified', 'demo', 'proposal', 'converted', 'lost'
+  
+  lead_score INTEGER DEFAULT 0, -- 0-100, скоринг качества лида
+  
+  -- Связь с клиентами (если конвертировался)
+  client_id INTEGER,
+  
+  -- Менеджмент
+  assigned_to VARCHAR(255), -- кому назначен лид
+  last_contact_at TIMESTAMP,
+  demo_scheduled_at TIMESTAMP,
+  converted_at TIMESTAMP,
+  notes TEXT,
+  
+  -- Временные метки
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Создаем базовые индексы, если их нет
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_telegram_id ON leads(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at);
+
+-- Создаем триггер для автообновления updated_at, если его нет
+CREATE OR REPLACE FUNCTION update_leads_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_leads_timestamp ON leads;
+CREATE TRIGGER update_leads_timestamp 
+BEFORE UPDATE ON leads
+FOR EACH ROW 
+EXECUTE FUNCTION update_leads_updated_at();
+
+-- Теперь добавляем новые поля для событий конверсии
 ALTER TABLE leads 
   ADD COLUMN IF NOT EXISTS presentation_requested BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS presentation_requested_at TIMESTAMP,

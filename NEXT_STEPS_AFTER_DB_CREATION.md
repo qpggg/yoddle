@@ -148,3 +148,6 @@ pm2 status
 - Убедитесь, что выполнили `git pull origin stable`
 - Проверьте путь: `ls -lh public/backup_full1.sql`
 
+
+
+

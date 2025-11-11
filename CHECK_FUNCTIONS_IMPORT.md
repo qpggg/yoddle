@@ -120,3 +120,6 @@ sudo -u postgres psql yoddle_db -c "\df"
 
 Выполните проверку и сообщите результат!
 
+
+
+

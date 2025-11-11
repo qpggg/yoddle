@@ -307,7 +307,7 @@ pm2 restart all
    ```
 
 2. **Проверьте наличие и содержимое .env файла:**
-   ```bash
+```bash
    # Убедитесь, что .env файл существует в корне проекта
    ls -la /path/to/yoddle1/.env
    
@@ -319,7 +319,7 @@ pm2 restart all
    ```
 
 3. **Если .env файл отсутствует или BOT_TOKEN не настроен:**
-   ```bash
+```bash
    # Создайте или отредактируйте .env файл
    cd /path/to/yoddle1
    nano .env
@@ -353,7 +353,7 @@ pm2 restart all
    - Проверьте настройки подключения в `.env`
 
 6. **Запустите бота напрямую (без PM2) для отладки:**
-   ```bash
+```bash
    cd /path/to/yoddle1/telegram-bot
    node src/bot-simple.js
    # или

@@ -123,3 +123,6 @@ PGPASSWORD=lJS2b1O3 psql -h YOUR_DB_HOST -p 5432 -U f1111323_base -d f1111323_ba
 
 Обновите файл `.env` на сервере с правильными значениями (см. `IMPORT_DB_TO_SERVER.md` или `QUICK_CONNECT_DB.md`)
 
+
+
+
