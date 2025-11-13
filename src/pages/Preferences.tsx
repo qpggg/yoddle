@@ -311,7 +311,12 @@ const Preferences: React.FC = () => {
 
   // AI анализ результатов теста - РАЗБИТЫЙ НА ЭТАПЫ
   const performAiAnalysis = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('❌ User ID отсутствует, не можем выполнить анализ');
+      // Все равно показываем результаты с базовыми рекомендациями
+      setShowResults(true);
+      return;
+    }
 
     console.log('🧠 Начинаем AI анализ для пользователя', user.id);
     
@@ -349,15 +354,19 @@ const Preferences: React.FC = () => {
       // ЭТАП 4: Показ результатов (ВСЕГДА работает)
       setAiProgress('Готово! Показываем результаты...');
       console.log('🎉 Показываем результаты пользователю');
+      
+      // Гарантируем, что результаты всегда показываются
       setShowResults(true);
+      setShowIntro(false);
       
     } catch (error) {
       console.error('❌ Критическая ошибка AI Analysis:', error);
-      setAiAnalysisResult('Показываем базовые рекомендации...');
+      setAiAnalysisResult('ИИ обрабатывает ваши данные. Рекомендации появятся через несколько секунд...');
       
       // EMERGENCY: всегда показываем хоть что-то
       console.log('🚨 EMERGENCY: Показываем результаты принудительно');
       setShowResults(true);
+      setShowIntro(false);
     } finally {
       setAiAnalyzing(false);
       // Автоматически закрываем модалку
@@ -1068,48 +1077,21 @@ const Preferences: React.FC = () => {
   }
 
   if (showResults) {
-    // ВСЕГДА показываем AI рекомендации с уверенностью и объяснениями
+    // Показываем ТОЛЬКО AI рекомендации
     let recommendations: BenefitRecommendation[] = [];
     
     if (hasExistingResults && savedRecommendations.length > 0) {
-      // Используем AI рекомендации (предпочтительно)
+      // Используем AI рекомендации
       recommendations = savedRecommendations;
       console.log('✅ Используем AI рекомендации:', recommendations.length);
     } else {
-      // Если AI рекомендации еще не готовы, создаем "умные" статические с AI структурой
-      const staticRecs = getRecommendations();
-      recommendations = staticRecs.map(rec => ({
-        ...rec,
-        // Добавляем AI-подобные данные для единообразия
-        confidence: 0.75, // Средняя уверенность для статических
-        explanations: generateExplanations(rec, answers), // Генерируем объяснения из ответов
-        score: 0.75,
-        algorithm_variant: 'static_enhanced'
-      }));
-      console.log('🔄 Используем enhanced статические рекомендации с AI структурой:', recommendations.length);
+      // Если AI рекомендации еще не готовы, показываем пустой список
+      // Пользователь увидит сообщение о том, что рекомендации генерируются
+      recommendations = [];
+      console.log('⏳ AI рекомендации еще не готовы, показываем пустой список');
     }
     
-    // Гарантируем минимум 3 рекомендации
-    if (recommendations.length < 3) {
-      const staticRecs = getRecommendations();
-      const existingIds = new Set(recommendations.map(r => r.benefit_id).filter(Boolean));
-      
-      for (const staticRec of staticRecs) {
-        if (recommendations.length >= 3) break;
-        if (!existingIds.has(staticRec.benefit_id)) {
-          recommendations.push({
-            ...staticRec,
-            confidence: 0.65,
-            explanations: generateExplanations(staticRec, answers),
-            score: 0.65,
-            algorithm_variant: 'static_fallback'
-          });
-        }
-      }
-      console.log('🔄 Дополнили до', recommendations.length, 'рекомендаций');
-    }
-    
-    console.log('📊 Final AI-enhanced recommendations:', recommendations);
+    console.log('📊 Final AI recommendations:', recommendations);
     console.log('🔍 All recommendations have confidence:', recommendations.every(r => r.confidence));
     console.log('🎯 All recommendations have explanations:', recommendations.every(r => r.explanations && r.explanations.length > 0));
 
@@ -1171,19 +1153,50 @@ const Preferences: React.FC = () => {
               </Typography>
             </Box>
 
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
+            {recommendations.length === 0 ? (
               <Box sx={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: 3,
-                justifyContent: 'center',
-                mb: 6
+                textAlign: 'center', 
+                py: 8,
+                px: 3
               }}>
-                {recommendations.map((rec) => (
+                <CircularProgress 
+                  size={60}
+                  sx={{ 
+                    color: '#8B0000',
+                    mb: 3
+                  }} 
+                />
+                <Typography variant="h5" sx={{ 
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 700,
+                  color: '#1A1A1A',
+                  mb: 2
+                }}>
+                  ИИ генерирует персональные рекомендации...
+                </Typography>
+                <Typography variant="body1" sx={{ 
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  color: '#666',
+                  maxWidth: '500px',
+                  mx: 'auto'
+                }}>
+                  Это может занять несколько секунд. Пожалуйста, подождите.
+                </Typography>
+              </Box>
+            ) : (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: 3,
+                  justifyContent: 'center',
+                  mb: 6
+                }}>
+                  {recommendations.map((rec) => (
                   <motion.div
                     key={rec.category}
                     variants={itemVariants}
@@ -1560,6 +1573,7 @@ const Preferences: React.FC = () => {
                 ))}
               </Box>
             </motion.div>
+            )}
 
             {/* AI Отчет по рекомендациям */}
             {aiRecommendationsReport && (

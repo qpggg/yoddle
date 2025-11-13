@@ -67,40 +67,56 @@ export const useAI = () => {
   }, [loadInsights]);
 
   // Анализ настроения
-  const analyzeMood = useCallback(async (moodData: MoodEntry) => {
+  const analyzeMood = useCallback(async (moodData: MoodEntry, userId?: number) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await aiClient.analyzeMood(moodData);
-      if (response.success) {
+      
+      if (!userId) {
+        throw new Error('User ID is required for mood analysis');
+      }
+      
+      const response = await aiClient.analyzeMood(moodData, userId);
+      if (response.success && response.analysis) {
         // Перезагружаем инсайты после анализа
         await loadInsights();
         return response.analysis;
+      } else {
+        throw new Error(response.error || 'Failed to analyze mood');
       }
-    } catch (err) {
-      setError('Ошибка анализа настроения');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Ошибка анализа настроения';
+      setError(errorMessage);
       console.error('Analyze mood error:', err);
-      throw err;
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   }, [loadInsights]);
 
   // Логирование активности
-  const logActivity = useCallback(async (activityData: ActivityEntry) => {
+  const logActivity = useCallback(async (activityData: ActivityEntry, userId?: number) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await aiClient.logActivity(activityData);
-      if (response.success) {
+      
+      if (!userId) {
+        throw new Error('User ID is required for activity logging');
+      }
+      
+      const response = await aiClient.logActivity(activityData, userId);
+      if (response.success && response.recommendation) {
         // Перезагружаем рекомендации после логирования
         await loadRecommendations();
         return response.recommendation;
+      } else {
+        throw new Error(response.error || 'Failed to log activity');
       }
-    } catch (err) {
-      setError('Ошибка логирования активности');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Ошибка логирования активности';
+      setError(errorMessage);
       console.error('Log activity error:', err);
-      throw err;
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }

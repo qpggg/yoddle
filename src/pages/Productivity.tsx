@@ -566,6 +566,13 @@ const Productivity: React.FC = () => {
         
         // Проверяем, что название активности указано
         if (activityName && activityName.trim() !== '') {
+          // Проверяем наличие user.id
+          if (!user?.id) {
+            setSnackbarMessage('Ошибка: пользователь не авторизован');
+            setSnackbarOpen(true);
+            return;
+          }
+          
           // Отправляем активность в AI API
           const activityResponse = await logActivity({
             activity: activityName,
@@ -574,7 +581,7 @@ const Productivity: React.FC = () => {
             success: activityEntry.success_rating >= 5, // Конвертируем рейтинг в boolean
             success_rating: activityEntry.success_rating,
             notes: activityEntry.notes
-          });
+          }, parseInt(user.id, 10));
           
           // Показываем AI ответ в том же месте, где показывается анализ настроения
           if (activityResponse) {
@@ -593,12 +600,20 @@ const Productivity: React.FC = () => {
         }
       } else {
         // Обычное логирование настроения
+        // Проверяем наличие user.id
+        if (!user?.id) {
+          setSnackbarMessage('Ошибка: пользователь не авторизован');
+          setSnackbarOpen(true);
+          return;
+        }
+        
         console.log('🚀 Отправляем данные настроения:', {
           mood: moodEntry.mood,
           activities: ['daily_mood_check'],
           notes: moodEntry.notes,
           stressLevel: moodEntry.stress,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          userId: user.id
         });
         
         const analysis = await analyzeMood({
@@ -607,7 +622,7 @@ const Productivity: React.FC = () => {
           notes: moodEntry.notes,
           stressLevel: moodEntry.stress,
           timestamp: new Date().toISOString()
-        });
+        }, parseInt(user.id, 10));
         
         console.log('📝 Полученный анализ настроения, длина:', analysis?.length || 0);
         console.log('📝 Полученный анализ настроения (первые 200 символов):', analysis?.substring(0, 200));
@@ -645,9 +660,10 @@ const Productivity: React.FC = () => {
       
       // Перезагрузка данных
       await loadProductivityData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting data:', error);
-      setSnackbarMessage('Ошибка отправки данных');
+      const errorMessage = error?.message || 'Ошибка отправки данных';
+      setSnackbarMessage(errorMessage.includes('User ID') ? 'Ошибка: пользователь не авторизован' : errorMessage);
       setSnackbarOpen(true);
     } finally {
       setSubmitting(false);

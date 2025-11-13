@@ -38,13 +38,15 @@ export interface AIRecommendation {
 
 export interface AIAnalysisResponse {
   success: boolean;
-  analysis: string;
-  signalId: string;
+  analysis?: string;
+  signalId?: string;
+  error?: string;
 }
 
 export interface AIRecommendationResponse {
   success: boolean;
-  recommendation: string;
+  recommendation?: string;
+  error?: string;
 }
 
 export interface AIInsightsResponse {
@@ -87,27 +89,50 @@ class AIClient {
       console.log('📡 AI Client: Получен ответ:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Пытаемся получить детали ошибки из ответа
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          // Если не удалось распарсить JSON, используем стандартное сообщение
+        }
+        throw new Error(errorMessage);
       }
 
       const responseData = await response.json();
       console.log('📦 AI Client: Данные ответа:', responseData);
       
+      // Проверяем, есть ли ошибка в ответе
+      if (responseData.error) {
+        throw new Error(responseData.error);
+      }
+      
       return responseData;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ AI API request failed: ${endpoint}`, error);
+      
+      // Улучшаем сообщение об ошибке
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      }
+      
       throw error;
     }
   }
 
   // Анализ настроения
-  async analyzeMood(moodData: MoodEntry): Promise<AIAnalysisResponse> {
+  async analyzeMood(moodData: MoodEntry, userId?: number): Promise<AIAnalysisResponse> {
     console.log('🚀 AI Client: Отправляем данные настроения:', moodData);
     console.log('🌐 AI Client: URL запроса:', `${this.baseURL}/api/ai/analyze-mood`);
     
+    if (!userId) {
+      throw new Error('userId is required for mood analysis');
+    }
+    
     const requestBody = {
       ...moodData,
-      userId: 1, // Временно используем ID = 1 для тестирования
+      userId: userId,
     };
     
     console.log('📦 AI Client: Тело запроса:', requestBody);
@@ -119,12 +144,16 @@ class AIClient {
   }
 
   // Логирование активности
-  async logActivity(activityData: ActivityEntry): Promise<AIRecommendationResponse> {
+  async logActivity(activityData: ActivityEntry, userId?: number): Promise<AIRecommendationResponse> {
+    if (!userId) {
+      throw new Error('userId is required for activity logging');
+    }
+    
     return this.request<AIRecommendationResponse>('/api/ai/log-activity', {
       method: 'POST',
       body: JSON.stringify({
         ...activityData,
-        userId: 1, // Временно используем ID = 1 для тестирования
+        userId: userId,
       }),
     });
   }

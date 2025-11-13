@@ -79,28 +79,8 @@ app.get('/api/wallet/policy', policyHandler);
 app.post('/api/wallet/refresh', refreshHandler);
 
 // === Раздача статики фронта ===
+// ВАЖНО: Статика раздается ПОСЛЕ всех API роутов (см. ниже, перед SPA fallback)
 import path from 'path';
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Раздача файлов из public (для доступа к backup_full1.sql и другим файлам)
-// Настраиваем поддержку всех типов файлов, включая SQL
-app.use('/public', express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    // Устанавливаем правильный MIME тип для SQL файлов
-    if (filePath.endsWith('.sql')) {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Content-Disposition', 'inline');
-    }
-    // Для PDF файлов
-    if (filePath.endsWith('.pdf')) {
-      res.setHeader('Content-Type', 'application/pdf');
-    }
-  },
-  dotfiles: 'allow', // Разрешаем доступ к файлам, начинающимся с точки
-  extensions: ['html', 'htm', 'json', 'xml', 'txt', 'sql', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'css', 'js'] // Явно указываем расширения
-}));
-
-// Для SPA: отдавать index.html на все не-API запросы (после API маршрутов)
 
 // Обеспечиваем схему кошелька в БД (для локальной разработки и новых окружений)
 async function ensureWalletSchema() {
@@ -1538,6 +1518,56 @@ app.use('/api/news', newsRouter);
 // Подключаем API клиентов
 app.use('/api/clients', clientsRouter);
 
+// === Раздача статики фронта (ПОСЛЕ всех API роутов, ПЕРЕД SPA fallback) ===
+// Статические файлы (CSS, JS, изображения и т.д.) раздаются из папки dist
+app.use(express.static(path.join(__dirname, 'dist'), {
+  // fallthrough: true по умолчанию - если файл не найден, передаем управление дальше
+  index: false // Не используем index.html автоматически для директорий
+}));
+
+// Раздача файлов из public (для доступа к backup_full1.sql и другим файлам)
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // Устанавливаем правильный MIME тип для SQL файлов
+    if (filePath.endsWith('.sql')) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', 'inline');
+    }
+    // Для PDF файлов
+    if (filePath.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+    }
+  },
+  dotfiles: 'allow', // Разрешаем доступ к файлам, начинающимся с точки
+  extensions: ['html', 'htm', 'json', 'xml', 'txt', 'sql', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'css', 'js']
+}));
+
+// === SPA fallback: отдавать index.html для всех не-API маршрутов ===
+// ВАЖНО: Этот middleware должен быть ПОСЛЕДНИМ, после всех API роутов и статики
+app.use((req, res, next) => {
+  // Пропускаем только API запросы - они уже обработаны выше
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  
+  // Пропускаем статические файлы (с расширениями) - они обрабатываются express.static выше
+  // Если express.static не нашел файл, он передаст управление сюда
+  if (req.path.includes('.') && !req.path.endsWith('/')) {
+    // Это статический файл, но он не найден - возвращаем 404
+    return res.status(404).send('File not found');
+  }
+  
+  // Для всех остальных запросов (включая /preferences, /dashboard и т.д.) отдаем index.html
+  const indexPath = join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    console.log(`📄 SPA fallback: отдаем index.html для ${req.path}`);
+    return res.sendFile(indexPath);
+  }
+  
+  console.error(`❌ SPA fallback: index.html не найден по пути ${indexPath}`);
+  return res.status(404).send('Build not found. Run the frontend build to serve the SPA.');
+});
+
 // Запуск сервера
 const HOST = '0.0.0.0';
 const server = app.listen(PORT, HOST, () => {
@@ -1591,19 +1621,4 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
   // Не завершаем процесс, пусть PM2 решает
-}); 
-
-// === SPA fallback: отдавать index.html для всех не-API маршрутов ===
-app.get('*', (req, res, next) => {
-  // Пропускаем API запросы и статические файлы
-  if (req.path.startsWith('/api') || req.path.startsWith('/public') || req.path.includes('.')) {
-    return next();
-  }
-  
-  const indexPath = join(__dirname, 'dist', 'index.html');
-  if (fs.existsSync(indexPath)) {
-    return res.sendFile(indexPath);
-  }
-  
-  return res.status(404).send('Build not found. Run the frontend build to serve the SPA.');
 });
