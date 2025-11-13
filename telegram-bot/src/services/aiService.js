@@ -1,37 +1,144 @@
 const axios = require('axios');
 const config = require('../config');
 
-// Генерация персонализированного совета через основной API
-async function getAIAdvice({ mood, task, role, userId }) {
-  try {
-    // Вызываем основной API endpoint для генерации рекомендаций
-    const response = await axios.post(
-      `${config.apiBaseUrl}/api/ai/generate-telegram-recommendations`,
-      {
-        mood,
-        task,
-        role,
-        userId // Передаем userId если есть (telegram_id)
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      }
-    );
+// Генерация персонализированного совета через Claude API
+async function getAIAdvice({ mood, task, role }) {
+  const prompt = `
+      You are a compassionate AI friend-psychologist providing daily emotional support and advice to a Russian user. Your task is to analyze the user's input and generate a thoughtful, culturally appropriate response in Russian.
 
-    if (response.data.success && response.data.advice) {
-      return response.data.advice;
-    } else {
-      throw new Error('Неверный формат ответа от API');
+Here is the user's input:
+
+<role>{{ROLE}}</role>
+<mood>{{MOOD}}</mood>
+<task>{{TASK}}</task>
+
+Begin by analyzing the user's situation and planning your response. Wrap this process inside <emotional_analysis> tags:
+
+<emotional_analysis>
+1. Analyze the user's role and how it relates to their current mood
+2. Evaluate the main task they're facing and its challenges
+3. Classify the mood, considering arguments for different categories
+4. Consider how the task relates to the user's current emotional state
+5. Consider cultural context (Russian-specific idioms, proverbs, or cultural factors)
+6. Choose an appropriate emoji (🎉, 😊, or 💪)
+7. Prepare a brief analysis of the user's situation
+8. Craft a thought-provoking question for self-reflection
+9. Develop three pieces of tailored advice related to how Yoddle HR platform can help
+10. Create a short, optimistic forecast
+11. Generate 2-3 creative metaphors or analogies related to the user's situation (consider Russian nature, literature, or daily life)
+12. Consider potential tool calls (e.g., for translation or cultural references) and note required parameters
+</emotional_analysis>
+
+After completing your analysis, provide your response in Russian. IMPORTANT: Your response MUST contain exactly 4 paragraphs, separated by empty lines. The total response must not exceed 80 words.
+
+Response structure:
+Paragraph 1: Emotional reaction with emoji (1-2 sentences)
+Paragraph 2: Situation analysis and thought-provoking question (2-3 sentences)
+Paragraph 3: Three specific pieces of advice about how Yoddle can help (3-4 sentences, mention specific platform modules: benefits, gamification, AI analytics)
+Paragraph 4: Optimistic forecast and words of support (1-2 sentences)
+
+Example format (content-free):
+
+Абзац 1
+
+Абзац 2
+
+Абзац 3
+
+Абзац 4
+
+Guidelines for your response:
+- Write in a friendly, empathetic tone
+- Focus on emotions rather than formality
+- Avoid using numbers in your text
+- Use creative metaphors or analogies when appropriate
+- Ensure variety in your responses across different interactions
+- Occasionally include a relevant Russian quote or proverb
+- Mention specific Yoddle platform modules (benefits, gamification, AI analytics) naturally
+
+IMPORTANT: Each response must be UNIQUE. Do not repeat phrases, metaphors, or structures from previous responses.
+
+Vary your approach:
+- Use DIFFERENT emojis, metaphors, Russian proverbs, and cultural references in each response
+- Avoid cliché phrases like "как говорится", "уверен", "справитесь"
+- Vary the emotional tone from enthusiastic to calmly supportive
+- Use different types of support: motivation, empathy, admiration, calmness
+- Vary metaphors: nature (spring, sea, mountains, forest, river, sun, stars), culture (Russian birch, matryoshka, balalaika, samovar), professional (growth, development, achievements, success)
+- Ask DIFFERENT types of questions: reflective, planning, emotional, practical
+
+BEFORE SENDING: Ensure that your response is unique, diverse, and contains exactly 4 paragraphs separated by empty lines. The response must be ready for direct display to the user.
+
+Now, please provide your response in Russian based on this structure and the given user input.`;
+  
+  // Подставляем фактические значения в плейсхолдеры шаблона
+  const filledPrompt = prompt
+    .replace('{{ROLE}}', role || 'HR-специалист')
+    .replace('{{MOOD}}', mood || 'N/A')
+    .replace('{{TASK}}', task || 'N/A');
+
+  // Попытка через Claude API
+  if (config.claudeApiKey) {
+    try {
+      const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 400,
+          messages: [
+            {
+              role: 'user',
+              content: filledPrompt
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': config.claudeApiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          timeout: 10000
+        }
+      );
+
+      return response.data.content[0].text;
+    } catch (error) {
+      console.error('Claude API error:', error.message);
     }
-  } catch (error) {
-    console.error('❌ API error:', error.message);
-    
-    // Fallback: Rule-based ответы
-    return getRuleBasedAdvice({ mood, task, role });
   }
+
+  // Попытка через OpenRouter
+  if (config.openRouterApiKey) {
+    try {
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'anthropic/claude-3-5-haiku-20241022',
+          messages: [
+            {
+              role: 'user',
+              content: filledPrompt
+            }
+          ],
+          max_tokens: 400
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${config.openRouterApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      console.error('OpenRouter API error:', error.message);
+    }
+  }
+
+  // Fallback: Rule-based ответы
+  return getRuleBasedAdvice({ mood, task, role });
 }
 
 // Rule-based советы как fallback

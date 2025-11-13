@@ -747,7 +747,7 @@ bot.action(/stress_(\d+)/, async (ctx) => {
   ctx.session.aiAdvisor.step = 'notes';
   
   await ctx.answerCbQuery();
-  await ctx.editMessageText(
+  const notesMessage = await ctx.editMessageText(
     `✅ Настроение: <b>${ctx.session.aiAdvisor.mood}/10</b>\n` +
     `✅ Энергия: <b>${ctx.session.aiAdvisor.energy}/10</b>\n` +
     `✅ Стресс: <b>${stressValue}/10</b>\n\n` +
@@ -762,6 +762,13 @@ bot.action(/stress_(\d+)/, async (ctx) => {
       ])
     }
   );
+  
+  // Сохраняем ID сообщения с формой для последующего удаления
+  if (notesMessage && notesMessage.message_id) {
+    ctx.session.aiAdvisor.notesMessageId = notesMessage.message_id;
+  } else if (ctx.callbackQuery && ctx.callbackQuery.message) {
+    ctx.session.aiAdvisor.notesMessageId = ctx.callbackQuery.message.message_id;
+  }
 });
 
 // Обработка пропуска заметок
@@ -776,6 +783,11 @@ bot.action('skip_notes', async (ctx) => {
   ctx.session.aiAdvisor.notes = '';
   ctx.session.aiAdvisor.step = 'processing';
   
+  // Сохраняем ID сообщения для удаления
+  if (ctx.callbackQuery && ctx.callbackQuery.message) {
+    ctx.session.aiAdvisor.notesMessageId = ctx.callbackQuery.message.message_id;
+  }
+  
   await ctx.answerCbQuery();
   await processAIAdvisor(ctx);
 });
@@ -787,6 +799,16 @@ bot.on('text', async (ctx) => {
   if (ctx.session?.aiAdvisor?.step === 'notes') {
     ctx.session.aiAdvisor.notes = ctx.message.text;
     ctx.session.aiAdvisor.step = 'processing';
+    
+    // Удаляем предыдущее сообщение с формой ввода заметок
+    const notesMessageId = ctx.session.aiAdvisor.notesMessageId;
+    if (notesMessageId) {
+      try {
+        await ctx.deleteMessage(notesMessageId);
+      } catch (error) {
+        console.log('⚠️ Не удалось удалить сообщение с формой:', error.message);
+      }
+    }
     
     await processAIAdvisor(ctx);
     return;
@@ -826,6 +848,8 @@ bot.on('text', async (ctx) => {
 
 // Функция обработки ИИ-советника и отправки на API
 async function processAIAdvisor(ctx) {
+  let loadingMessageId = null;
+  
   try {
     const { mood, energy, stress, notes, isAdmin } = ctx.session.aiAdvisor || {};
     
@@ -834,15 +858,22 @@ async function processAIAdvisor(ctx) {
       throw new Error('Не все данные заполнены');
     }
     
-    // Отправляем сообщение о обработке
-    await ctx.editMessageText(
-      `✅ Настроение: <b>${mood}/10</b>\n` +
-      `✅ Энергия: <b>${energy}/10</b>\n` +
-      `✅ Стресс: <b>${stress}/10</b>\n` +
-      `${notes ? `✅ Заметки: ${notes.substring(0, 50)}${notes.length > 50 ? '...' : ''}\n\n` : ''}` +
-      '⏳ Анализирую ваши данные и генерирую персональные рекомендации...',
-      { parse_mode: 'HTML' }
-    );
+    // Отправляем сообщение с песочными часами
+    let loadingMessage;
+    try {
+      // Пытаемся отредактировать сообщение, если оно есть (для случая "Пропустить")
+      if (ctx.callbackQuery && ctx.callbackQuery.message) {
+        loadingMessage = await ctx.editMessageText('⏳', { parse_mode: 'HTML' });
+      } else {
+        // Если редактировать нечего, отправляем новое сообщение
+        loadingMessage = await ctx.reply('⏳');
+      }
+    } catch (error) {
+      // Если не удалось отредактировать, отправляем новое сообщение
+      loadingMessage = await ctx.reply('⏳');
+    }
+    
+    loadingMessageId = loadingMessage?.message_id;
     
     try {
       // Отправляем запрос на API для анализа
@@ -906,52 +937,70 @@ async function processAIAdvisor(ctx) {
           }
         }
         
+        // Удаляем сообщение с песочными часами
+        if (loadingMessageId) {
+          try {
+            await ctx.deleteMessage(loadingMessageId);
+          } catch (error) {
+            console.log('⚠️ Не удалось удалить сообщение с песочными часами:', error.message);
+          }
+        }
+        
         // Показываем результат от AI
-        await ctx.editMessageText(
+        await ctx.replyWithHTML(
           `🤖 <b>Персональные рекомендации для вас:</b>\n\n` +
           `${response.data.analysis}${usageInfo}\n\n` +
           `💡 <b>Что дальше?</b>`,
-          {
-            parse_mode: 'HTML',
-            ...Markup.inlineKeyboard([
-              [Markup.button.callback('🔄 Оценить еще раз', 'try_ai')],
-              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-            ])
-          }
+          Markup.inlineKeyboard([
+            [Markup.button.callback('🔄 Оценить еще раз', 'try_ai')],
+            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+          ])
         );
       } else if (response.data && response.data.success === false && response.data.error === 'Достигнут лимит использования ИИ-советника') {
+        // Удаляем сообщение с песочными часами
+        if (loadingMessageId) {
+          try {
+            await ctx.deleteMessage(loadingMessageId);
+          } catch (error) {
+            console.log('⚠️ Не удалось удалить сообщение с песочными часами:', error.message);
+          }
+        }
+        
         // API вернул ошибку лимита
-        await ctx.editMessageText(
+        await ctx.replyWithHTML(
           `⛔ <b>Достигнут лимит использования ИИ-советника</b>\n\n` +
           `${response.data.message || 'Вы использовали ИИ-советника максимальное количество раз сегодня.'}\n\n` +
           `Лимит обновится завтра. Спасибо за использование Yoddle! 💙`,
-          {
-            parse_mode: 'HTML',
-            ...Markup.inlineKeyboard([
-              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-            ])
-          }
+          Markup.inlineKeyboard([
+            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+          ])
         );
       } else {
         throw new Error('API вернул неверный формат данных');
       }
     } catch (apiError) {
+      // Удаляем сообщение с песочными часами при ошибке
+      if (loadingMessageId) {
+        try {
+          await ctx.deleteMessage(loadingMessageId);
+        } catch (error) {
+          console.log('⚠️ Не удалось удалить сообщение с песочными часами:', error.message);
+        }
+      }
+      
       // Обработка ошибки 429 (Too Many Requests) от API
       if (apiError.response && apiError.response.status === 429) {
         const errorData = apiError.response.data || {};
-        await ctx.editMessageText(
+        await ctx.replyWithHTML(
           `⛔ <b>Достигнут лимит использования ИИ-советника</b>\n\n` +
           `${errorData.message || 'Вы использовали ИИ-советника максимальное количество раз сегодня.'}\n\n` +
           `Лимит обновится завтра. Спасибо за использование Yoddle! 💙`,
-          {
-            parse_mode: 'HTML',
-            ...Markup.inlineKeyboard([
-              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-            ])
-          }
+          Markup.inlineKeyboard([
+            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+          ])
         );
         return;
       }
@@ -996,20 +1045,35 @@ async function processAIAdvisor(ctx) {
       
       advice += '💡 Хотите узнать больше о том, как Yoddle может помочь?';
       
-      await ctx.editMessageText(
-        fallbackAdvice + advice,
-        {
-          parse_mode: 'HTML',
-          ...Markup.inlineKeyboard([
-            [Markup.button.callback('🔄 Попробовать еще раз', 'try_ai')],
-            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-          ])
+      // Удаляем сообщение с песочными часами при ошибке
+      if (loadingMessageId) {
+        try {
+          await ctx.deleteMessage(loadingMessageId);
+        } catch (error) {
+          console.log('⚠️ Не удалось удалить сообщение с песочными часами:', error.message);
         }
+      }
+      
+      await ctx.replyWithHTML(
+        fallbackAdvice + advice,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🔄 Попробовать еще раз', 'try_ai')],
+          [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+          [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+        ])
       );
     }
   } catch (error) {
     console.error('❌ Критическая ошибка в processAIAdvisor:', error);
+    
+    // Удаляем сообщение с песочными часами при критической ошибке
+    if (loadingMessageId) {
+      try {
+        await ctx.deleteMessage(loadingMessageId);
+      } catch (deleteError) {
+        console.log('⚠️ Не удалось удалить сообщение с песочными часами:', deleteError.message);
+      }
+    }
     
     // Показываем сообщение об ошибке пользователю
     try {

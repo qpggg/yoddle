@@ -1,0 +1,30 @@
+{
+  "gpt_dalle_prompt": "Soft, premium corporate illustration, B2B style, highly detailed and refined. Abstract representation of HR transformation: AI-powered recruitment with subtle gamified elements, smooth digital onboarding flows, elegant automated HR workflows. Soft gradients, gentle shadows, premium quality rendering. Corporate blue (#0066CC) and white color scheme with soft transitions. Professional, sophisticated, modern. No text, no labels, no people faces, soft clean background, 16:9 ratio, high detail, smooth rendering",
+  
+  "post_context": {
+    "title": "Как одна глобальная компания преобразила HR-службу с помощью AI и автоматизации",
+    "key_points": [
+      "AI-система для рекрутмента с геймифицированными тестами",
+      "Цифровой онбординг и автоматизированные процессы",
+      "Сбор данных о взаимодействиях сотрудников",
+      "Сокращение времени найма",
+      "Переключение HR с админки на стратегию"
+    ]
+  },
+  
+  "visual_elements": {
+    "must_have": [
+      "AI/automation symbols (subtle)",
+      "HR process flows",
+      "Digital transformation elements",
+      "Professional corporate aesthetic"
+    ],
+    "avoid": [
+      "Text overlays",
+      "People faces",
+      "Cluttered design",
+      "Unprofessional colors"
+    ]
+  }
+}
+
