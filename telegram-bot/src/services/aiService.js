@@ -82,7 +82,7 @@ Now, please provide your response in Russian based on this structure and the giv
       const response = await axios.post(
         'https://api.anthropic.com/v1/messages',
         {
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 400,
           messages: [
             {
@@ -113,7 +113,7 @@ Now, please provide your response in Russian based on this structure and the giv
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          model: 'anthropic/claude-3-5-haiku-20241022',
+          model: 'anthropic/claude-sonnet-4-20250514',
           messages: [
             {
               role: 'user',

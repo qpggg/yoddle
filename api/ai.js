@@ -308,7 +308,7 @@ Now, please provide your response in Russian based on this structure and the giv
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 400,
       messages: [
         {
@@ -485,7 +485,7 @@ Provide your response directly without any XML tags.
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
       messages: [
         {
@@ -670,7 +670,7 @@ router.post('/recommendations/generate', async (req, res) => {
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }]
       });
@@ -1047,7 +1047,7 @@ router.post('/generate-daily-insight', async (req, res) => {
     console.log('🤖 Отправляем запрос к Claude AI...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 200,
       messages: [
         {
@@ -1199,7 +1199,7 @@ router.post('/analyze-trends', async (req, res) => {
     console.log('🤖 Анализируем тренды...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
         messages: [
           {
@@ -1408,7 +1408,7 @@ async function generateWeeklyInsight(userId, weekStart, weekEnd) {
 
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 200,
         messages: [
           {
