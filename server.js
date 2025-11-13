@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import newsRouter from './api/news.js';
 import aiRouter from './api/ai.js';
@@ -1593,13 +1594,16 @@ process.on('unhandledRejection', (reason, promise) => {
 }); 
 
 // === SPA fallback: отдавать index.html для всех не-API маршрутов ===
-// NOTE: SPA fallback временно отключен из-за несовместимости паттернов в Express 5
-// import fs from 'fs';
-// app.use((req, res, next) => {
-//   if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
-//   const indexPath = join(__dirname, 'dist', 'index.html');
-//   if (fs.existsSync(indexPath)) {
-//     return res.sendFile(indexPath);
-//   }
-//   return res.status(404).send('Build not found. Run the frontend build to serve the SPA.');
-// });
+app.get('*', (req, res, next) => {
+  // Пропускаем API запросы и статические файлы
+  if (req.path.startsWith('/api') || req.path.startsWith('/public') || req.path.includes('.')) {
+    return next();
+  }
+  
+  const indexPath = join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  
+  return res.status(404).send('Build not found. Run the frontend build to serve the SPA.');
+});

@@ -2,10 +2,12 @@ import { Client } from 'pg';
 
 // Функция для создания клиента БД
 function createDbClient() {
-  const connectionString = process.env.DATABASE_URL || 'postgresql://f1111323_yoddle:Nei3wmOK@host.docker.internal:6543/supa_full?sslmode=disable';
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
   
   return new Client({
-    connectionString: connectionString,
+    connectionString: process.env.DATABASE_URL,
     ssl: false
   });
 }

@@ -29,7 +29,7 @@ Begin by analyzing the user's situation and planning your response. Wrap this pr
 12. Consider potential tool calls (e.g., for translation or cultural references) and note required parameters
 </emotional_analysis>
 
-After completing your analysis, provide your response in Russian. IMPORTANT: Your response MUST contain exactly 4 paragraphs, separated by empty lines. The total response must not exceed 80 words.
+After completing your analysis, provide your response in Russian. IMPORTANT: Your response MUST contain exactly 4 paragraphs, separated by empty lines. The total response should be between 80-100 words to provide comprehensive and helpful advice.
 
 Response structure:
 Paragraph 1: Emotional reaction with emoji (1-2 sentences)
@@ -83,7 +83,7 @@ Now, please provide your response in Russian based on this structure and the giv
         'https://api.anthropic.com/v1/messages',
         {
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 400,
+          max_tokens: 1500,
           messages: [
             {
               role: 'user',
@@ -120,7 +120,7 @@ Now, please provide your response in Russian based on this structure and the giv
               content: filledPrompt
             }
           ],
-          max_tokens: 400
+          max_tokens: 1500
         },
         {
           headers: {
