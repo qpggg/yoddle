@@ -210,7 +210,53 @@ bot.action(/role_(.+)/, async (ctx) => {
 
 // Обработка email (только если мы в процессе онбординга на этапе email)
 bot.on('text', async (ctx) => {
-  // Проверяем, что мы в процессе онбординга и ожидаем email
+  // Приоритет 1: Проверяем, что мы в процессе ИИ-советника и ожидаем заметки
+  console.log('📝 Получено текстовое сообщение (первый обработчик):', {
+    step: ctx.session?.aiAdvisor?.step,
+    onboardingStep: ctx.session?.onboarding?.step,
+    hasSession: !!ctx.session,
+    hasAiAdvisor: !!ctx.session?.aiAdvisor,
+    text: ctx.message.text?.substring(0, 50)
+  });
+  
+  if (ctx.session?.aiAdvisor?.step === 'notes') {
+    console.log('✅ Обрабатываем заметки пользователя (первый обработчик)');
+    
+    // Сохраняем заметки в сессию
+    if (!ctx.session) {
+      ctx.session = {};
+    }
+    if (!ctx.session.aiAdvisor) {
+      ctx.session.aiAdvisor = {};
+    }
+    
+    ctx.session.aiAdvisor.notes = ctx.message.text;
+    ctx.session.aiAdvisor.step = 'processing';
+    
+    console.log('💾 Заметки сохранены в сессию (первый обработчик):', {
+      notes: ctx.session.aiAdvisor.notes?.substring(0, 50),
+      step: ctx.session.aiAdvisor.step,
+      mood: ctx.session.aiAdvisor.mood,
+      energy: ctx.session.aiAdvisor.energy,
+      stress: ctx.session.aiAdvisor.stress
+    });
+    
+    // Удаляем предыдущее сообщение с формой ввода заметок
+    const notesMessageId = ctx.session.aiAdvisor.notesMessageId;
+    if (notesMessageId) {
+      try {
+        await ctx.deleteMessage(notesMessageId);
+      } catch (error) {
+        console.log('⚠️ Не удалось удалить сообщение с формой:', error.message);
+      }
+    }
+    
+    // Запускаем анализ с заметками
+    await processAIAdvisor(ctx);
+    return;
+  }
+  
+  // Приоритет 2: Проверяем, что мы в процессе онбординга и ожидаем email
   if (!ctx.session?.onboarding || ctx.session.onboarding.step !== 'email') {
     return; // Не обрабатываем, если не в процессе онбординга
   }
@@ -780,7 +826,21 @@ bot.action('skip_notes', async (ctx) => {
     ctx.session.aiAdvisor = {};
   }
   
-  ctx.session.aiAdvisor.notes = '';
+  console.log('⏭️ Пользователь нажал "Пропустить" заметки');
+  console.log('📋 Текущие данные сессии перед пропуском:', {
+    mood: ctx.session.aiAdvisor.mood,
+    energy: ctx.session.aiAdvisor.energy,
+    stress: ctx.session.aiAdvisor.stress,
+    notes: ctx.session.aiAdvisor.notes,
+    step: ctx.session.aiAdvisor.step
+  });
+  
+  // Если пользователь уже ввел заметки, сохраняем их, а не очищаем
+  // Только если заметок нет, устанавливаем пустую строку
+  if (!ctx.session.aiAdvisor.notes) {
+    ctx.session.aiAdvisor.notes = '';
+  }
+  
   ctx.session.aiAdvisor.step = 'processing';
   
   // Сохраняем ID сообщения для удаления
@@ -788,73 +848,42 @@ bot.action('skip_notes', async (ctx) => {
     ctx.session.aiAdvisor.notesMessageId = ctx.callbackQuery.message.message_id;
   }
   
+  console.log('💾 Данные сессии после пропуска:', {
+    notes: ctx.session.aiAdvisor.notes,
+    step: ctx.session.aiAdvisor.step
+  });
+  
   await ctx.answerCbQuery();
   await processAIAdvisor(ctx);
 });
 
-// Обработка email (только если мы в процессе онбординга на этапе email)
-// Обработка текстовых сообщений (email для онбординга или заметки для ИИ-советника)
-bot.on('text', async (ctx) => {
-  // Приоритет 1: Проверяем, что мы в процессе ИИ-советника и ожидаем заметки
-  if (ctx.session?.aiAdvisor?.step === 'notes') {
-    ctx.session.aiAdvisor.notes = ctx.message.text;
-    ctx.session.aiAdvisor.step = 'processing';
-    
-    // Удаляем предыдущее сообщение с формой ввода заметок
-    const notesMessageId = ctx.session.aiAdvisor.notesMessageId;
-    if (notesMessageId) {
-      try {
-        await ctx.deleteMessage(notesMessageId);
-      } catch (error) {
-        console.log('⚠️ Не удалось удалить сообщение с формой:', error.message);
-      }
-    }
-    
-    await processAIAdvisor(ctx);
-    return;
-  }
-  
-  // Приоритет 2: Проверяем, что мы в процессе онбординга и ожидаем email
-  if (ctx.session?.onboarding?.step === 'email') {
-    const text = ctx.message.text.trim();
-    
-    // Простая проверка email
-    if (text.includes('@') && text.includes('.')) {
-      ctx.session.onboarding.email = text;
-      ctx.session.onboarding.step = 'interests';
-      ctx.session.onboarding.interests = [];
-      
-      await ctx.replyWithHTML(
-        '✅ Email сохранен!\n\n' +
-        '<b>Что вас интересует в Yoddle?</b>\n' +
-        'Выберите один или несколько пунктов:',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('💰 Корпоративные льготы', 'interest_benefits')],
-          [Markup.button.callback('🤖 ИИ-рекомендации', 'interest_ai')],
-          [Markup.button.callback('🎮 Геймификация', 'interest_gamification')],
-          [Markup.button.callback('📊 Аналитика и отчетность', 'interest_analytics')],
-          [Markup.button.callback('✅ Завершить', 'interest_done')],
-          [Markup.button.callback('⏭️ Пропустить', 'interest_skip')]
-        ])
-      );
-    } else {
-      await ctx.reply('❌ Некорректный email. Попробуйте еще раз:');
-    }
-    return;
-  }
-  
-  // Если не в процессе онбординга или ИИ-советника, игнорируем сообщение
-});
+// Второй обработчик текста удален - теперь все обрабатывается в первом обработчике выше
 
 // Функция обработки ИИ-советника и отправки на API
 async function processAIAdvisor(ctx) {
   let loadingMessageId = null;
   
   try {
-    const { mood, energy, stress, notes, isAdmin } = ctx.session.aiAdvisor || {};
+    // Получаем данные из сессии напрямую, чтобы убедиться что заметки не потерялись
+    const aiAdvisor = ctx.session?.aiAdvisor || {};
+    const mood = aiAdvisor.mood;
+    const energy = aiAdvisor.energy;
+    const stress = aiAdvisor.stress;
+    const notes = aiAdvisor.notes || '';
+    const isAdmin = aiAdvisor.isAdmin;
+    
+    console.log('🔍 processAIAdvisor вызван с данными:', {
+      mood,
+      energy,
+      stress,
+      notes: notes ? notes.substring(0, 50) + '...' : '(пусто)',
+      step: aiAdvisor.step,
+      hasNotes: !!notes
+    });
     
     // Проверяем, что все необходимые данные есть
     if (!mood || !energy || stress === undefined) {
+      console.error('❌ Не все данные заполнены:', { mood, energy, stress });
       throw new Error('Не все данные заполнены');
     }
     
@@ -887,11 +916,22 @@ async function processAIAdvisor(ctx) {
         userId: ctx.from.id
       });
       
+      // Убеждаемся, что заметки передаются правильно
+      const notesToSend = notes || '';
+      console.log('📤 Отправка данных в API:', {
+        mood,
+        energy,
+        stressLevel: stress,
+        notes: notesToSend ? notesToSend.substring(0, 50) + '...' : '(пусто)',
+        notesLength: notesToSend.length,
+        userId: ctx.from.id
+      });
+      
       const response = await axios.post(apiUrl, {
         mood: mood,
         energy: energy, // Преобразуем в activities для совместимости с API
         stressLevel: stress,
-        notes: notes || '',
+        notes: notesToSend,
         activities: [], // Пустой массив, так как мы не собираем активности
         userId: ctx.from.id // Используем telegram ID как userId
       }, {
