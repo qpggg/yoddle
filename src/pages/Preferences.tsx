@@ -558,55 +558,6 @@ const Preferences: React.FC = () => {
     }
   };
 
-  // Генерация объяснений на основе ответов теста
-  const generateExplanations = (recommendation: BenefitRecommendation, userAnswers: string[]): string[] => {
-    const explanations: string[] = [];
-    
-    // Анализируем ответы и связываем с рекомендацией
-    userAnswers.forEach(answer => {
-      if (answer.includes('здоровье') || answer.includes('Здоровье')) {
-        if (recommendation.category === 'Здоровье' || recommendation.title.includes('здоров')) {
-          explanations.push('здоровье ↑');
-        }
-      }
-      if (answer.includes('спорт') || answer.includes('фитнес')) {
-        if (recommendation.title.includes('спорт') || recommendation.title.includes('фитнес')) {
-          explanations.push('спорт ↑');
-        }
-      }
-      if (answer.includes('стресс') || answer.includes('выгорание')) {
-        if (recommendation.title.includes('выгорание') || recommendation.title.includes('психолог')) {
-          explanations.push('стресс ↓');
-        }
-      }
-      if (answer.includes('обучение') || answer.includes('развитие')) {
-        if (recommendation.category === 'Обучение') {
-          explanations.push('развитие ↑');
-        }
-      }
-    });
-
-    // Добавляем объяснения на основе свободных предпочтений
-    if (wantTags.length > 0) {
-      wantTags.forEach(tag => {
-        if (recommendation.title.toLowerCase().includes(tag.toLowerCase()) || 
-            recommendation.description.toLowerCase().includes(tag.toLowerCase())) {
-          explanations.push(`${tag} ↑`);
-        }
-      });
-    }
-
-    // Если нет специфических объяснений, добавляем общие
-    if (explanations.length === 0) {
-      explanations.push('тест ↑');
-      if (recommendation.category === 'Здоровье') explanations.push('ЗОЖ');
-      if (recommendation.category === 'Обучение') explanations.push('навыки +');
-      if (recommendation.category === 'Психология') explanations.push('баланс');
-    }
-
-    return explanations.slice(0, 3); // Максимум 3 объяснения
-  };
-
   const resetTest = () => {
     setCurrentQuestion(0);
     setAnswers([]);
