@@ -5,6 +5,14 @@ import Anthropic from '@anthropic-ai/sdk';
 const router = express.Router();
 
 // Инициализация Claude API
+// Диагностика: проверяем наличие API ключа
+if (!process.env.CLAUDE_API_KEY) {
+  console.error('❌ CLAUDE_API_KEY не установлен! AI функции не будут работать.');
+  console.error('💡 Установите переменную окружения CLAUDE_API_KEY в PM2 или .env файле');
+} else {
+  console.log('✅ CLAUDE_API_KEY загружен (первые 10 символов):', process.env.CLAUDE_API_KEY.substring(0, 10) + '...');
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
   // Позволяет направлять трафик через внешний прокси (например, Cloudflare Worker)

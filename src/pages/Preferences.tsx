@@ -558,61 +558,6 @@ const Preferences: React.FC = () => {
     }
   };
 
-  const getRecommendations = (): BenefitRecommendation[] => {
-    // Используем ту же логику, что и в saveRecommendationsToDb
-    const benefitScores: { [key: number]: number } = {};
-    
-    answers.forEach(answer => {
-      const benefitIds = answerToBenefitMapping[answer] || [];
-      benefitIds.forEach(benefitId => {
-        benefitScores[benefitId] = (benefitScores[benefitId] || 0) + 1;
-      });
-    });
-
-    // Сортируем льготы по очкам и берем топ-3
-    const recommendedBenefitIds = Object.entries(benefitScores)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3)
-      .map(([benefitId]) => parseInt(benefitId));
-
-    // Создаем заглушки рекомендаций на основе benefit_id
-    // В реальном случае здесь должен быть запрос к БД для получения названий
-    const mockBenefitNames: { [key: number]: { name: string; description: string; category: string } } = {
-      1: { name: 'Профилактика выгорания', description: 'Программы по предотвращению эмоционального выгорания', category: 'Здоровье' },
-      2: { name: 'Режим дня и баланс работы', description: 'Помощь в организации рабочего времени', category: 'Обучение' },
-      3: { name: 'Правильное питание', description: 'Консультации по здоровому питанию', category: 'Здоровье' },
-      4: { name: 'Психологическая поддержка', description: 'Индивидуальные консультации психолога', category: 'Психология' },
-      5: { name: 'Массаж', description: 'Релаксационные массажные процедуры', category: 'Отдых' },
-      6: { name: 'Здоровые привычки', description: 'Программы формирования здорового образа жизни', category: 'Здоровье' },
-      7: { name: 'Командные виды спорта', description: 'Корпоративные спортивные мероприятия', category: 'Спорт' },
-      8: { name: 'Фитнес-программы', description: 'Абонементы в спортивные залы', category: 'Спорт' },
-      9: { name: 'Тимбилдинг через спорт', description: 'Командообразующие спортивные активности', category: 'Спорт' },
-      10: { name: 'Soft-skills тренинги', description: 'Развитие личностных навыков', category: 'Обучение' }
-    };
-
-    return recommendedBenefitIds.map(benefitId => {
-      const benefit = mockBenefitNames[benefitId] || { name: 'Неизвестная льгота', description: '', category: 'Здоровье' };
-      const staticRec = {
-        category: benefit.name,
-        icon: categoryIcons[benefit.category] || <FaBook />,
-        title: benefit.name,
-        description: benefit.description,
-        examples: benefitExamples[benefitId] || ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
-        benefit_id: benefitId,
-        // Обязательные AI поля
-        explanations: ['тест ↑'],
-        confidence: 0.75,
-        score: 0.75,
-        algorithm_variant: 'static'
-      };
-      
-      // Генерируем объяснения для статической рекомендации
-      staticRec.explanations = generateExplanations(staticRec, answers);
-      
-      return staticRec;
-    });
-  };
-
   // Генерация объяснений на основе ответов теста
   const generateExplanations = (recommendation: BenefitRecommendation, userAnswers: string[]): string[] => {
     const explanations: string[] = [];

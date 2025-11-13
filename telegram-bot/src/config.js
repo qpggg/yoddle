@@ -64,3 +64,13 @@ module.exports = {
   isDevelopment: process.env.NODE_ENV === 'development',
 };
 
+// Диагностика: проверяем наличие AI ключей
+console.log('🔍 Telegram Bot AI Config:');
+console.log('  CLAUDE_API_KEY:', module.exports.claudeApiKey ? `✅ Set (${module.exports.claudeApiKey.substring(0, 10)}...)` : '❌ Missing');
+console.log('  OPENROUTER_API_KEY:', module.exports.openRouterApiKey ? `✅ Set (${module.exports.openRouterApiKey.substring(0, 10)}...)` : '❌ Missing');
+
+if (!module.exports.claudeApiKey && !module.exports.openRouterApiKey) {
+  console.error('⚠️ ВНИМАНИЕ: Ни один AI API ключ не установлен! Telegram бот будет использовать только rule-based ответы.');
+  console.error('💡 Установите CLAUDE_API_KEY или OPENROUTER_API_KEY в переменных окружения.');
+}
+
