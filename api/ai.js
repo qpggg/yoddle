@@ -565,8 +565,10 @@ Provide your response directly without any XML tags.
 // POST /api/ai/recommendations/generate — гибридная генерация (тест + free-form + сигналы) с использованием Claude
 router.post('/recommendations/generate', async (req, res) => {
   try {
-    const userId = req.body.user_id || req.body.userId || 1;
+    const userId = parseInt(req.body.user_id || req.body.userId || 1, 10);
     const variant = (req.query.variant || 'hybrid_v1').toString();
+    
+    console.log(`🚀 Генерация гибридных рекомендаций для пользователя ${userId}, вариант: ${variant}`);
 
     // 1) Загружаем свободные предпочтения (последнюю запись)
     const prefQuery = `
@@ -575,7 +577,21 @@ router.post('/recommendations/generate', async (req, res) => {
       ORDER BY timestamp DESC LIMIT 1
     `;
     const prefRes = await pool.query(prefQuery, [userId]);
-    const prefs = prefRes.rows[0]?.data || { tags: [], avoid: [], free_text: '', constraints: {} };
+    
+    // Безопасно парсим предпочтения
+    let prefs = { tags: [], avoid: [], free_text: '', constraints: {} };
+    if (prefRes.rows[0]?.data) {
+      const prefData = prefRes.rows[0].data;
+      if (typeof prefData === 'object') {
+        prefs = prefData;
+      } else {
+        try {
+          prefs = JSON.parse(prefData);
+        } catch (e) {
+          console.warn('⚠️ Не удалось распарсить предпочтения:', e.message);
+        }
+      }
+    }
 
     // 2) Загружаем недавние сигналы (14 дней)
     const signalsQuery = `
@@ -584,8 +600,30 @@ router.post('/recommendations/generate', async (req, res) => {
       ORDER BY timestamp DESC
     `;
     const sigRes = await pool.query(signalsQuery, [userId]);
-    const moods = sigRes.rows.filter(r => r.type === 'mood').map(r => r.data).filter(Boolean);
-    const acts = sigRes.rows.filter(r => r.type === 'activity').map(r => r.data).filter(Boolean);
+    
+    // Безопасно парсим данные из БД (могут быть JSON строками или объектами)
+    const parseSignalData = (data) => {
+      if (!data) return null;
+      if (typeof data === 'object') return data;
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.warn('⚠️ Не удалось распарсить данные сигнала:', e.message);
+        return null;
+      }
+    };
+    
+    const moods = sigRes.rows
+      .filter(r => r.type === 'mood')
+      .map(r => parseSignalData(r.data))
+      .filter(Boolean);
+    
+    const acts = sigRes.rows
+      .filter(r => r.type === 'activity')
+      .map(r => parseSignalData(r.data))
+      .filter(Boolean);
+    
+    console.log(`📊 Загружено ${moods.length} записей настроения и ${acts.length} активностей для пользователя ${userId}`);
 
     // 3) Загружаем текущий список льгот для маппинга (id, name, category)
     const benefitsQuery = `SELECT id, name, category FROM benefits`;
@@ -676,6 +714,8 @@ router.post('/recommendations/generate', async (req, res) => {
 - ai_score в 0..1, confidence в 0..1.
 - Только JSON, без текста вне JSON.`;
 
+    console.log(`📝 Отправляем промпт в Claude для генерации рекомендаций (длина: ${prompt.length} символов)`);
+    
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -684,15 +724,26 @@ router.post('/recommendations/generate', async (req, res) => {
       });
     });
 
+    console.log(`📥 Получен ответ от Claude (длина: ${message.content?.[0]?.text?.length || 0} символов)`);
+    
     let parsed;
     try {
       parsed = JSON.parse(message.content?.[0]?.text || '{}');
+      console.log(`✅ JSON успешно распарсен, найдено кандидатов: ${parsed?.candidates?.length || 0}`);
     } catch (e) {
+      console.warn('⚠️ Ошибка парсинга JSON, пытаемся очистить и распарсить:', e.message);
       // В случае нарушения формата пытаемся очистить и распарсить
-      try { parsed = JSON.parse(cleanClaudeOutput(message.content?.[0]?.text || '{}')); } catch (_) { parsed = { candidates: [] }; }
+      try { 
+        parsed = JSON.parse(cleanClaudeOutput(message.content?.[0]?.text || '{}')); 
+        console.log(`✅ JSON распарсен после очистки, найдено кандидатов: ${parsed?.candidates?.length || 0}`);
+      } catch (e2) { 
+        console.error('❌ Не удалось распарсить JSON даже после очистки:', e2.message);
+        parsed = { candidates: [] }; 
+      }
     }
 
     const candidates = Array.isArray(parsed?.candidates) ? parsed.candidates.slice(0,3) : [];
+    console.log(`🎯 Обрабатываем ${candidates.length} кандидатов от AI`);
 
     // 6) Подсчет итогового score и подготовка записей к сохранению
     const items = candidates.map((c) => {
@@ -745,9 +796,11 @@ router.post('/recommendations/generate', async (req, res) => {
     }
 
     // Очищаем предыдущие рекомендации пользователя (только variant=hybrid_v1)
+    console.log(`🗑️ Удаляем старые рекомендации для пользователя ${userId}`);
     await pool.query(`DELETE FROM benefit_recommendations WHERE user_id = $1`, [userId]);
 
     // Сохраняем новые рекомендации с расширенными полями
+    console.log(`💾 Сохраняем ${top.length} новых рекомендаций в БД`);
     for (let i = 0; i < top.length; i++) {
       const t = top[i];
       const insert = `
@@ -766,10 +819,16 @@ router.post('/recommendations/generate', async (req, res) => {
       ]);
     }
 
+    console.log(`✅ Генерация гибридных рекомендаций завершена успешно для пользователя ${userId}`);
     res.json({ success: true, variant, generatedAt: new Date().toISOString(), saved: top.length });
   } catch (error) {
-    console.error('Hybrid recommendations generation error:', error);
-    res.status(500).json({ success: false, error: 'Ошибка генерации рекомендаций' });
+    console.error('❌ Hybrid recommendations generation error:', error);
+    console.error('📋 Детали ошибки:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.body.user_id || req.body.userId
+    });
+    res.status(500).json({ success: false, error: 'Ошибка генерации рекомендаций: ' + error.message });
   }
 });
 
@@ -778,7 +837,7 @@ router.post('/recommendations/generate', async (req, res) => {
 router.post('/generate-personal-recommendations', async (req, res) => {
   try {
     const { userId } = req.body;
-    const targetUserId = userId || 1;
+    const targetUserId = parseInt(userId || 1, 10);
 
     console.log(`🎯 Генерация персональных рекомендаций для пользователя ${targetUserId}`);
 
@@ -798,37 +857,48 @@ router.post('/generate-personal-recommendations', async (req, res) => {
 
     const userDataResult = await pool.query(userDataQuery, [targetUserId]);
     
+    console.log(`📊 Загружено ${userDataResult.rows.length} записей сигналов для пользователя ${targetUserId}`);
+    
     if (userDataResult.rows.length === 0) {
+      console.log(`⚠️ Нет данных для пользователя ${targetUserId}, возвращаем сообщение по умолчанию`);
       return res.json({
         success: true,
         recommendations: ['Пока недостаточно данных для персонализированных рекомендаций. Продолжайте вести дневник!']
       });
     }
 
+    // Безопасно парсим данные из БД
+    const parseSignalData = (data) => {
+      if (!data) return null;
+      if (typeof data === 'object') return data;
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.warn('⚠️ Не удалось распарсить данные сигнала в generate-personal-recommendations:', e.message);
+        return null;
+      }
+    };
+
     // Анализируем данные
     const moodData = userDataResult.rows
       .filter(row => row.type === 'mood')
       .map(row => {
-        try {
-          const data = JSON.parse(row.data);
-          return { mood: data.mood, stress: data.stressLevel, timestamp: row.timestamp };
-        } catch (e) {
-          return null;
-        }
+        const data = parseSignalData(row.data);
+        if (!data) return null;
+        return { mood: data.mood, stress: data.stressLevel, timestamp: row.timestamp };
       })
       .filter(Boolean);
 
     const activityData = userDataResult.rows
       .filter(row => row.type === 'activity')
       .map(row => {
-        try {
-          const data = JSON.parse(row.data);
-          return { activity: data.activity, success: data.success, duration: data.duration };
-        } catch (e) {
-          return null;
-        }
+        const data = parseSignalData(row.data);
+        if (!data) return null;
+        return { activity: data.activity, success: data.success, duration: data.duration };
       })
       .filter(Boolean);
+    
+    console.log(`📈 Обработано ${moodData.length} записей настроения и ${activityData.length} активностей`);
 
     const prompt = `
       Ты - AI-эксперт по продуктивности и личному развитию. Проанализируй данные пользователя и создай 5 персонализированных рекомендаций.
@@ -863,7 +933,7 @@ router.post('/generate-personal-recommendations', async (req, res) => {
     console.log('🤖 Генерируем персональные рекомендации...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-20250219',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
         messages: [
           {
@@ -891,6 +961,7 @@ router.post('/generate-personal-recommendations', async (req, res) => {
       new Date()
     ]);
 
+    console.log(`✅ Персональные рекомендации успешно сгенерированы для пользователя ${targetUserId}`);
     res.json({
       success: true,
       recommendations: recommendations
@@ -898,9 +969,14 @@ router.post('/generate-personal-recommendations', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Generate personal recommendations error:', error);
+    console.error('📋 Детали ошибки:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.body.userId
+    });
     res.status(500).json({
       success: false,
-      error: 'Ошибка генерации персональных рекомендаций'
+      error: 'Ошибка генерации персональных рекомендаций: ' + error.message
     });
   }
 });

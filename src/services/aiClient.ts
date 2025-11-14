@@ -68,7 +68,32 @@ class AIClient {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+    // В production используем относительные пути (тот же домен)
+    // В dev режиме Vite proxy обработает /api запросы
+    const envApiUrl = (import.meta as any).env?.VITE_API_URL;
+    const isDev = import.meta.env.DEV;
+    const isProd = import.meta.env.PROD;
+    
+    if (envApiUrl) {
+      // Если явно указан URL, используем его (приоритет)
+      this.baseURL = envApiUrl;
+      console.log('🔧 AI Client: Используем VITE_API_URL из env:', envApiUrl);
+    } else if (isDev) {
+      // В dev режиме используем localhost (Vite proxy обработает)
+      this.baseURL = 'http://localhost:3001';
+      console.log('🔧 AI Client: Dev режим, используем localhost:3001');
+    } else {
+      // В production используем относительные пути (пустая строка = тот же домен)
+      this.baseURL = '';
+      console.log('🔧 AI Client: Production режим, используем относительные пути');
+    }
+    
+    console.log('🔧 AI Client baseURL:', this.baseURL || '(относительные пути)', {
+      isDev,
+      isProd,
+      hasEnvUrl: !!envApiUrl,
+      currentHost: typeof window !== 'undefined' ? window.location.host : 'N/A'
+    });
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
