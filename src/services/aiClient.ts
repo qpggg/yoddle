@@ -73,26 +73,30 @@ class AIClient {
     const envApiUrl = (import.meta as any).env?.VITE_API_URL;
     const mode = (import.meta as any).env?.MODE || 'production';
     const isDev = mode === 'development';
-    const isProd = mode === 'production';
+    
+    // Определяем hostname для более надежной проверки
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     
     if (envApiUrl) {
       // Если явно указан URL, используем его (приоритет)
       this.baseURL = envApiUrl;
       console.log('🔧 AI Client: Используем VITE_API_URL из env:', envApiUrl);
-    } else if (isDev) {
-      // В dev режиме используем localhost (Vite proxy обработает)
+    } else if (isDev && isLocalhost) {
+      // Только в dev режиме И на localhost используем localhost:3001 (Vite proxy обработает)
       this.baseURL = 'http://localhost:3001';
-      console.log('🔧 AI Client: Dev режим, используем localhost:3001');
+      console.log('🔧 AI Client: Dev режим на localhost, используем localhost:3001');
     } else {
-      // В production используем относительные пути (пустая строка = тот же домен)
+      // Во всех остальных случаях (production или не localhost) используем относительные пути
       this.baseURL = '';
-      console.log('🔧 AI Client: Production режим, используем относительные пути');
+      console.log('🔧 AI Client: Используем относительные пути (production или не localhost)');
     }
     
     console.log('🔧 AI Client baseURL:', this.baseURL || '(относительные пути)', {
       mode,
       isDev,
-      isProd,
+      isLocalhost,
+      hostname,
       hasEnvUrl: !!envApiUrl,
       currentHost: typeof window !== 'undefined' ? window.location.host : 'N/A'
     });
