@@ -71,8 +71,9 @@ class AIClient {
     // В production используем относительные пути (тот же домен)
     // В dev режиме Vite proxy обработает /api запросы
     const envApiUrl = (import.meta as any).env?.VITE_API_URL;
-    const isDev = import.meta.env.DEV;
-    const isProd = import.meta.env.PROD;
+    const mode = (import.meta as any).env?.MODE || 'production';
+    const isDev = mode === 'development';
+    const isProd = mode === 'production';
     
     if (envApiUrl) {
       // Если явно указан URL, используем его (приоритет)
@@ -89,6 +90,7 @@ class AIClient {
     }
     
     console.log('🔧 AI Client baseURL:', this.baseURL || '(относительные пути)', {
+      mode,
       isDev,
       isProd,
       hasEnvUrl: !!envApiUrl,
