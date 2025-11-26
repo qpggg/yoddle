@@ -1,0 +1,29 @@
+# Команды для восстановления Telegram-бота (скопируйте и выполните на сервере)
+
+# 1. Подключитесь к серверу и перейдите в проект
+cd /var/www/yoddle  # или cd ~/yoddle1
+
+# 2. Проверьте статус PM2
+pm2 status
+
+# 3. Если процесс yoddle-tg существует, перезапустите его
+pm2 restart yoddle-tg
+
+# 4. Если процесса нет, запустите заново
+cd telegram-bot
+pm2 start ecosystem.config.js
+pm2 save
+
+# 5. Проверьте логи
+pm2 logs yoddle-tg --lines 50
+
+# 6. Если бот не работает, проверьте .env файл
+cat .env | grep BOT_TOKEN
+
+# 7. Если нужно полностью переустановить
+pm2 delete yoddle-tg
+cd telegram-bot
+npm install
+pm2 start ecosystem.config.js
+pm2 save
+

@@ -696,9 +696,28 @@ bot.action('try_ai', async (ctx) => {
   const userId = ctx.from.id;
   const userIsAdmin = isAdmin(userId);
   
-  // НЕ проверяем лимит ДО обращения к API - пусть API сам это делает
-  // API сервер сохраняет данные в БД и может проверить лимит там
-  // Это избегает проблем с подключением к БД в боте
+  // Проверяем лимит использования ПЕРЕД входом в AI советник (максимум 3 запроса в день)
+  if (!userIsAdmin) {
+    try {
+      const usageCheck = await checkAIUsageLimit(userId, false);
+      if (usageCheck && !usageCheck.allowed) {
+        await ctx.replyWithHTML(
+          `⛔ <b>Достигнут лимит использования ИИ-советника</b>\n\n` +
+          `Вы использовали ИИ-советника <b>${usageCheck.count}/${usageCheck.limit}</b> раз сегодня.\n\n` +
+          `Лимит обновится завтра. Вы сможете получить новые рекомендации с 00:00.\n\n` +
+          `💡 <b>Хотите записаться на демо?</b>`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+          ])
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('⚠️ Ошибка при проверке лимита (продолжаем работу):', error.message);
+      // Продолжаем работу, даже если проверка лимита не удалась (API также проверит лимит)
+    }
+  }
   
   // Инициализируем session для ИИ-советника
   if (!ctx.session) {
@@ -833,15 +852,15 @@ bot.action('skip_notes', async (ctx) => {
     stress: ctx.session.aiAdvisor.stress,
     notes: ctx.session.aiAdvisor.notes,
     step: ctx.session.aiAdvisor.step
-  });
-  
+});
+
   // Если пользователь уже ввел заметки, сохраняем их, а не очищаем
   // Только если заметок нет, устанавливаем пустую строку
   if (!ctx.session.aiAdvisor.notes) {
     ctx.session.aiAdvisor.notes = '';
   }
   
-  ctx.session.aiAdvisor.step = 'processing';
+    ctx.session.aiAdvisor.step = 'processing';
   
   // Сохраняем ID сообщения для удаления
   if (ctx.callbackQuery && ctx.callbackQuery.message) {
@@ -885,6 +904,29 @@ async function processAIAdvisor(ctx) {
     if (!mood || !energy || stress === undefined) {
       console.error('❌ Не все данные заполнены:', { mood, energy, stress });
       throw new Error('Не все данные заполнены');
+    }
+    
+    // Проверяем лимит использования ПЕРЕД отправкой запроса к API
+    if (!isAdmin && ctx.from && ctx.from.id) {
+      try {
+        const usageCheck = await checkAIUsageLimit(ctx.from.id, false);
+        if (usageCheck && !usageCheck.allowed) {
+          await ctx.replyWithHTML(
+            `⛔ <b>Достигнут лимит использования ИИ-советника</b>\n\n` +
+            `Вы использовали ИИ-советника <b>${usageCheck.count}/${usageCheck.limit}</b> раз сегодня.\n\n` +
+            `Лимит обновится завтра. Вы сможете получить новые рекомендации с 00:00.\n\n` +
+            `💡 <b>Что дальше?</b>`,
+            Markup.inlineKeyboard([
+              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+            ])
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('⚠️ Ошибка при проверке лимита (продолжаем работу):', error.message);
+        // Продолжаем работу, даже если проверка лимита не удалась (API также проверит лимит)
+      }
     }
     
     // Отправляем сообщение с песочными часами
@@ -992,10 +1034,10 @@ async function processAIAdvisor(ctx) {
           `${response.data.analysis}${usageInfo}\n\n` +
           `💡 <b>Что дальше?</b>`,
           Markup.inlineKeyboard([
-            [Markup.button.callback('🔄 Оценить еще раз', 'try_ai')],
-            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-          ])
+              [Markup.button.callback('🔄 Оценить еще раз', 'try_ai')],
+              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+            ])
         );
       } else if (response.data && response.data.success === false && response.data.error === 'Достигнут лимит использования ИИ-советника') {
         // Удаляем сообщение с песочными часами
@@ -1013,9 +1055,9 @@ async function processAIAdvisor(ctx) {
           `${response.data.message || 'Вы использовали ИИ-советника максимальное количество раз сегодня.'}\n\n` +
           `Лимит обновится завтра. Спасибо за использование Yoddle! 💙`,
           Markup.inlineKeyboard([
-            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-          ])
+              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+            ])
         );
       } else {
         throw new Error('API вернул неверный формат данных');
@@ -1038,9 +1080,9 @@ async function processAIAdvisor(ctx) {
           `${errorData.message || 'Вы использовали ИИ-советника максимальное количество раз сегодня.'}\n\n` +
           `Лимит обновится завтра. Спасибо за использование Yoddle! 💙`,
           Markup.inlineKeyboard([
-            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-          ])
+              [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+              [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+            ])
         );
         return;
       }
@@ -1097,10 +1139,10 @@ async function processAIAdvisor(ctx) {
       await ctx.replyWithHTML(
         fallbackAdvice + advice,
         Markup.inlineKeyboard([
-          [Markup.button.callback('🔄 Попробовать еще раз', 'try_ai')],
-          [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
-          [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
-        ])
+            [Markup.button.callback('🔄 Попробовать еще раз', 'try_ai')],
+            [Markup.button.callback('📞 Записаться на демо', 'schedule_demo')],
+            [Markup.button.callback('⬅️ Главное меню', 'menu_main')]
+          ])
       );
     }
   } catch (error) {

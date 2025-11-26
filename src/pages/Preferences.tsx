@@ -1080,19 +1080,19 @@ const Preferences: React.FC = () => {
                 </Typography>
               </Box>
             ) : (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 3,
-                  justifyContent: 'center',
-                  mb: 6
-                }}>
-                  {recommendations.map((rec) => (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 3,
+                justifyContent: 'center',
+                mb: 6
+              }}>
+                {recommendations.map((rec) => (
                   <motion.div
                     key={rec.category}
                     variants={itemVariants}

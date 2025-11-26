@@ -159,46 +159,48 @@ async function getAllLeads() {
   }
 }
 
-// Проверка лимита использования ИИ-советника (3 раза в день для обычных пользователей)
+// Проверка лимита использования ИИ-советника (максимум 3 раза в день для обычных пользователей)
 async function checkAIUsageLimit(telegramId, isAdmin = false) {
-  // Всегда возвращаем объект, даже при ошибке
-  const defaultResult = { allowed: true, count: 0, limit: 3 };
+  // Лимит строго 3 запроса в день
+  const MAX_REQUESTS_PER_DAY = 3;
+  const defaultResult = { allowed: true, count: 0, limit: MAX_REQUESTS_PER_DAY };
   
   if (isAdmin) {
     return { allowed: true, count: 0, limit: Infinity };
   }
 
   if (!pool) {
-    // Если БД недоступна, используем session как fallback
+    // Если БД недоступна, разрешаем использование (API также проверит лимит)
     return defaultResult;
   }
 
   try {
     // Получаем количество использований за сегодня
+    // Используем ту же логику, что и в API: проверяем по telegram_id в поле data
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const query = `
       SELECT COUNT(*) as count 
       FROM ai_signals 
-      WHERE user_id = $1 
+      WHERE user_id = 1
       AND type = 'mood' 
-      AND timestamp >= $2
+      AND timestamp >= $1
+      AND data->>'telegram_id' = $2
     `;
     
-    const result = await pool.query(query, [telegramId, today]);
+    const result = await pool.query(query, [today, String(telegramId)]);
     
     if (!result || !result.rows || !result.rows[0]) {
       return defaultResult;
     }
     
     const count = parseInt(result.rows[0].count) || 0;
-    const limit = 3;
     
     return {
-      allowed: count < limit,
+      allowed: count < MAX_REQUESTS_PER_DAY,
       count: count,
-      limit: limit
+      limit: MAX_REQUESTS_PER_DAY
     };
   } catch (error) {
     // Логируем только сообщение ошибки, без полного объекта
@@ -217,7 +219,7 @@ async function checkAIUsageLimit(telegramId, isAdmin = false) {
     }
     
     console.error('❌ Error checking AI usage limit:', errorMessage);
-    // В случае ошибки разрешаем использование (лучше позволить использовать, чем заблокировать из-за ошибки БД)
+    // В случае ошибки разрешаем использование (API также проверит лимит)
     return defaultResult;
   }
 }
