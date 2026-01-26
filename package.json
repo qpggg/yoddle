@@ -12,10 +12,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "migrate-passwords": "node migrate_passwords.js",
-    "migrate-passwords-secure": "node migrate_passwords_secure.js",
+    "migrate-passwords": "node scripts/utils/migrate_passwords.js",
+    "migrate-passwords-secure": "node scripts/utils/migrate_passwords_secure.js",
     "test-fixes": "node test_fixes.js",
     "check-db": "node check_db_fixes.js",
+    "check-db-connection": "node scripts/utils/check_db_connection.js",
     "test-login": "node test_login.js",
     "test-speed": "node test_login_speed.js",
     "test-simple": "node test_login_simple.js",
@@ -49,7 +50,8 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "6.22.1",
     "react-transition-group": "4.4.5",
-    "resend": "^6.0.1"
+    "resend": "^6.0.1",
+    "xtend": "^4.0.2"
   },
   "devDependencies": {
     "@types/react": "18.2.55",

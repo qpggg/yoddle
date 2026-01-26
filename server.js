@@ -1542,6 +1542,12 @@ app.use('/public', express.static(path.join(__dirname, 'public'), {
   extensions: ['html', 'htm', 'json', 'xml', 'txt', 'sql', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'css', 'js']
 }));
 
+// Раздача логотипов из public/logos
+app.use('/logos', express.static(path.join(__dirname, 'public/logos'), {
+  maxAge: '1y', // Кэширование на год
+  etag: true
+}));
+
 // === SPA fallback: отдавать index.html для всех не-API маршрутов ===
 // ВАЖНО: Этот middleware должен быть ПОСЛЕДНИМ, после всех API роутов и статики
 app.use((req, res, next) => {

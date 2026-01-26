@@ -1,0 +1,38 @@
+# ============================================
+# КОМАНДЫ ДЛЯ ПЕРЕЗАПУСКА TELEGRAM БОТА НА СЕРВЕРЕ
+# ============================================
+
+# 1. ПЕРЕЙТИ В ДИРЕКТОРИЮ БОТА
+cd /path/to/yoddle/telegram-bot
+
+# 2. ПРОВЕРИТЬ СТАТУС
+pm2 status
+
+# 3. ПЕРЕЗАПУСТИТЬ БОТА (если процесс существует)
+pm2 restart yoddle-tg
+
+# ИЛИ ПОЛНЫЙ ПЕРЕЗАПУСК (если процесс упал):
+pm2 stop yoddle-tg
+pm2 delete yoddle-tg
+pm2 start ecosystem.config.js
+pm2 save
+
+# 4. ПРОВЕРИТЬ ЛОГИ
+pm2 logs yoddle-tg --lines 50
+
+# 5. ПРОВЕРИТЬ ОШИБКИ
+pm2 logs yoddle-tg --err --lines 100
+
+# ============================================
+# ЕСЛИ БОТ НЕ РАБОТАЕТ:
+# ============================================
+
+# Проверить .env файл
+cat ../.env | grep BOT_TOKEN
+cat ../.env | grep PG_CONNECTION_STRING
+
+# Переустановить зависимости
+npm install
+
+# Проверить подключение к БД
+node -e "require('dotenv').config({path: '../.env'}); console.log(process.env.PG_CONNECTION_STRING ? 'OK' : 'NOT SET')"

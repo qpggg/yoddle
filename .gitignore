@@ -46,3 +46,43 @@ dist-ssr
 .env.test.local
 .env.production.local
 .env
+
+# Временные файлы
+*.tmp
+*.bak
+*.swp
+*~
+
+# Экспорты и бэкапы БД
+*.sql.dump
+*.dump
+backup_*.sql
+export*.sql
+supa.dump*
+
+# Конфигурационные файлы БД (не коммитить)
+pg_hba.conf.*
+postgresql.conf.*
+
+# Временные данные
+*.csv
+metrics_table.*
+*.html
+!index.html
+
+# Python (если будут скрипты)
+__pycache__/
+*.pyc
+*.pyo
+
+# Логи
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS
+Thumbs.db
