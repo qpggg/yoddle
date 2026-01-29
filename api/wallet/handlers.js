@@ -61,6 +61,8 @@ export async function ensureWalletSchema() {
           END;
         END IF;
       END $$;`);
+    // Убираем триггер: баланс обновляет только код (триггер дублировал — total_spent считался 2x)
+    await client.query(`DROP TRIGGER IF EXISTS trigger_update_user_balance ON coin_transactions`);
   } catch (e) {
     console.error('ensureWalletSchema error:', e.message);
   }
@@ -356,7 +358,7 @@ export async function refreshHandler(req, res) {
       `SELECT 
           COALESCE(SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add') THEN amount ELSE 0 END),0) AS earned,
           COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) 
-          - COALESCE(SUM(CASE WHEN transaction_type = 'refund' THEN amount ELSE 0 END),0) AS spent
+          - COALESCE(SUM(CASE WHEN transaction_type = 'refund' THEN ABS(amount) ELSE 0 END),0) AS spent
        FROM coin_transactions WHERE user_id = $1`,
       [user_id]
     );

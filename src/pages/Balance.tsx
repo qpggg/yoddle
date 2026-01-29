@@ -244,6 +244,7 @@ const BalancePage: React.FC = () => {
                     });
                     await loadBase();
                     await loadPage(true);
+                    window.dispatchEvent(new Event('wallet-updated')); // обновить баланс в меню
                   } catch {}
                 }}
                 sx={{

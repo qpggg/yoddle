@@ -12,6 +12,7 @@ import aiPreferencesHandler from './api/ai-preferences.js';
 import recommendationsFeedbackHandler from './api/recommendations-feedback.js';
 import productivityRouter from './api/productivity.js';
 import clientsRouter from './api/clients.js';
+import cronRouter from './api/cron.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 import { createDbClient, getDbClient } from './db.js';
 import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
@@ -123,6 +124,8 @@ async function ensureWalletSchema() {
     // Drop both constraint and index variants of the unique rule
     await client.query(`ALTER TABLE IF EXISTS coin_transactions DROP CONSTRAINT IF EXISTS uq_tx_user_type_ref`);
     await client.query(`DROP INDEX IF EXISTS uq_tx_user_type_ref`);
+    // Убираем триггер: баланс обновляет только код (триггер дублировал — total_spent считался 2x)
+    await client.query(`DROP TRIGGER IF EXISTS trigger_update_user_balance ON coin_transactions`);
   } catch (e) {
     console.error('ensureWalletSchema error:', e.message);
   }
@@ -248,6 +251,40 @@ app.get('/api/wallet/purchases', async (req, res) => {
     return res.status(500).json({ error: 'Database error' });
   }
 });
+
+// GET /api/wallet/refund-windows — оставшееся время возврата по БД (один запрос, источник правды для таймера)
+app.get('/api/wallet/refund-windows', async (req, res) => {
+  const { user_id } = req.query;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+  const client = createDbClient();
+  try {
+    await ensureWalletSchema();
+    await client.connect();
+    const rows = await client.query(
+      `SELECT ub.benefit_id,
+         GREATEST(0, LEAST(48*3600, FLOOR(48*3600 - EXTRACT(EPOCH FROM (NOW() - ct.created_at)))))::int AS seconds_left
+        FROM user_benefits ub
+        INNER JOIN LATERAL (
+          SELECT created_at FROM coin_transactions
+          WHERE user_id::text = ub.user_id::text AND transaction_type = 'benefit_purchase' AND reference_id = ub.benefit_id::text
+          ORDER BY created_at DESC LIMIT 1
+        ) ct ON true
+        WHERE ub.user_id = $1`,
+      [user_id]
+    );
+    const windows = {};
+    for (const row of rows.rows) {
+      windows[String(row.benefit_id)] = Number(row.seconds_left ?? 0);
+    }
+    await client.end();
+    return res.status(200).json({ success: true, windows });
+  } catch (error) {
+    await client.end();
+    console.error('Refund-windows error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // POST /api/gamification/login - оптимизированная геймификация входа
 app.post('/api/gamification/login', async (req, res) => {
   const { user_id } = req.body;
@@ -499,7 +536,7 @@ app.post('/api/wallet/refresh', async (req, res) => {
       `SELECT 
           COALESCE(SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add') THEN amount ELSE 0 END),0) AS earned,
           COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) 
-          - COALESCE(SUM(CASE WHEN transaction_type = 'refund' THEN amount ELSE 0 END),0) AS spent
+          - COALESCE(SUM(CASE WHEN transaction_type = 'refund' THEN ABS(amount) ELSE 0 END),0) AS spent
        FROM coin_transactions WHERE user_id = $1`,
       [user_id]
     );
@@ -885,7 +922,7 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
     let progress = progressResult.rows[0];
     if (!progress) {
       await client.query(
-        'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion) VALUES ($1, 25, 1, 1, 1, 0, 50)',
+        'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion, onboarding_completed, tour_completed) VALUES ($1, 25, 1, 1, 1, 0, 50, false, false)',
         [user_id]
       );
       
@@ -895,15 +932,18 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
         [user_id, 'first_login']
       );
       
-      progress = {
-        user_id,
-        xp: 25,
-        level: 1,
-        login_streak: 1,
-        days_active: 1,
-        benefits_used: 0,
-        profile_completion: 50
-      };
+      // Перезапрашиваем данные из БД, чтобы получить все поля включая onboarding_completed и tour_completed
+      const newProgressResult = await client.query(
+        'SELECT * FROM user_progress WHERE user_id = $1',
+        [user_id]
+      );
+      progress = newProgressResult.rows[0];
+    }
+    
+    // Гарантируем что boolean поля всегда имеют правильные значения (не NULL)
+    if (progress) {
+      progress.onboarding_completed = progress.onboarding_completed === true || progress.onboarding_completed === 'true' || progress.onboarding_completed === 1 || progress.onboarding_completed === 't' || progress.onboarding_completed === 'T';
+      progress.tour_completed = progress.tour_completed === true || progress.tour_completed === 'true' || progress.tour_completed === 1 || progress.tour_completed === 't' || progress.tour_completed === 'T';
     }
     
     await client.end();
@@ -916,6 +956,7 @@ app.get('/api/progress', rateLimit, validateUser, async (req, res) => {
     
   } catch (error) {
     console.error('Database error:', error);
+    await client.end();
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -1018,29 +1059,104 @@ app.patch('/api/progress', async (req, res) => {
   try {
     await client.connect();
     
-    const allowedFields = ['login_streak', 'days_active', 'benefits_used', 'profile_completion'];
+    const allowedFields = ['login_streak', 'days_active', 'benefits_used', 'profile_completion', 'onboarding_completed', 'tour_completed'];
     if (!allowedFields.includes(field)) {
+      await client.end();
       return res.status(400).json({ error: 'Invalid field' });
     }
     
-    // 🚀 Поддержка increment для увеличения значения на 1
-    if (value === 'increment') {
+    // Проверяем существует ли запись user_progress для этого пользователя
+    const checkProgressResult = await client.query(
+      'SELECT * FROM user_progress WHERE user_id = $1',
+      [user_id]
+    );
+    
+    // Если записи нет, создаем базовую запись
+    if (checkProgressResult.rows.length === 0) {
       await client.query(
-        `UPDATE user_progress SET ${field} = ${field} + 1, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
+        'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion, onboarding_completed, tour_completed) VALUES ($1, 25, 1, 1, 1, 0, 50, false, false)',
         [user_id]
       );
-    } else {
-      await client.query(
-        `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
-        [user_id, value]
-      );
+      console.log(`📝 Created user_progress record for user ${user_id}`);
     }
     
-    return res.status(200).json({ success: true });
+    // Приводим значение к правильному типу для boolean полей
+    let finalValue = value;
+    if (field === 'onboarding_completed' || field === 'tour_completed') {
+      // Явно приводим к boolean
+      finalValue = value === true || value === 'true' || value === 1 || value === '1';
+    }
+    
+    // Для boolean полей используем явное приведение типа в PostgreSQL
+    let updateQuery;
+    if (field === 'onboarding_completed' || field === 'tour_completed') {
+      // Явно приводим к boolean типу в PostgreSQL
+      updateQuery = `UPDATE user_progress SET ${field} = $2::boolean, last_activity = CURRENT_TIMESTAMP`;
+    } else {
+      updateQuery = `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP`;
+    }
+    const queryParams = [user_id, finalValue];
+    
+    if (field === 'onboarding_completed' && finalValue === true) {
+      updateQuery += ', onboarding_completed_at = CURRENT_TIMESTAMP';
+    }
+    if (field === 'tour_completed' && finalValue === true) {
+      updateQuery += ', tour_completed_at = CURRENT_TIMESTAMP';
+    }
+    
+    // 🚀 Поддержка increment для числовых полей (кроме boolean)
+    if (value === 'increment' && field !== 'onboarding_completed' && field !== 'tour_completed') {
+      updateQuery = `UPDATE user_progress SET ${field} = ${field} + 1, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`;
+      await client.query(updateQuery, [user_id]);
+    } else {
+      updateQuery += ' WHERE user_id = $1';
+      console.log(`🔄 Executing query: ${updateQuery} with params: [${user_id}, ${finalValue} (${typeof finalValue})]`);
+      const result = await client.query(updateQuery, queryParams);
+      
+      // Проверяем что обновление прошло успешно
+      if (result.rowCount === 0) {
+        await client.end();
+        return res.status(500).json({ error: 'Failed to update user progress' });
+      }
+      
+      console.log(`✅ Updated ${field} to ${finalValue} for user ${user_id}`);
+    }
+    
+    // Проверяем что значение действительно обновилось - получаем полную запись
+    const checkResult = await client.query(
+      `SELECT * FROM user_progress WHERE user_id = $1`,
+      [user_id]
+    );
+    const updatedProgress = checkResult.rows[0];
+    const actualValue = updatedProgress?.[field];
+    
+    console.log(`✅ Verified update for user ${user_id}:`);
+    console.log(`   ${field} = ${actualValue} (type: ${typeof actualValue})`);
+    
+    await client.end();
+    
+    return res.status(200).json({ 
+      success: true, 
+      updated_value: actualValue,
+      progress: updatedProgress
+    });
     
   } catch (error) {
-    console.error('Database error:', error);
-    return res.status(500).json({ error: 'Database error' });
+    console.error('❌ Database error in PATCH /api/progress:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      user_id,
+      field,
+      value
+    });
+    await client.end();
+    return res.status(500).json({ 
+      error: 'Database error',
+      message: error.message
+    });
   }
 });
 
@@ -1511,6 +1627,9 @@ app.use('/api/recommendations-feedback', recommendationsFeedbackHandler);
 
 // Подключаем API продуктивности
 app.use('/api/productivity', productivityRouter);
+
+// Подключаем cron задачи
+app.use('/api/cron', cronRouter);
 
 // Подключаем API новостей
 app.use('/api/news', newsRouter);

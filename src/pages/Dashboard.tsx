@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { 
   Brain, 
   Zap, 
@@ -25,6 +25,9 @@ import NotificationCenter from '../components/NotificationCenter';
 // Глобальная модалка теперь в App.tsx; локальную версию используем как InlineProfileEditModal
 import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
+import WelcomeTour from '../components/WelcomeTour';
+import QuickStartCard from '../components/QuickStartCard';
+import DashboardTooltip from '../components/DashboardTooltip';
 
 // Константа с рангами (такая же как в Progress.tsx)
 const RANKS = [
@@ -222,9 +225,16 @@ const Dashboard: React.FC = () => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [showWelcomeTour, setShowWelcomeTour] = useState(false);
+  const [tourWasClosed, setTourWasClosed] = useState(false);
   const [userProgress, setUserProgress] = useState<any>(null);
   const [latestNews, setLatestNews] = useState<LatestNews | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
+  const [userBalance, setUserBalance] = useState<number>(0);
+  const [hasMoodEntries, setHasMoodEntries] = useState<boolean>(false);
+  const [hasPreferencesTest, setHasPreferencesTest] = useState<boolean>(false);
+  const [quickStartDataLoaded, setQuickStartDataLoaded] = useState<boolean>(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false);
   const { user, setUser, isLoading: userLoading, error: userError } = useUser();
   const { userBenefits, isLoading: benefitsLoading, error: benefitsError } = useUserBenefits();
   const { unreadCount } = useNotifications({ userId: user?.id });
@@ -235,7 +245,69 @@ const Dashboard: React.FC = () => {
       console.log(`📢 Непрочитанных уведомлений: ${unreadCount}`);
     }
   }, [unreadCount]);
+  
+  // Отслеживание изменений состояния для отладки
+  React.useEffect(() => {
+    console.log('[Dashboard] State changed:', {
+      userProgress: userProgress ? `✅ (XP: ${userProgress.xp})` : '❌ null',
+      quickStartDataLoaded,
+      benefitsLoading,
+      user_id: user?.id
+    });
+  }, [userProgress, quickStartDataLoaded, benefitsLoading, user?.id]);
+  
   const navigate = useNavigate();
+
+  // Проверка первого входа и показ приветственного тура
+  useEffect(() => {
+    console.log('[Dashboard] Tour check useEffect:', {
+      tourWasClosed,
+      showWelcomeTour,
+      userLoading,
+      userId: user?.id,
+      tourCompleted: userProgress?.tour_completed,
+      tourCompletedType: typeof userProgress?.tour_completed
+    });
+    
+    // НЕ показываем тур если:
+    // 1. Тур уже был закрыт пользователем в этой сессии
+    // 2. Тур уже показывается
+    if (tourWasClosed || showWelcomeTour) {
+      console.log('[Dashboard] Tour check: NOT showing (tourWasClosed or already showing)');
+      return;
+    }
+    
+    // Строгая проверка: tour_completed должен быть явно false
+    const tourCompleted = userProgress?.tour_completed;
+    // Не показываем если: true, 'true', 1, 't', 'T', null, undefined
+    const isCompleted = tourCompleted === true || 
+                       tourCompleted === 'true' || 
+                       tourCompleted === 1 || 
+                       tourCompleted === 't' ||
+                       tourCompleted === 'T';
+    
+    if (isCompleted || tourCompleted === null || tourCompleted === undefined) {
+      console.log('[Dashboard] Tour check: NOT showing (completed or no data)', { tourCompleted, isCompleted });
+      return;
+    }
+    
+    // Показываем тур ТОЛЬКО если tour_completed === false или 'f'
+    if (user?.id && !userLoading && userProgress && (tourCompleted === false || tourCompleted === 'f')) {
+      console.log('[Dashboard] Tour check: SHOWING tour (all conditions met)');
+      // Небольшая задержка для плавного появления
+      const timer = setTimeout(() => {
+        setShowWelcomeTour(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      console.log('[Dashboard] Tour check: NOT showing (conditions not met)', {
+        hasUser: !!user?.id,
+        userLoading,
+        hasProgress: !!userProgress,
+        tourCompleted
+      });
+    }
+  }, [user?.id, userLoading, userProgress?.tour_completed, showWelcomeTour, tourWasClosed]);
 
   // Глобальный обработчик для открытия модалки "Изменить профиль" из других частей приложения
   useEffect(() => {
@@ -244,21 +316,205 @@ const Dashboard: React.FC = () => {
     return () => window.removeEventListener('openProfileEditModal', handler as EventListener);
   }, []);
 
+  // Обработчик завершения тура
+  const handleTourComplete = async () => {
+    // СРАЗУ помечаем что тур был закрыт - это предотвратит повторное открытие
+    setTourWasClosed(true);
+    setShowWelcomeTour(false);
+    
+    // Затем обновляем статус в БД
+    if (user?.id) {
+      try {
+        console.log('🔄 Updating tour_completed to true for user:', user.id);
+        const response = await fetch('/api/progress', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            field: 'tour_completed',
+            value: true
+          }),
+        });
+        
+        const data = await response.json();
+        console.log('📊 API Response:', data);
+        
+        if (response.ok) {
+          // Обновляем локальное состояние СРАЗУ
+          if (userProgress) {
+            setUserProgress({ ...userProgress, tour_completed: true });
+          }
+          // Перезагружаем прогресс из БД для гарантии синхронизации
+          const refreshResponse = await fetch(`/api/progress?user_id=${user.id}`);
+          const refreshData = await refreshResponse.json();
+          if (refreshData.progress) {
+            setUserProgress(refreshData.progress);
+            console.log('✅ Progress refreshed from DB:', refreshData.progress.tour_completed);
+          }
+        } else {
+          console.error('❌ API Error:', data);
+        }
+      } catch (error) {
+        console.error('❌ Error updating tour completed:', error);
+        // Ошибка не критична, тур уже закрыт и помечен как закрытый
+      }
+    }
+  };
+
   // Загрузка прогресса пользователя
   useEffect(() => {
     const loadProgress = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('[Dashboard] No user.id, skipping progress load');
+        return;
+      }
+      
+      console.log('[Dashboard] Starting to load progress for user:', user.id);
       
       try {
+        console.log('[Dashboard] Fetching from:', `/api/progress?user_id=${user.id}`);
         const response = await fetch(`/api/progress?user_id=${user.id}`);
+        
+        console.log('[Dashboard] Response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[Dashboard] Failed to fetch progress:', response.status, response.statusText, errorText);
+          // Устанавливаем пустой прогресс чтобы не блокировать UI
+          setUserProgress(null);
+          return;
+        }
+        
         const data = await response.json();
-        setUserProgress(data.progress);
+        console.log('[Dashboard] Full API response:', data);
+        
+        const progress = data.progress;
+        
+        console.log('[Dashboard] Loaded progress from DB:', {
+          progress: progress,
+          hasProgress: !!progress,
+          tour_completed: progress?.tour_completed,
+          onboarding_completed: progress?.onboarding_completed,
+          type_tour: typeof progress?.tour_completed,
+          type_onboarding: typeof progress?.onboarding_completed,
+          raw_tour: JSON.stringify(progress?.tour_completed),
+          raw_onboarding: JSON.stringify(progress?.onboarding_completed)
+        });
+        
+        if (!progress) {
+          console.error('[Dashboard] No progress data received! Response data:', data);
+          // Устанавливаем пустой прогресс
+          setUserProgress(null);
+          return;
+        }
+        
+        setUserProgress(progress);
+        console.log('[Dashboard] ✅ userProgress state updated successfully');
+        
+        // Синхронизируем статус онбординга из БД
+        // PostgreSQL возвращает boolean как true/false, но может быть и строка
+        const onboardingCompleted = progress?.onboarding_completed;
+        // Проверяем все возможные варианты true
+        const isOnboardingDone = onboardingCompleted === true || 
+                                 onboardingCompleted === 'true' || 
+                                 onboardingCompleted === 1 || 
+                                 onboardingCompleted === 't' ||
+                                 onboardingCompleted === 'T';
+        console.log('[Dashboard] Onboarding check:', {
+          value: onboardingCompleted,
+          type: typeof onboardingCompleted,
+          isDone: isOnboardingDone
+        });
+        setOnboardingCompleted(isOnboardingDone);
+        
+        // Если тур уже завершен в БД, помечаем что он был закрыт
+        const tourCompleted = progress?.tour_completed;
+        // Проверяем все возможные варианты true
+        const isTourDone = tourCompleted === true || 
+                          tourCompleted === 'true' || 
+                          tourCompleted === 1 || 
+                          tourCompleted === 't' ||
+                          tourCompleted === 'T';
+        console.log('[Dashboard] Tour check:', {
+          value: tourCompleted,
+          type: typeof tourCompleted,
+          isDone: isTourDone
+        });
+        if (isTourDone) {
+          console.log('[Dashboard] Tour is completed, setting tourWasClosed = true');
+          setTourWasClosed(true);
+          setShowWelcomeTour(false);
+        } else {
+          console.log('[Dashboard] Tour is NOT completed, setting tourWasClosed = false');
+          // Если тур не завершен, сбрасываем флаг (на случай если пользователь сменился)
+          setTourWasClosed(false);
+        }
       } catch (error) {
-        console.error('Error loading progress:', error);
+        console.error('[Dashboard] Error loading progress:', error);
+        setUserProgress(null); // Сбрасываем на null при ошибке
       }
     };
 
     loadProgress();
+  }, [user?.id]);
+
+  // Загрузка баланса и проверка настроения
+  useEffect(() => {
+    const loadQuickStartData = async () => {
+      if (!user?.id) {
+        console.log('[Dashboard] No user.id, skipping quick start data load');
+        setQuickStartDataLoaded(false);
+        return;
+      }
+
+      console.log('[Dashboard] Starting to load quick start data for user:', user.id);
+      setQuickStartDataLoaded(false);
+      try {
+        // Загружаем баланс
+        const balanceResponse = await fetch(`/api/wallet?user_id=${user.id}`);
+        const balanceData = await balanceResponse.json();
+        if (balanceData.success) {
+          setUserBalance(balanceData.balance || 0);
+        }
+
+        // Проверяем наличие записей настроения
+        const moodResponse = await fetch(`/api/productivity/mood-percentages/${user.id}`);
+        const moodData = await moodResponse.json();
+        if (moodData.success && moodData.dailyData && moodData.dailyData.length > 0) {
+          setHasMoodEntries(true);
+        } else {
+          setHasMoodEntries(false);
+        }
+
+        // Проверяем прохождение теста предпочтений через проверку рекомендаций
+        // Если есть сохраненные рекомендации, значит тест пройден
+        try {
+          const recommendationsResponse = await fetch(`/api/user-recommendations?user_id=${user.id}`);
+          const recommendationsData = await recommendationsResponse.json();
+          if (recommendationsData.recommendations && recommendationsData.recommendations.length > 0) {
+            setHasPreferencesTest(true);
+          } else {
+            setHasPreferencesTest(false);
+          }
+        } catch (err) {
+          console.error('Error checking preferences test:', err);
+          setHasPreferencesTest(false);
+        }
+
+        // Проверяем завершение онбординга из БД (через userProgress)
+        // Это будет обновлено после загрузки userProgress
+      } catch (error) {
+        console.error('[Dashboard] ❌ Error loading quick start data:', error);
+        // В случае ошибки все равно помечаем как загруженное, чтобы не блокировать UI
+      } finally {
+        console.log('[Dashboard] ✅ Quick start data loaded, setting quickStartDataLoaded = true');
+        setQuickStartDataLoaded(true);
+      }
+    };
+
+    loadQuickStartData();
   }, [user?.id]);
 
   // Загрузка последней новости
@@ -389,12 +645,68 @@ const Dashboard: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* Показываем загрузку если данные еще не готовы */}
+      {(!userProgress || !quickStartDataLoaded || benefitsLoading) && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '400px',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          <div style={{ fontSize: '24px' }}>🔄</div>
+          <div>Загрузка данных дашборда...</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {!userProgress && 'Загрузка прогресса...'}
+            {userProgress && !quickStartDataLoaded && 'Загрузка дополнительных данных...'}
+            {userProgress && quickStartDataLoaded && benefitsLoading && 'Загрузка льгот...'}
+          </div>
+          {/* Показываем контент даже если benefitsLoading застрял, но только если есть userProgress */}
+          {userProgress && quickStartDataLoaded && benefitsLoading && (
+            <div style={{ marginTop: '20px', padding: '10px', background: '#fff3cd', borderRadius: '5px', fontSize: '12px' }}>
+              ⚠️ Загрузка льгот занимает больше времени, чем ожидалось. Контент будет показан как только данные загрузятся.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Показываем контент если есть хотя бы userProgress и quickStartDataLoaded, даже если benefitsLoading еще идет */}
+      {userProgress && quickStartDataLoaded && (
       <motion.div 
         className="dashboard-grid"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        key="dashboard-grid-loaded"
       >
+        <motion.div variants={itemVariants} style={{ gridColumn: '1 / -1' }}>
+          <QuickStartCard
+            profileCompletion={userProgress.profile_completion || 0}
+            hasMoodEntries={hasMoodEntries}
+            hasBenefits={userBenefits.length > 0}
+            balance={userBalance}
+            hasPreferencesTest={hasPreferencesTest}
+            onboardingCompleted={onboardingCompleted}
+            userId={user?.id || null}
+            onComplete={async () => {
+              // Перезагружаем данные после завершения онбординга
+              setOnboardingCompleted(true);
+              // Перезагружаем прогресс из БД для синхронизации
+              if (user?.id) {
+                try {
+                  const response = await fetch(`/api/progress?user_id=${user.id}`);
+                  const data = await response.json();
+                  if (data.progress) {
+                    setUserProgress(data.progress);
+                  }
+                } catch (error) {
+                  console.error('Error reloading progress:', error);
+                }
+              }
+            }}
+          />
+        </motion.div>
         <motion.div 
           className="dashboard-card overview"
           variants={itemVariants}
@@ -404,7 +716,13 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{ position: 'relative' }}
         >
+          <DashboardTooltip
+            title="Текущие льготы"
+            content="Здесь отображаются льготы, которые вы выбрали из каталога. Вы можете добавить новые льготы, нажав кнопку 'Добавить', или управлять уже выбранными через кнопку 'Управление'. Каждая льгота расходует ваш баланс Yoddle-coins."
+            position="top-right"
+          />
           <h2>Текущие льготы</h2>
           <div className="benefits-list">
             {benefitsLoading ? (
@@ -418,10 +736,14 @@ const Dashboard: React.FC = () => {
                 <span>Ошибка: {benefitsError}</span>
               </div>
             ) : userBenefits.length > 0 ? (
-              userBenefits.map((benefit) => (
+              userBenefits.slice(0, 3).map((benefit, index) => (
                 <div className="benefit-item" key={benefit.id}>
                   <Gift size={20} />
-                  <span>{benefit.name}</span>
+                  <span>
+                    {index === 2 && userBenefits.length > 3
+                      ? `${benefit.name} + ${userBenefits.length - 3}`
+                      : benefit.name}
+                  </span>
                 </div>
               ))
             ) : (
@@ -514,7 +836,13 @@ const Dashboard: React.FC = () => {
             boxShadow: '0 12px 32px rgba(139,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
             transition: { duration: 0.28, ease: 'easeInOut' }
           }}
+          style={{ position: 'relative' }}
         >
+          <DashboardTooltip
+            title="Аналитика использования"
+            content="На этом графике отображается ваша активность на платформе за последние дни. Чем выше столбцы, тем больше действий вы совершили. Регулярная активность помогает вам получать больше XP и повышать уровень."
+            position="top-right"
+          />
           <h2>Аналитика использования</h2>
           <ActivityChart />
         </motion.div>
@@ -534,11 +862,24 @@ const Dashboard: React.FC = () => {
             borderRadius: '16px',
             textAlign: 'center',
             position: 'relative',
-            overflow: 'hidden',
+            overflow: 'visible',
             cursor: 'pointer'
           }}
-          onClick={() => navigate('/productivity')}
+          onClick={(e) => {
+            // Проверяем, не кликнули ли на тултип
+            const target = e.target as HTMLElement;
+            if (!target.closest('[data-tooltip-trigger]')) {
+              navigate('/productivity');
+            }
+          }}
         >
+          <div data-tooltip-trigger>
+            <DashboardTooltip
+              title="ИИ Продуктивность"
+              content="Записывайте своё настроение и активность ежедневно. Искусственный интеллект анализирует ваши данные и даёт персональные рекомендации для улучшения самочувствия и продуктивности. Регулярные записи помогают получить более точные инсайты."
+              position="top-right"
+            />
+          </div>
           {/* Декоративные элементы */}
           <div style={{
             position: 'absolute',
@@ -734,7 +1075,7 @@ const Dashboard: React.FC = () => {
             color: 'white',
             borderRadius: '12px',
             position: 'relative',
-            overflow: 'hidden',
+            overflow: 'visible',
             border: 'none'
           }}
         >
@@ -760,6 +1101,13 @@ const Dashboard: React.FC = () => {
             zIndex: 0
           }} />
           
+          <DashboardTooltip
+            title="Прогресс и рейтинг"
+            content="Здесь отображается ваш текущий уровень, опыт (XP) и ранг. Заполнение профиля и активность на платформе помогают вам получать опыт и повышать уровень. Чем выше уровень, тем больше возможностей открывается. Ранги: Новичок, Активист, Профи, Эксперт, Мастер."
+            position="top-right"
+            iconColor="#FFFFFF"
+            iconBgColor="rgba(255, 255, 255, 0.25)"
+          />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <h2 style={{ color: 'white', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 700 }}>Прогресс</h2>
                           <div className="profile-info" style={{ flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
@@ -870,9 +1218,15 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
             display: 'flex',
             flexDirection: 'column',
             height: '100%',
-            minHeight: '280px'
+            minHeight: '280px',
+            position: 'relative'
           }}
         >
+          <DashboardTooltip
+            title="Новости и обновления"
+            content="Здесь публикуются последние новости о платформе Yoddle, новых льготах, обновлениях функций и важных объявлениях. Регулярно проверяйте эту секцию, чтобы быть в курсе всех изменений и возможностей. Новости разделены по категориям: Продукт, Интеграция, Геймификация, Партнерства, Анонс, Компания."
+            position="top-right"
+          />
           <h2>Новости</h2>
           
           {newsLoading ? (
@@ -992,9 +1346,15 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
             display: 'flex',
             flexDirection: 'column',
             height: '100%',
-            minHeight: '280px'
+            minHeight: '280px',
+            position: 'relative'
           }}
         >
+          <DashboardTooltip
+            title="Отзывы о компании"
+            content="Здесь вы можете оставить отзыв о вашей компании и работе в ней. Ваши отзывы помогают HR-отделу улучшать корпоративную культуру и условия работы. Вы можете поделиться своим опытом, предложить улучшения или выразить благодарность коллегам."
+            position="top-right"
+          />
           <h2>Отзывы</h2>
           
           <div style={{ marginTop: 16, marginBottom: 16, flex: 1, display: 'flex', alignItems: 'flex-start' }}>
@@ -1104,12 +1464,14 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
           </motion.button>
         </motion.div>
       </motion.div>
+      )}
 
+      {userProgress && quickStartDataLoaded && (
       <motion.div 
         className="dashboard-footer"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.8, ease: 'easeInOut' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <p>Нужна помощь? Обратитесь в поддержку</p>
         <motion.button 
@@ -1121,6 +1483,7 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
           Связаться с поддержкой
         </motion.button>
       </motion.div>
+      )}
       <InlineProfileEditModal open={showProfileModal} onClose={() => setShowProfileModal(false)} user={user} setUser={setUser} />
       <NewsModal open={showNewsModal} onClose={() => setShowNewsModal(false)} />
       <FeedbackModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} userId={user?.id || null} />
@@ -1129,6 +1492,16 @@ getRankByXP(userProgress.xp).maxXP === Infinity ? 100 : ((userProgress.xp - getR
         open={showNotificationCenter} 
         onClose={() => setShowNotificationCenter(false)} 
         userId={user?.id || null} 
+      />
+      <WelcomeTour 
+        open={showWelcomeTour} 
+        onClose={() => {
+          // При закрытии через крестик тоже помечаем как закрытый
+          setTourWasClosed(true);
+          setShowWelcomeTour(false);
+          handleTourComplete();
+        }}
+        onComplete={handleTourComplete}
       />
     </div>
   );

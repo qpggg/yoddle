@@ -16,6 +16,7 @@ export const useUserBenefits = () => {
 
   const fetchUserBenefits = useCallback(async () => {
     if (!user?.id) {
+      console.log('[useUserBenefits] No user.id, skipping');
       setUserBenefits([]);
       setIsLoading(false);
       setError(null);
@@ -23,6 +24,7 @@ export const useUserBenefits = () => {
     }
 
     try {
+      console.log('[useUserBenefits] Starting to fetch benefits for user:', user.id);
       setIsLoading(true);
       setError(null);
       
@@ -33,13 +35,15 @@ export const useUserBenefits = () => {
       }
       
       const data = await response.json();
+      console.log('[useUserBenefits] Benefits loaded:', data.benefits?.length || 0, 'benefits');
       setUserBenefits(data.benefits || []);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Ошибка загрузки льгот пользователя';
-      console.error('Ошибка загрузки льгот пользователя:', error);
+      console.error('[useUserBenefits] Error loading benefits:', error);
       setError(errorMessage);
       setUserBenefits([]);
     } finally {
+      console.log('[useUserBenefits] Loading completed, setting isLoading = false');
       setIsLoading(false);
     }
   }, [user?.id]);

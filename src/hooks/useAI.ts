@@ -123,11 +123,13 @@ export const useAI = () => {
   }, [loadRecommendations]);
 
   // Загрузка всех данных при инициализации
+  // ИСПРАВЛЕНО: убрали автоматический вызов generateDailyInsight() так как он использует дефолтный userId='1'
+  // Недельный инсайт должен загружаться через loadWeeklyInsight() с правильным userId
   useEffect(() => {
     loadInsights();
     loadRecommendations();
-    generateDailyInsight();
-  }, [loadInsights, loadRecommendations, generateDailyInsight]);
+    // generateDailyInsight() вызывается только явно с правильным userId
+  }, [loadInsights, loadRecommendations]);
 
   return {
     insights,

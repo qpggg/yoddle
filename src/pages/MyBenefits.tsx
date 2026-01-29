@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Container, Typography, Box, Grid, Paper, Modal, Button, Chip, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
@@ -94,7 +94,7 @@ const BenefitCard = ({ benefit, onAdd, isAdded, isDisabled, isSelectedCard, isRe
   onRefund?: () => void;
   refundSecondsLeft?: number;
 }) => (
-  <motion.div variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
+  <motion.div initial="visible" variants={itemVariants} whileHover={isSelectedCard ? {} : { y: -8, boxShadow: '0 20px 40px rgba(139,0,0,0.15)' }} style={{ height: '100%', borderRadius: '24px', transition: 'box-shadow 0.3s ease' }}>
     <Paper elevation={0} sx={{ 
       p: 3, 
       borderRadius: '24px', 
@@ -227,23 +227,28 @@ const MyBenefits: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
   const [userRecommendedBenefitIds, setUserRecommendedBenefitIds] = useState<number[]>([]);
   const [refundLeft, setRefundLeft] = useState<Record<number, number>>({}); // benefit_id -> seconds_left
+  const [insufficientFunds, setInsufficientFunds] = useState<{ required: number; balance: number } | null>(null);
+  const [refundUnavailable, setRefundUnavailable] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
     const fetchBenefits = fetch('/api/benefits').then(res => res.json());
     const fetchUserBenefits = user?.id ? fetch(`/api/user-benefits?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ benefits: [] });
     const fetchUserRecommendations = user?.id ? fetch(`/api/user-recommendations?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ recommendations: [] });
+    const fetchRefundWindows = user?.id ? fetch(`/api/wallet/refund-windows?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ success: false, windows: {} });
 
-    Promise.all([fetchBenefits, fetchUserBenefits, fetchUserRecommendations])
-      .then(([allBenefitsData, userBenefitsData, userRecommendationsData]) => {
+    Promise.all([fetchBenefits, fetchUserBenefits, fetchUserRecommendations, fetchRefundWindows])
+      .then(([allBenefitsData, userBenefitsData, userRecommendationsData, refundData]) => {
         setAllBenefits(allBenefitsData.benefits || []);
         setUserBenefitIds((userBenefitsData.benefits || []).map((b: any) => b.id));
-        
-        // Загружаем ID рекомендованных льгот
         const recommendedBenefitIds = (userRecommendationsData.recommendations || []).map((rec: any) => rec.benefit_id);
-        console.log('Loaded recommendations:', userRecommendationsData.recommendations);
-        console.log('Recommended benefit IDs:', recommendedBenefitIds);
         setUserRecommendedBenefitIds(recommendedBenefitIds);
+        if (refundData?.success && refundData?.windows) {
+          const windows = refundData.windows as Record<string, number>;
+          const updates: Record<number, number> = {};
+          Object.entries(windows).forEach(([k, v]) => { updates[Number(k)] = Number(v); });
+          setRefundLeft((prev) => ({ ...prev, ...updates }));
+        }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -261,6 +266,8 @@ const MyBenefits: React.FC = () => {
   const handleClose = () => { 
     setOpenBenefit(null); 
     setModalType(null);
+    setInsufficientFunds(null);
+    setRefundUnavailable(null);
     setTimeout(() => setSuccess(false), 300); 
   };
   
@@ -276,9 +283,9 @@ const MyBenefits: React.FC = () => {
     if (!purchaseRes.ok) {
       const data = await purchaseRes.json().catch(() => ({}));
       if (data?.error === 'insufficient_funds') {
-        alert(`Недостаточно средств: нужно ${data.required}, доступно ${data.balance}`);
+        setInsufficientFunds({ required: data.required ?? 0, balance: data.balance ?? 0 });
       } else {
-        alert('Не удалось выполнить покупку');
+        setInsufficientFunds({ required: 0, balance: 0 }); // покажем общее сообщение через тот же стиль
       }
       return;
     }
@@ -296,6 +303,7 @@ const MyBenefits: React.FC = () => {
     // 🎉 АВТОЛОГИРОВАНИЕ ДОБАВЛЕНИЯ ЛЬГОТЫ
     await logBenefitAdded(openBenefit.name);
     
+    window.dispatchEvent(new Event('wallet-updated')); // обновить баланс в меню
     setSuccess(true);
     setUserBenefitIds(prev => [...prev, openBenefit.id]);
     setTimeout(handleClose, 1200);
@@ -308,51 +316,62 @@ const MyBenefits: React.FC = () => {
     
   const selectedBenefits = useMemo(() => allBenefits.filter(b => userBenefitIds.includes(b.id)), [allBenefits, userBenefitIds]);
 
-  // Загружаем окна возврата для выбранных льгот (последняя покупка по каждой)
+  // Таймер: загрузка из БД (при появлении льгот и раз в 10 с) + локальный тик раз в секунду для плавного отображения
   useEffect(() => {
+    if (!user?.id) return;
     let cancelled = false;
     const load = async () => {
-      if (!user?.id) return;
-      const updates: Record<number, number> = {};
-      for (const b of selectedBenefits) {
-        try {
-          const r = await fetch(`/api/wallet/purchases?user_id=${user.id}&benefit_id=${b.id}&limit=1`).then(res => res.json());
-          const last = r?.data && r.data[0];
-          if (last?.created_at) {
-            const createdAt = new Date(last.created_at).getTime();
-            const now = Date.now();
-            const seconds = Math.max(0, Math.floor(48 * 3600 - (now - createdAt) / 1000));
-            updates[b.id] = seconds;
-          } else {
-            updates[b.id] = 0;
-          }
-        } catch {
-          updates[b.id] = 0;
+      try {
+        const r = await fetch(`/api/wallet/refund-windows?user_id=${user.id}`).then(res => res.json());
+        if (!cancelled && r?.success && r?.windows) {
+          const windows = r.windows as Record<string, number>;
+          const updates: Record<number, number> = {};
+          Object.entries(windows).forEach(([k, v]) => { updates[Number(k)] = Number(v); });
+          setRefundLeft((prev) => ({ ...prev, ...updates }));
         }
-      }
-      if (!cancelled) setRefundLeft((prev) => ({ ...prev, ...updates }));
+      } catch {}
     };
     load();
-    const id = setInterval(() => load(), 1000 * 30); // раз в 30 секунд обновляем таймер из сервера
+    const id = setInterval(load, 1000 * 10);
     return () => { cancelled = true; clearInterval(id); };
-  }, [user?.id, selectedBenefits.map(b => b.id).join(',')]);
+  }, [user?.id, userBenefitIds.join(',')]);
 
-  // Тикающий таймер, уменьшаем оставшееся время каждую секунду
+  // Локальный тик раз в секунду — таймер визуально обновляется каждую секунду (значение сверяется с БД каждые 10 с)
   useEffect(() => {
     const id = setInterval(() => {
-      setRefundLeft(prev => {
+      setRefundLeft((prev) => {
+        const maxSeconds = 48 * 3600;
         const next: Record<number, number> = {};
         let changed = false;
         for (const [k, v] of Object.entries(prev)) {
-          const nv = Math.max(0, (v as number) - 1);
+          const val = v as number;
+          const nv = Math.min(maxSeconds, Math.max(0, val > 0 ? val - 1 : 0));
           next[Number(k)] = nv;
-          if (nv !== v) changed = true;
+          if (nv !== val) changed = true;
         }
         return changed ? next : prev;
       });
     }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  // После 48 ч автоматически убираем льготу из «выбранных» — списание окончательное, слот освобождается (можно снова добавить ту же льготу)
+  const expiredBenefitIds = useMemo(
+    () => userBenefitIds.filter(id => refundLeft[id] === 0),
+    [userBenefitIds, refundLeft]
+  );
+  useEffect(() => {
+    if (!user?.id || expiredBenefitIds.length === 0) return;
+    const removeSet = new Set(expiredBenefitIds);
+    setUserBenefitIds(prev => prev.filter(id => !removeSet.has(id)));
+    expiredBenefitIds.forEach(benefitId => {
+      fetch('/api/user-benefits', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, benefit_id: benefitId })
+      }).catch(() => {});
+    });
+  }, [user?.id, expiredBenefitIds.join(',')]);
 
   if (isLoading) {
     return (
@@ -428,7 +447,7 @@ const MyBenefits: React.FC = () => {
             {selectedBenefits.length > 0 ? (
               <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
                 {selectedBenefits.map((benefit) => (
-              <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`} component={motion.div} layout>
+              <Grid item xs={12} sm={6} md={4} key={`selected-${benefit.id}`} component={motion.div} layout variants={itemVariants}>
                 <BenefitCard 
                       benefit={benefit} 
                       onAdd={() => {}} 
@@ -454,6 +473,7 @@ const MyBenefits: React.FC = () => {
                           });
                           if (res.ok) {
                             await fetch('/api/wallet/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) });
+                            window.dispatchEvent(new Event('wallet-updated')); // обновить баланс в меню
                             // Удаляем льготу из выбранных локально
                             setUserBenefitIds(prev => prev.filter(id => id !== benefit.id));
                             // Также убираем из user_benefits на сервере для консистентности
@@ -462,8 +482,11 @@ const MyBenefits: React.FC = () => {
                             try { await fetch(`/api/wallet/transactions?user_id=${user.id}&limit=5&offset=0&type=all`); } catch {}
                           } else {
                             const data = await res.json().catch(() => ({}));
-                            const left = data?.seconds_left ? Math.max(0, Math.floor(data.seconds_left / 3600)) : null;
-                            alert(data?.error ? `Возврат недоступен. ${left !== null ? `Осталось ${left} ч.` : ''}` : 'Ошибка возврата');
+                            const isWindowClosed = data?.error === 'refund window closed';
+                            const msg = isWindowClosed
+                              ? 'Срок возврата (48 часов) истёк. Возврат этой льготы больше недоступен.'
+                              : (data?.error ? `Возврат недоступен. ${data?.error}` : 'Ошибка возврата');
+                            setRefundUnavailable(msg);
                           }
                         }}
                       isRecommended={checkIfRecommended(benefit, userRecommendedBenefitIds)}
@@ -530,7 +553,7 @@ const MyBenefits: React.FC = () => {
 
           <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
             {filteredBenefits.map((benefit) => (
-              <Grid item xs={12} sm={6} md={4} key={benefit.id} component={motion.div} layout>
+              <Grid item xs={12} sm={6} md={4} key={benefit.id} component={motion.div} layout variants={itemVariants}>
                 <BenefitCard 
                   benefit={benefit} 
                   onAdd={() => handleAddClick(benefit)} 
@@ -544,10 +567,123 @@ const MyBenefits: React.FC = () => {
         </motion.div>
 
         {/* Модальное окно */}
-        <Modal open={!!modalType} onClose={handleClose} sx={{ backdropFilter: 'blur(5px)'}}>
+        <Modal open={!!modalType || !!insufficientFunds || !!refundUnavailable} onClose={handleClose} sx={{ backdropFilter: 'blur(5px)'}}>
           <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>
             <AnimatePresence>
-            {modalType === 'confirm' && openBenefit && (
+            {refundUnavailable && (
+              <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <Paper
+                  sx={{
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    boxShadow: '0 24px 48px rgba(139, 0, 0, 0.25)',
+                    maxWidth: 380,
+                    mx: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 50%, #A52A2A 100%)',
+                      color: '#fff',
+                      p: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Box sx={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2, fontSize: '1.5rem', fontWeight: 800 }}>
+                      Y
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Возврат недоступен</Typography>
+                    <Typography sx={{ opacity: 0.95, mb: 2 }}>{refundUnavailable}</Typography>
+                    <Button variant="contained" fullWidth onClick={handleClose} sx={{ py: 1.5, borderRadius: '50px', background: 'rgba(255,255,255,0.95)', color: '#8B0000', fontWeight: 700, textTransform: 'none', '&:hover': { background: '#fff', color: '#8B0000' } }}>
+                      Понятно
+                    </Button>
+                  </Box>
+                </Paper>
+              </motion.div>
+            )}
+            {!refundUnavailable && insufficientFunds && (
+              <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <Paper
+                  sx={{
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    boxShadow: '0 24px 48px rgba(139, 0, 0, 0.25)',
+                    maxWidth: 380,
+                    mx: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 50%, #A52A2A 100%)',
+                      color: '#fff',
+                      p: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 2,
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      Y
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                      {insufficientFunds.required > 0 ? 'Недостаточно средств' : 'Ошибка покупки'}
+                    </Typography>
+                    {insufficientFunds.required > 0 ? (
+                      <>
+                        <Typography sx={{ opacity: 0.95, mb: 0.5 }}>
+                          Нужно: <strong>{Number(insufficientFunds.required).toLocaleString('ru-RU')} Y</strong>
+                        </Typography>
+                        <Typography sx={{ opacity: 0.95 }}>
+                          Доступно: <strong>{Number(insufficientFunds.balance).toLocaleString('ru-RU')} Y</strong>
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography sx={{ opacity: 0.95 }}>Не удалось выполнить покупку. Попробуйте позже.</Typography>
+                    )}
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={handleClose}
+                      sx={{
+                        mt: 2.5,
+                        py: 1.5,
+                        borderRadius: '50px',
+                        background: 'rgba(255,255,255,0.95)',
+                        color: '#8B0000',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        '&:hover': { background: '#fff', color: '#8B0000' },
+                      }}
+                    >
+                      Понятно
+                    </Button>
+                  </Box>
+                </Paper>
+              </motion.div>
+            )}
+            {!refundUnavailable && !insufficientFunds && modalType === 'confirm' && openBenefit && (
               <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0, scale: 0.8}}>
                 <Box sx={modalBoxStyle}>
                   {!success ? (

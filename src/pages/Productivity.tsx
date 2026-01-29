@@ -1,9 +1,58 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar, Tooltip } from '@mui/material';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Container, Typography, Box, Grid, Paper, Card, Button, Slider, TextField, CircularProgress, Alert, Snackbar, Tooltip, IconButton } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../hooks/useUser';
 import { useProductivity } from '../hooks/useProductivity';
 import { useAI } from '../hooks/useAI';
+
+// Утилита для retry логики с таймаутом
+const fetchWithRetry = async (
+  url: string, 
+  options: RequestInit = {}, 
+  retries = 2, 
+  timeout = 30000
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok && retries > 0 && response.status >= 500) {
+      // Retry только для серверных ошибок
+      await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+      return fetchWithRetry(url, options, retries - 1, timeout);
+    }
+    
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Запрос превысил время ожидания');
+    }
+    if (retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+      return fetchWithRetry(url, options, retries - 1, timeout);
+    }
+    throw error;
+  }
+};
+
+// Debounce утилита
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 import {
   BrainIcon,
   HeartIcon,
@@ -25,7 +74,9 @@ import {
   GraduationCapIcon,
   PartyPopperIcon,
   TargetIcon,
-  RocketIcon
+  RocketIcon,
+  InfoIcon,
+  AlertTriangleIcon
 } from 'lucide-react';
 
 // Компонент для отображения AI ответов с иконками
@@ -35,17 +86,9 @@ interface AIResponseDisplayProps {
 }
 
 const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekly = false }) => {
-  // Добавляем отладочную информацию
-  console.log('AIResponseDisplay получил ответ, длина:', response?.length || 0);
-  console.log('AIResponseDisplay получил ответ:', response);
-  console.log('AIResponseDisplay получил ответ (первые 200 символов):', response?.substring(0, 200));
-  console.log('AIResponseDisplay получил ответ (последние 200 символов):', response?.substring(Math.max(0, (response?.length || 0) - 200)));
-  
   // Функция для замены XML-тегов на иконки и форматирования
-  const formatAIResponse = (text: string) => {
+  const formatAIResponse = useCallback((text: string) => {
     if (!text) return text;
-
-    console.log('Форматируем текст:', text);
 
     // Убираем теги response если они есть
     let formattedText = text
@@ -100,11 +143,10 @@ const AIResponseDisplay: React.FC<AIResponseDisplayProps> = ({ response, isWeekl
       .replace(/\s*🚀/g, '\n🚀')
       .trim();
 
-    console.log('Отформатированный текст:', formattedText);
     return formattedText;
-  };
+  }, []);
 
-  const formattedResponse = formatAIResponse(response);
+  const formattedResponse = useMemo(() => formatAIResponse(response), [response, formatAIResponse]);
 
   // Проверяем, есть ли XML-теги в ответе
   const hasXMLTags = /<[^>]+>/.test(response);
@@ -397,12 +439,14 @@ const AnimatedMoodIndicator: React.FC<{ value: number; label: string; color: str
 const Productivity: React.FC = () => {
   const { user } = useUser();
   const { 
-    dailyInsight, 
-    loading: aiLoading, 
     analyzeMood,
-    logActivity,
-    generateDailyInsight
+    logActivity
+    // generateDailyInsight не используем - у нас есть loadWeeklyInsight() с правильным userId
   } = useAI();
+  
+  // Состояние для недельного инсайта
+  const [weeklyInsight, setWeeklyInsight] = useState<string>('');
+  const [weeklyInsightLoading, setWeeklyInsightLoading] = useState(false);
   
   // Хук для продуктивности
   const {
@@ -444,199 +488,247 @@ const Productivity: React.FC = () => {
     stress: 3,
     success_rating: 5
   });
+  
+  // Состояния для графика зависимости рейтинга от активностей
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartStats, setChartStats] = useState<any>(null);
+  const [showActivityChart, setShowActivityChart] = useState(false);
 
-  // Ref для формы
+  // Ref для формы и графика
   const formRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
+  // Загрузка недельного инсайта с retry и таймаутом
+  const loadWeeklyInsight = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setWeeklyInsightLoading(true);
+    try {
+      const response = await fetchWithRetry('/api/ai/generate-daily-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: String(user.id), 
+          forceRegenerate: !weeklyInsight
+        })
+      }, 2, 45000); // 45 секунд таймаут для AI запросов
+      
+      const data = await response.json();
+      
+      if (data.success && data.insight) {
+        setWeeklyInsight(data.insight);
+      } else {
+        setWeeklyInsight(data.insight || '');
+      }
+    } catch (error: any) {
+      // Graceful degradation - показываем сообщение вместо пустоты
+      setWeeklyInsight('Не удалось загрузить недельный анализ. Попробуйте обновить страницу.');
+    } finally {
+      setWeeklyInsightLoading(false);
+    }
+  }, [user?.id, weeklyInsight]);
+  
+  // Загрузка данных графика зависимости рейтинга от активностей
+  const loadRatingChart = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setChartLoading(true);
+    try {
+      const response = await fetchWithRetry(`/api/productivity/rating-chart/${user.id}?days=14`, {}, 2, 20000);
+      const data = await response.json();
+      
+      if (data.success && data.chartData && data.chartData.length > 0) {
+        setChartData(data.chartData);
+        setChartStats(data.stats);
+      } else {
+        setChartData([]);
+        setChartStats(null);
+      }
+    } catch (error) {
+      // Graceful degradation - показываем пустой график вместо ошибки
+      setChartData([]);
+      setChartStats(null);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [user?.id]);
+  
   // Загрузка данных при монтировании
   useEffect(() => {
-    console.log('Productivity page mounted, loading data...');
-    
-    // Принудительно загружаем данные продуктивности
     if (user?.id) {
-      console.log('🔄 Forcing productivity data load for user:', user.id);
       loadDashboard();
       loadMoodPercentages();
+      loadRatingChart();
+      loadWeeklyInsight();
     }
-  }, [user?.id, loadDashboard, loadMoodPercentages]);
+  }, [user?.id, loadDashboard, loadMoodPercentages, loadRatingChart, loadWeeklyInsight]);
 
-  // Обновляем данные при изменении процентов из БД
-  useEffect(() => {
-    if (moodPercentages && dailyMoodData) {
-      console.log('📊 Обновляем данные на основе процентов из БД:', moodPercentages);
-      loadProductivityData();
+  // Мемоизированное преобразование данных настроения
+  const transformedWeeklyMood = useMemo(() => {
+    if (!dailyMoodData || dailyMoodData.length === 0) {
+      return [
+        { day: 'Пн', mood: 5, energy: 5, stress: 5 },
+        { day: 'Вт', mood: 5, energy: 5, stress: 5 },
+        { day: 'Ср', mood: 5, energy: 5, stress: 5 },
+        { day: 'Чт', mood: 5, energy: 5, stress: 5 },
+        { day: 'Пт', mood: 5, energy: 5, stress: 5 },
+        { day: 'Сб', mood: 5, energy: 5, stress: 5 },
+        { day: 'Вс', mood: 5, energy: 5, stress: 5 }
+      ];
     }
-  }, [moodPercentages, dailyMoodData]);
-
-  // Функция плавного скролла к форме
-  const scrollToForm = () => {
-    if (formRef.current) {
-      formRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
+    
+    const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const dayNamesMap: { [key: string]: string } = {
+      'Mon': 'Пн', 'Tue': 'Вт', 'Wed': 'Ср', 'Thu': 'Чт', 'Fri': 'Пт', 'Sat': 'Сб', 'Sun': 'Вс',
+      'Пн': 'Пн', 'Вт': 'Вт', 'Ср': 'Ср', 'Чт': 'Чт', 'Пт': 'Пт', 'Сб': 'Сб', 'Вс': 'Вс'
+    };
+    
+    return weekDays.map((dayName, index) => {
+      const dayData = dailyMoodData.find((data: any) => {
+        if ((data as any).day_name && dayNamesMap[(data as any).day_name] === dayName) {
+          return true;
+        }
+        if (data.date) {
+          const date = new Date(data.date);
+          const dayIndex = date.getDay();
+          const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+          return adjustedIndex === index;
+        }
+        return false;
       });
-    }
-  };
-
-  const loadProductivityData = async () => {
-    setLoading(true);
-    try {
-      // Используем реальные AI данные
-      await generateDailyInsight();
       
-      // Преобразуем реальные данные из БД в формат для отображения
-      if (dailyMoodData && dailyMoodData.length > 0) {
-        // Правильный порядок дней: Пн, Вт, Ср, Чт, Пт, Сб, Вс
-        const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+      if (dayData) {
+        const moodValue = (dayData as any).mood || dayData.mood_percentage || 0;
+        const energyValue = (dayData as any).energy || dayData.energy_percentage || 0;
+        const calmnessValue = (dayData as any).calmness || dayData.calmness_percentage || 0;
         
-        // Создаем массив для всех дней недели
-        const realWeeklyMood: WeeklyMood[] = weekDays.map((dayName, index) => {
-          // Ищем данные для текущего дня недели
-          const dayData = dailyMoodData.find(data => {
-            const date = new Date(data.date);
-            const dayIndex = date.getDay();
-            // getDay() возвращает 0=Вс, 1=Пн, 2=Вт, 3=Ср, 4=Чт, 5=Пт, 6=Сб
-            // Нам нужно: 0=Пн, 1=Вт, 2=Ср, 3=Чт, 4=Пт, 5=Сб, 6=Вс
-            const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-            return adjustedIndex === index;
-          });
-          
-          if (dayData) {
-            return {
-              day: dayName,
-              mood: Math.round(dayData.mood_percentage), // Проценты уже в правильном формате
-              energy: Math.round(dayData.energy_percentage),
-              stress: Math.round(100 - dayData.calmness_percentage) // Инвертируем спокойствие в стресс
-            };
-          } else {
-            // Если нет данных для этого дня, возвращаем 0
-            return {
-              day: dayName,
-              mood: 0,
-              energy: 0,
-              stress: 100 // Максимальный стресс = нет спокойствия
-            };
-          }
-        });
-        
-        setWeeklyMood(realWeeklyMood);
-        console.log('📊 Загружены реальные недельные данные настроения:', realWeeklyMood);
-        console.log('📊 Исходные данные из БД:', dailyMoodData);
-      } else {
-        console.log('📊 Нет данных настроения, используем базовые значения');
-        // Базовые данные если нет реальных
-        const baseWeeklyMood: WeeklyMood[] = [
-          { day: 'Пн', mood: 5, energy: 5, stress: 5 },
-          { day: 'Вт', mood: 5, energy: 5, stress: 5 },
-          { day: 'Ср', mood: 5, energy: 5, stress: 5 },
-          { day: 'Чт', mood: 5, energy: 5, stress: 5 },
-          { day: 'Пт', mood: 5, energy: 5, stress: 5 },
-          { day: 'Сб', mood: 5, energy: 5, stress: 5 },
-          { day: 'Вс', mood: 5, energy: 5, stress: 5 }
-        ];
-        setWeeklyMood(baseWeeklyMood);
+        return {
+          day: dayName,
+          mood: Math.round(moodValue),
+          energy: Math.round(energyValue),
+          stress: Math.round(100 - calmnessValue)
+        };
       }
       
-      // Загружаем последние активности по категориям (пока используем mock данные)
+      return {
+        day: dayName,
+        mood: 0,
+        energy: 0,
+        stress: 100
+      };
+    });
+  }, [dailyMoodData]);
+  
+  const loadProductivityData = useCallback(async () => {
+    setLoading(true);
+    try {
+      setWeeklyMood(transformedWeeklyMood);
       setLastActivities({
         work: 'Завершение проекта Yoddle',
         health: 'Утренняя пробежка 5км',
         learning: 'Изучение React Hooks'
       });
     } catch (error) {
-      console.error('Error loading productivity data:', error);
       setSnackbarMessage('Ошибка загрузки данных');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [transformedWeeklyMood]);
+  
+  // Debounced обновление данных при изменении процентов из БД
+  const debouncedLoadProductivityData = useMemo(
+    () => debounce(() => {
+      if (moodPercentages && dailyMoodData) {
+        loadProductivityData();
+      }
+    }, 300),
+    [moodPercentages, dailyMoodData, loadProductivityData]
+  );
+  
+  useEffect(() => {
+    debouncedLoadProductivityData();
+  }, [moodPercentages, dailyMoodData, debouncedLoadProductivityData]);
 
-  const handleQuickMoodSubmit = async () => {
+  // Функция плавного скролла к форме
+  const scrollToForm = useCallback(() => {
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+    }
+  }, []);
+
+  // Обновляем weeklyMood при изменении transformedWeeklyMood
+  useEffect(() => {
+    setWeeklyMood(transformedWeeklyMood);
+  }, [transformedWeeklyMood]);
+
+  const handleQuickMoodSubmit = useCallback(async () => {
     setSubmitting(true);
     try {
-      // Проверяем, является ли это логированием активности
       if (formType === 'activity') {
+        const activityName = activityEntry.activity.trim();
         
-        // Определяем категорию активности
-        let category = activityEntry.category;
-        
-        // Извлекаем название активности из поля названия
-        let activityName = activityEntry.activity.trim();
-        
-        // Проверяем, что название активности указано
-        if (activityName && activityName.trim() !== '') {
-          // Проверяем наличие user.id
-          if (!user?.id) {
-            setSnackbarMessage('Ошибка: пользователь не авторизован');
-            setSnackbarOpen(true);
-            return;
-          }
-          
-          // Отправляем активность в AI API
-          const activityResponse = await logActivity({
-            activity: activityName,
-            category: category,
-            duration: activityEntry.duration,
-            success: activityEntry.success_rating >= 5, // Конвертируем рейтинг в boolean
-            success_rating: activityEntry.success_rating,
-            notes: activityEntry.notes
-          }, parseInt(user.id, 10));
-          
-          // Показываем AI ответ в том же месте, где показывается анализ настроения
-          if (activityResponse) {
-            console.log('📝 Полученный ответ активности, длина:', activityResponse?.length || 0);
-            console.log('📝 Полученный ответ активности (первые 200 символов):', activityResponse?.substring(0, 200));
-            console.log('📝 Полученный ответ активности (последние 200 символов):', activityResponse?.substring(Math.max(0, (activityResponse?.length || 0) - 200)));
-            setLastAnalysis(activityResponse);
-            setSnackbarMessage('Активность залогирована и проанализирована!');
-          } else {
-            setSnackbarMessage('Активность залогирована и проанализирована!');
-          }
-        } else {
+        if (!activityName) {
           setSnackbarMessage('Пожалуйста, укажите название активности');
           setSnackbarOpen(true);
-          return; // Не сбрасываем форму, если название не указано
+          return;
         }
-      } else {
-        // Обычное логирование настроения
-        // Проверяем наличие user.id
+        
         if (!user?.id) {
           setSnackbarMessage('Ошибка: пользователь не авторизован');
           setSnackbarOpen(true);
           return;
         }
         
-        console.log('🚀 Отправляем данные настроения:', {
-          mood: moodEntry.mood,
-          activities: ['daily_mood_check'],
-          notes: moodEntry.notes,
-          stressLevel: moodEntry.stress,
-          timestamp: new Date().toISOString(),
-          userId: user.id
-        });
+        try {
+          const activityResponse = await logActivity({
+            activity: activityName,
+            category: activityEntry.category,
+            duration: activityEntry.duration,
+            success: activityEntry.success_rating >= 5,
+            success_rating: activityEntry.success_rating,
+            notes: activityEntry.notes
+          }, parseInt(user.id, 10));
+          
+          if (activityResponse) {
+            setLastAnalysis(activityResponse);
+          }
+          setSnackbarMessage('Активность залогирована и проанализирована!');
+        } catch (error: any) {
+          throw new Error(error?.message || 'Ошибка при отправке активности');
+        }
+      } else {
+        if (!user?.id) {
+          setSnackbarMessage('Ошибка: пользователь не авторизован');
+          setSnackbarOpen(true);
+          return;
+        }
         
-        const analysis = await analyzeMood({
-          mood: moodEntry.mood,
-          activities: ['daily_mood_check'],
-          notes: moodEntry.notes,
-          stressLevel: moodEntry.stress,
-          timestamp: new Date().toISOString()
-        }, parseInt(user.id, 10));
-        
-        console.log('📝 Полученный анализ настроения, длина:', analysis?.length || 0);
-        console.log('📝 Полученный анализ настроения (первые 200 символов):', analysis?.substring(0, 200));
-        console.log('📝 Полученный анализ настроения (последние 200 символов):', analysis?.substring(Math.max(0, (analysis?.length || 0) - 200)));
-        
-        setLastAnalysis(analysis || 'AI проанализировал ваше настроение!');
-        setSnackbarMessage('AI проанализировал ваше настроение!');
+        try {
+          const analysis = await analyzeMood({
+            mood: moodEntry.mood,
+            energy: moodEntry.energy,
+            activities: ['daily_mood_check'],
+            notes: moodEntry.notes,
+            stressLevel: moodEntry.stress,
+            timestamp: new Date().toISOString()
+          }, parseInt(user.id, 10));
+          
+          setLastAnalysis(analysis || 'AI проанализировал ваше настроение!');
+          setSnackbarMessage('AI проанализировал ваше настроение!');
+        } catch (error: any) {
+          throw new Error(error?.message || 'Ошибка при анализе настроения');
+        }
       }
       
       setSnackbarOpen(true);
       
-      // Добавляем задержку перед сбросом формы, чтобы пользователь увидел ответ
+      // Оптимистичное обновление UI - сбрасываем форму сразу
       setTimeout(() => {
-        // Сброс формы только если операция прошла успешно
         setMoodEntry({
           mood: 7,
           energy: 7,
@@ -656,35 +748,41 @@ const Productivity: React.FC = () => {
         });
         setFormType(null);
         setShowQuickEntry(false);
-      }, 3000); // 3 секунды задержки для формы активности
+      }, 2000);
       
-      // Перезагрузка данных
-      await loadProductivityData();
+      // Перезагрузка данных в фоне (не блокируем UI)
+      Promise.all([
+        loadProductivityData(),
+        loadDashboard(),
+        loadRatingChart()
+      ]).catch(() => {
+        // Тихая ошибка - данные обновятся при следующей загрузке
+      });
     } catch (error: any) {
-      console.error('Error submitting data:', error);
       const errorMessage = error?.message || 'Ошибка отправки данных';
-      setSnackbarMessage(errorMessage.includes('User ID') ? 'Ошибка: пользователь не авторизован' : errorMessage);
+      setSnackbarMessage(errorMessage.includes('User ID') || errorMessage.includes('авторизован') 
+        ? 'Ошибка: пользователь не авторизован' 
+        : errorMessage);
       setSnackbarOpen(true);
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [formType, activityEntry, moodEntry, user?.id, logActivity, analyzeMood, loadProductivityData, loadDashboard, loadRatingChart]);
 
 
 
 
 
-  const calculateAverageFromWeek = () => {
-    // Используем реальные данные из БД если они есть
+  // Мемоизированный расчет средних значений
+  const averages = useMemo(() => {
     if (moodPercentages) {
       return {
         mood: moodPercentages.mood || 0,
         energy: moodPercentages.energy || 0,
-        stress: 100 - (moodPercentages.calmness || 0) // Инвертируем спокойствие в стресс
+        stress: 100 - (moodPercentages.calmness || 0)
       };
     }
     
-    // Fallback на локальные данные если БД недоступна
     if (weeklyMood.length === 0) return { mood: 0, energy: 0, stress: 0 };
     
     const totals = weeklyMood.reduce((acc, day) => ({
@@ -698,11 +796,10 @@ const Productivity: React.FC = () => {
       energy: Math.round((totals.energy / weeklyMood.length) * 10),
       stress: Math.round((totals.stress / weeklyMood.length) * 10)
     };
-  };
+  }, [moodPercentages, weeklyMood]);
 
 
 
-  const averages = calculateAverageFromWeek();
 
   if (loading) {
     return (
@@ -908,6 +1005,200 @@ const Productivity: React.FC = () => {
             </Box>
           </motion.div>
 
+          {/* Информационный блок о записи настроения и активности */}
+          <motion.div variants={itemVariants} style={{ marginBottom: '2rem', position: 'relative' }}>
+            <Paper elevation={0} sx={{
+              p: 4,
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+              border: '2px solid #8B000015',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)'
+            }}>
+              {/* Декоративный элемент */}
+              <Box sx={{
+                position: 'absolute',
+                top: -20,
+                right: -20,
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                background: 'rgba(139,0,0,0.05)',
+                zIndex: 0
+              }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                {/* Заголовок */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1.5,
+                  mb: 3
+                }}>
+                  <Box sx={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(139,0,0,0.3)'
+                  }}>
+                    <LightbulbIcon size={24} color="#fff" />
+                  </Box>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 700, 
+                    color: '#1A1A1A',
+                    fontSize: '1.25rem'
+                  }}>
+                    Зачем записывать настроение и активность?
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Box sx={{ 
+                      minWidth: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(139,0,0,0.2)'
+                    }}>
+                      <BarChart3Icon size={20} color="#fff" />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ 
+                        color: '#1A1A1A', 
+                        lineHeight: 1.7,
+                        fontSize: '0.95rem',
+                        fontWeight: 500
+                      }}>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#8B0000' }}>
+                          Запись настроения помогает AI анализировать ваше состояние
+                        </Box>
+                        {' — '}система отслеживает ваши эмоции, энергию и уровень стресса для более точных рекомендаций
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Box sx={{ 
+                      minWidth: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(139,0,0,0.2)'
+                    }}>
+                      <BrainIcon size={20} color="#fff" />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ 
+                        color: '#1A1A1A', 
+                        lineHeight: 1.7,
+                        fontSize: '0.95rem',
+                        fontWeight: 500
+                      }}>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#8B0000' }}>
+                          На основе активности вы получаете персональные рекомендации
+                        </Box>
+                        {' — '}AI изучает ваши паттерны поведения и предлагает индивидуальные советы по улучшению продуктивности
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Box sx={{ 
+                      minWidth: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(139,0,0,0.2)'
+                    }}>
+                      <SparklesIcon size={20} color="#fff" />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ 
+                        color: '#1A1A1A', 
+                        lineHeight: 1.7,
+                        fontSize: '0.95rem',
+                        fontWeight: 500
+                      }}>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#8B0000' }}>
+                          Все данные взаимосвязаны и улучшают качество инсайтов
+                        </Box>
+                        {' — '}чем больше информации вы предоставляете, тем точнее становятся аналитика и рекомендации
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Ограничения */}
+                <Box sx={{ 
+                  mt: 3,
+                  pt: 3,
+                  borderTop: '1px solid rgba(139,0,0,0.15)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2
+                }}>
+                  <Box sx={{ 
+                    minWidth: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #ff9800 0%, #ff6b00 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(255,152,0,0.2)'
+                  }}>
+                    <AlertTriangleIcon size={20} color="#fff" />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 700, 
+                      color: '#1A1A1A',
+                      mb: 1.5,
+                      fontSize: '0.95rem'
+                    }}>
+                      Ограничения записей
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Typography variant="body2" sx={{ 
+                        color: '#666', 
+                        lineHeight: 1.7,
+                        fontSize: '0.9rem'
+                      }}>
+                        <Box component="span" sx={{ fontWeight: 600, color: '#1A1A1A' }}>Обычная запись настроения:</Box> до 3 раз в день
+                      </Typography>
+                      <Typography variant="body2" sx={{ 
+                        color: '#666', 
+                        lineHeight: 1.7,
+                        fontSize: '0.9rem'
+                      }}>
+                        <Box component="span" sx={{ fontWeight: 600, color: '#1A1A1A' }}>Расширенная запись активности:</Box> до 2 раз в день
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+          </motion.div>
+
           {/* Бейдж уровня продуктивности */}
           <motion.div variants={itemVariants} style={{ marginBottom: '3rem' }}>
             <Paper elevation={0} sx={{
@@ -927,17 +1218,97 @@ const Productivity: React.FC = () => {
               }} />
               
               <Box sx={{ position: 'relative', zIndex: 1, pt: 3 }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 600, 
-                  color: '#666', 
-                  mb: 3,
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontSize: '0.9rem'
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: 1,
+                  mb: 3
                 }}>
-                  Ваш уровень продуктивности
-                </Typography>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 600, 
+                    color: '#666', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    fontSize: '0.9rem'
+                  }}>
+                    Ваш уровень продуктивности
+                  </Typography>
+                  
+                  {/* Иконка информации о тестовой функции */}
+                  <Tooltip
+                    title={
+                      <Box sx={{ p: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#fff', mb: 1, fontWeight: 600 }}>
+                          Тестовая функция
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#fff', mb: 1.5, lineHeight: 1.6 }}>
+                          Система определения уровня продуктивности находится в тестовом режиме. Ваш уровень рассчитывается на основе:
+                        </Typography>
+                        <Box component="ul" sx={{ m: 0, pl: 2, color: '#fff' }}>
+                          <li style={{ marginBottom: '8px' }}>
+                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                              <strong>Записей настроения</strong> — эмоциональное состояние, энергия и уровень стресса
+                            </Typography>
+                          </li>
+                          <li style={{ marginBottom: '8px' }}>
+                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                              <strong>Активности</strong> — ваши действия и достижения в течение дня
+                            </Typography>
+                          </li>
+                          <li style={{ marginBottom: '8px' }}>
+                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                              <strong>AI-анализа</strong> — персональные инсайты и рекомендации на основе ваших данных
+                            </Typography>
+                          </li>
+                          <li>
+                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                              <strong>Интеграции с системой</strong> — уровень влияет на рекомендации льгот и аналитику продуктивности
+                            </Typography>
+                          </li>
+                        </Box>
+                        <Typography variant="body2" sx={{ color: '#fff', mt: 1.5, fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
+                          Чем больше данных вы предоставляете, тем точнее определяется ваш уровень продуктивности.
+                        </Typography>
+                      </Box>
+                    }
+                    arrow
+                    placement="top"
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          bgcolor: '#1A1A1A',
+                          maxWidth: '450px',
+                          borderRadius: '12px',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                          p: 0,
+                          '& .MuiTooltip-arrow': {
+                            color: '#1A1A1A'
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    <IconButton
+                      sx={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: 'rgba(139,0,0,0.1)',
+                        border: '1px solid rgba(139,0,0,0.2)',
+                        color: '#8B0000',
+                        padding: 0,
+                        '&:hover': {
+                          background: 'rgba(139,0,0,0.15)',
+                          borderColor: 'rgba(139,0,0,0.3)'
+                        }
+                      }}
+                    >
+                      <InfoIcon size={14} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
                 
                 {productivityLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
@@ -946,17 +1317,17 @@ const Productivity: React.FC = () => {
                   </Box>
                 ) : productivityError ? (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body1" sx={{ color: '#f44336', mb: 2 }}>
-                      Ошибка загрузки: {productivityError}
-                    </Typography>
-                    <Button 
-                      variant="outlined" 
-                      onClick={() => loadDashboard()}
-                      sx={{ color: '#8B0000', borderColor: '#8B0000' }}
-                    >
-                      Попробовать снова
-                    </Button>
-                  </Box>
+                      <Typography variant="body1" sx={{ color: '#f44336', mb: 2 }}>
+                        Ошибка загрузки: {productivityError}
+                      </Typography>
+                      <Button 
+                        variant="outlined" 
+                        onClick={() => loadDashboard()}
+                        sx={{ color: '#8B0000', borderColor: '#8B0000' }}
+                      >
+                        Попробовать снова
+                      </Button>
+                    </Box>
                 ) : dashboard ? (
                   <Box sx={{ textAlign: 'center' }}>
                     {/* Большой бейдж уровня */}
@@ -1031,7 +1402,7 @@ const Productivity: React.FC = () => {
                       gap: 4,
                       mb: 4
                     }}>
-                      <Box sx={{ textAlign: 'center' }}>
+                      <Box sx={{ textAlign: 'center', position: 'relative' }}>
                         <Typography variant="h2" sx={{ 
                           fontWeight: 900, 
                           color: '#8B0000',
@@ -1043,15 +1414,74 @@ const Productivity: React.FC = () => {
                         }}>
                           {dashboard?.productivity_score ? Number(dashboard.productivity_score).toFixed(1) : '0.0'}
                         </Typography>
-                        <Typography variant="body2" sx={{ 
-                          color: '#666', 
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.1em',
-                          fontSize: '0.85rem'
-                        }}>
-                          Рейтинг
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          <Typography variant="body2" sx={{ 
+                            color: '#666', 
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            fontSize: '0.85rem'
+                          }}>
+                            Рейтинг
+                          </Typography>
+                          <Tooltip
+                            title={
+                              <Box sx={{ p: 1 }}>
+                                <Typography variant="body2" sx={{ color: '#fff', mb: 1.5, fontWeight: 600 }}>
+                                  Как рассчитывается рейтинг продуктивности?
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mb: 1 }}>
+                                  Рейтинг учитывает ваше настроение, успешность выполненных активностей и общую активность на платформе.
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mb: 1 }}>
+                                  Чем выше ваше настроение, чем больше успешных активностей вы выполняете и чем активнее вы используете платформу, тем выше ваш рейтинг продуктивности.
+                                </Typography>
+                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
+                                    💡 Это тестовая функция. Алгоритм расчета может изменяться для улучшения точности.
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', lineHeight: 1.6, mt: 1, fontWeight: 600 }}>
+                                    📅 Рейтинг обнуляется каждый месяц в первый день для всех пользователей. Это дает возможность начать с чистого листа и лучше понять, как работает система.
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            }
+                            arrow
+                            placement="top"
+                            componentsProps={{
+                              tooltip: {
+                                sx: {
+                                  bgcolor: '#1A1A1A',
+                                  maxWidth: '500px',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                                  p: 0,
+                                  '& .MuiTooltip-arrow': {
+                                    color: '#1A1A1A'
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <IconButton
+                              sx={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: 'rgba(139,0,0,0.1)',
+                                border: '1px solid rgba(139,0,0,0.2)',
+                                color: '#8B0000',
+                                padding: 0,
+                                '&:hover': {
+                                  background: 'rgba(139,0,0,0.15)',
+                                  borderColor: 'rgba(139,0,0,0.3)'
+                                }
+                              }}
+                            >
+                              <InfoIcon size={12} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </Box>
                       
                       <Box sx={{ 
@@ -1073,15 +1503,71 @@ const Productivity: React.FC = () => {
                         }}>
                           {dashboard.xp_multiplier || 1.0}x
                         </Typography>
-                        <Typography variant="body2" sx={{ 
-                          color: '#666', 
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.1em',
-                          fontSize: '0.85rem'
-                        }}>
-                          XP множитель
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          <Typography variant="body2" sx={{ 
+                            color: '#666', 
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            fontSize: '0.85rem'
+                          }}>
+                            XP множитель
+                          </Typography>
+                          <Tooltip
+                            title={
+                              <Box sx={{ p: 1 }}>
+                                <Typography variant="body2" sx={{ color: '#fff', mb: 1, fontWeight: 600 }}>
+                                  Что такое XP множитель?
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                                  Множитель опыта увеличивает количество очков опыта (XP), которые вы получаете за действия на платформе.
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mt: 1 }}>
+                                  Чем выше ваш рейтинг продуктивности, тем выше множитель. Это позволяет быстрее повышать уровень и получать больше наград.
+                                </Typography>
+                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
+                                    💡 Поддерживайте высокий рейтинг продуктивности для максимального множителя.
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            }
+                            arrow
+                            placement="top"
+                            componentsProps={{
+                              tooltip: {
+                                sx: {
+                                  bgcolor: '#1A1A1A',
+                                  maxWidth: '400px',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                                  p: 0,
+                                  '& .MuiTooltip-arrow': {
+                                    color: '#1A1A1A'
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <IconButton
+                              sx={{
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                background: 'rgba(139,0,0,0.1)',
+                                border: '1px solid rgba(139,0,0,0.2)',
+                                color: '#8B0000',
+                                padding: 0,
+                                '&:hover': {
+                                  background: 'rgba(139,0,0,0.15)',
+                                  borderColor: 'rgba(139,0,0,0.3)'
+                                }
+                              }}
+                            >
+                              <InfoIcon size={10} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </Box>
                     </Box>
                     
@@ -1147,6 +1633,41 @@ const Productivity: React.FC = () => {
                         </Box>
                       </Grid>
                     </Grid>
+                    
+                    {/* Кнопка показать график активности */}
+                    <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setShowActivityChart(!showActivityChart);
+                          if (!showActivityChart && chartRef.current) {
+                            setTimeout(() => {
+                              chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
+                          }
+                        }}
+                        sx={{
+                          borderColor: '#8B0000',
+                          color: '#8B0000',
+                          fontWeight: 600,
+                          px: 4,
+                          py: 1.5,
+                          borderRadius: '50px',
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          '&:hover': {
+                            borderColor: '#A0000A',
+                            background: 'rgba(139, 0, 0, 0.05)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(139, 0, 0, 0.2)'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                        startIcon={<BarChart3Icon size={20} />}
+                      >
+                        {showActivityChart ? 'Скрыть график активности' : 'Показать график активности'}
+                      </Button>
+                    </Box>
                   </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -1159,7 +1680,219 @@ const Productivity: React.FC = () => {
             </Paper>
           </motion.div>
 
-                    {/* Настроение за неделю */}
+          {/* График зависимости рейтинга от активностей - ПЕРЕД еженедельной аналитикой */}
+          {showActivityChart && (
+            <motion.div 
+              ref={chartRef}
+              variants={itemVariants} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              style={{ marginBottom: '3rem' }}
+            >
+            <Paper elevation={0} sx={{
+              ...cardStyle,
+              background: '#fff',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '6px',
+                background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #8B0000 100%)'
+              }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1, p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 700, 
+                    color: '#1A1A1A',
+                    fontSize: '1.3rem'
+                  }}>
+                    Зависимость рейтинга от активностей
+                  </Typography>
+                  <Tooltip title="Накопительный рейтинг учитывает всю историю ваших активностей и настроения. Коэффициент активности (K) также рассчитывается как среднее за всю историю, поэтому рейтинг плавно изменяется и отражает ваш общий прогресс.">
+                    <IconButton size="small" sx={{ color: '#8B0000' }}>
+                      <InfoIcon size={18} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                
+                {chartLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+                    <CircularProgress sx={{ color: '#8B0000' }} />
+                  </Box>
+                ) : chartData && chartData.length > 0 ? (
+                  <Box>
+                    {/* SVG График */}
+                    <Box sx={{ width: '100%', height: '300px', position: 'relative', mb: 3 }}>
+                      <svg width="100%" height="100%" viewBox="0 0 800 300" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                        {/* Сетка */}
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((y) => (
+                          <line
+                            key={y}
+                            x1="60"
+                            y1={270 - y * 27}
+                            x2="800"
+                            y2={270 - y * 27}
+                            stroke="#e0e0e0"
+                            strokeWidth="1"
+                            strokeDasharray="4 4"
+                          />
+                        ))}
+                        
+                        {/* Оси */}
+                        <line x1="60" y1="20" x2="60" y2="270" stroke="#8B0000" strokeWidth="2" />
+                        <line x1="60" y1="270" x2="800" y2="270" stroke="#8B0000" strokeWidth="2" />
+                        
+                        {/* Подписи оси Y (рейтинг 0-10) */}
+                        {[0, 2, 4, 6, 8, 10].map((y) => (
+                          <text
+                            key={y}
+                            x="55"
+                            y={270 - y * 27 + 4}
+                            textAnchor="end"
+                            fill="#666"
+                            fontSize="12"
+                            fontWeight="600"
+                          >
+                            {y}
+                          </text>
+                        ))}
+                        
+                        {/* Линия рейтинга */}
+                        {chartData.length > 1 && (
+                          <polyline
+                            points={chartData.map((d, i) => {
+                              const x = 60 + (i / Math.max(chartData.length - 1, 1)) * 740;
+                              const y = 270 - Math.max(0, Math.min(10, parseFloat(d.rating) || 0)) * 27;
+                              return `${x},${y}`;
+                            }).join(' ')}
+                            fill="none"
+                            stroke="#8B0000"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+                        
+                        {/* Точки на графике */}
+                        {chartData.map((d, i) => {
+                          const x = 60 + (i / Math.max(chartData.length - 1, 1)) * 740;
+                          const y = 270 - (parseFloat(d.rating) || 0) * 27;
+                          const date = new Date(d.date);
+                          const dayLabel = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                          
+                          return (
+                            <g key={i}>
+                              <circle
+                                cx={x}
+                                cy={y}
+                                r="5"
+                                fill="#8B0000"
+                                stroke="#fff"
+                                strokeWidth="2"
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <text
+                                x={x}
+                                y={285}
+                                textAnchor="middle"
+                                fill="#666"
+                                fontSize="10"
+                                transform={`rotate(-45 ${x} ${285})`}
+                              >
+                                {dayLabel}
+                              </text>
+                            </g>
+                          );
+                        })}
+                        
+                        {/* Градиент под линией */}
+                        {chartData.length > 1 && (
+                          <defs>
+                            <linearGradient id="ratingGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#8B0000" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#8B0000" stopOpacity="0.05" />
+                            </linearGradient>
+                          </defs>
+                        )}
+                        
+                        {chartData.length > 1 && (
+                          <polygon
+                            points={`60,270 ${chartData.map((d, i) => {
+                              const x = 60 + (i / Math.max(chartData.length - 1, 1)) * 740;
+                              const y = 270 - Math.max(0, Math.min(10, parseFloat(d.rating) || 0)) * 27;
+                              return `${x},${y}`;
+                            }).join(' ')} 800,270`}
+                            fill="url(#ratingGradient)"
+                          />
+                        )}
+                      </svg>
+                    </Box>
+                    
+                    {/* Статистика */}
+                    {chartStats && (
+                      <Grid container spacing={2} sx={{ mt: 2 }}>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ textAlign: 'center', p: 2, background: '#f5f5f5', borderRadius: '8px' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#8B0000', mb: 0.5 }}>
+                              {chartStats?.average ? chartStats.average.toFixed(1) : '0.0'}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#666', fontSize: '0.85rem' }}>
+                              Средний рейтинг
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ textAlign: 'center', p: 2, background: '#f5f5f5', borderRadius: '8px' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#8B0000', mb: 0.5 }}>
+                              {chartStats?.total_activities ? chartStats.total_activities : 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#666', fontSize: '0.85rem' }}>
+                              Всего активностей
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ textAlign: 'center', p: 2, background: '#f5f5f5', borderRadius: '8px' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#8B0000', mb: 0.5 }}>
+                              {chartStats?.successful_activities ? chartStats.successful_activities : 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#666', fontSize: '0.85rem' }}>
+                              Успешных
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ textAlign: 'center', p: 2, background: '#f5f5f5', borderRadius: '8px' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#8B0000', mb: 0.5 }}>
+                              {chartStats?.success_rate ? `${chartStats.success_rate.toFixed(0)}%` : '0%'}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#666', fontSize: '0.85rem' }}>
+                              Успешность
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    )}
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" sx={{ color: '#666' }}>
+                      Нет данных для отображения графика
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </motion.div>
+          )}
+
+          {/* Настроение за неделю */}
           <motion.div variants={itemVariants} style={{ marginBottom: '3rem' }}>
             <Paper elevation={0} sx={{
               ...cardStyle,
@@ -1253,14 +1986,15 @@ const Productivity: React.FC = () => {
 
                 {/* График по дням */}
                 <Grid container spacing={2}>
-                  {weeklyMood
-                    .sort((a, b) => {
-                      // Сортируем дни в правильном порядке: Пн, Вт, Ср, Чт, Пт, Сб, Вс
-                      const dayOrder = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 7 };
-                      return (dayOrder[a.day as keyof typeof dayOrder] || 0) - (dayOrder[b.day as keyof typeof dayOrder] || 0);
-                    })
-                    .map((day, index) => (
-                    <Grid item xs key={day.day}>
+                  {weeklyMood && weeklyMood.length > 0 ? (
+                    weeklyMood
+                      .sort((a, b) => {
+                        // Сортируем дни в правильном порядке: Пн, Вт, Ср, Чт, Пт, Сб, Вс
+                        const dayOrder = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 7 };
+                        return (dayOrder[a.day as keyof typeof dayOrder] || 0) - (dayOrder[b.day as keyof typeof dayOrder] || 0);
+                      })
+                      .map((day, index) => (
+                        <Grid item xs key={day.day}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#666' }}>
                           {day.day}
@@ -1277,7 +2011,7 @@ const Productivity: React.FC = () => {
                         }}>
                           {/* Настроение */}
                           <Tooltip 
-                            title={`Настроение: ${Math.round(day.mood)}%`}
+                            title={`Настроение: ${Math.round(day.mood || 0)}%`}
                             arrow
                             placement="top"
                           >
@@ -1298,11 +2032,12 @@ const Productivity: React.FC = () => {
                               style={{
                                 transformOrigin: 'bottom',
                                 width: '18px',
-                                height: `${Math.max(day.mood * 1.2, 15)}px`,
+                                height: `${Math.max((day.mood || 0) * 1.2, 15)}px`,
                                 background: 'linear-gradient(to top, #8B0000 0%, #A52A2A 100%)',
                                 borderRadius: '4px',
                                 boxShadow: '0 2px 6px rgba(139,0,0,0.3)',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                minHeight: '15px'
                               }}
                             />
                           </Tooltip>
@@ -1341,7 +2076,7 @@ const Productivity: React.FC = () => {
                           
                           {/* Спокойствие */}
                           <Tooltip 
-                            title={`Спокойствие: ${Math.round(100 - day.stress)}%`}
+                            title={`Спокойствие: ${Math.round(100 - (day.stress || 100))}%`}
                             arrow
                             placement="top"
                           >
@@ -1362,18 +2097,28 @@ const Productivity: React.FC = () => {
                               style={{
                                 transformOrigin: 'bottom',
                                 width: '18px',
-                                height: `${Math.max((100 - day.stress) * 1.2, 15)}px`,
+                                height: `${Math.max((100 - (day.stress || 100)) * 1.2, 15)}px`,
                                 background: 'linear-gradient(to top, #B71C1C 0%, #DC143C 100%)',
                                 borderRadius: '4px',
                                 boxShadow: '0 2px 6px rgba(183,28,28,0.3)',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                minHeight: '15px'
                               }}
                             />
                           </Tooltip>
                         </Box>
                       </Box>
+                        </Grid>
+                      ))
+                  ) : (
+                    <Grid item xs={12}>
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" sx={{ color: '#666' }}>
+                          Нет данных для отображения гистограмм
+                        </Typography>
+                      </Box>
                     </Grid>
-                  ))}
+                  )}
                 </Grid>
 
                 <Box sx={{ display: 'flex', gap: 4, mt: 4, justifyContent: 'center' }}>
@@ -1505,17 +2250,17 @@ const Productivity: React.FC = () => {
                 </Box>
                 
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, lineHeight: 1.4 }}>
-                  {dailyInsight ? 'AI Анализ недели' : 'Загрузка AI анализа...'}
+                  {weeklyInsight ? 'AI Анализ недели' : 'Загрузка AI анализа...'}
                 </Typography>
                 
                 <Box sx={{ opacity: 0.9, lineHeight: 1.6 }}>
-                  {aiLoading ? (
+                  {weeklyInsightLoading ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={16} color="inherit" />
                       AI анализирует ваши данные...
                     </Box>
-                  ) : dailyInsight ? (
-                    <AIResponseDisplay response={dailyInsight} isWeekly={true} />
+                  ) : weeklyInsight ? (
+                    <AIResponseDisplay response={weeklyInsight} isWeekly={true} />
                   ) : (
                     <Typography variant="body1" sx={{ color: 'inherit' }}>
                       AI анализирует ваши данные и готовит персональные инсайты. Продолжайте вести дневник настроения!
@@ -1889,11 +2634,9 @@ const Productivity: React.FC = () => {
                         size="large"
                         startIcon={<TrophyIcon size={20} />}
                         onClick={() => {
-                          console.log('🎯 Нажата кнопка "Поделиться успехом"');
                           setShowQuickEntry(true);
                           setFormType('mood');
                           setMoodEntry({...moodEntry, notes: 'Сегодня у меня был успех: '});
-                          console.log('📝 Установлено значение notes:', 'Сегодня у меня был успех: ');
                         }}
                         sx={{
                           background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
@@ -2561,13 +3304,10 @@ const Productivity: React.FC = () => {
                           label="Дополнительные заметки"
                           value={formType === 'activity' ? activityEntry.notes : moodEntry.notes}
                           onChange={(e) => {
-                            console.log('✏️ Изменение поля заметок:', e.target.value);
                             if (formType === 'activity') {
                               setActivityEntry({...activityEntry, notes: e.target.value});
-                              console.log('📝 Обновляем activityEntry.notes:', e.target.value);
                             } else {
                               setMoodEntry({...moodEntry, notes: e.target.value});
-                              console.log('📝 Обновляем moodEntry.notes:', e.target.value);
                             }
                           }}
                           sx={{ 

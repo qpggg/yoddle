@@ -1,6 +1,7 @@
 // AI API Client для интеграции с backend
 export interface MoodEntry {
   mood: number;
+  energy?: number;
   activities: string[];
   notes: string;
   stressLevel: number;
@@ -204,6 +205,14 @@ class AIClient {
     return this.request<DailyInsightResponse>('/api/ai/generate-daily-insight', {
       method: 'POST',
       body: JSON.stringify({ userId }),
+    });
+  }
+
+  // Генерация недельного инсайта
+  async generateWeeklyInsight(userId: string = '1', forceRegenerate: boolean = false): Promise<DailyInsightResponse> {
+    return this.request<DailyInsightResponse>('/api/ai/generate-daily-insight', {
+      method: 'POST',
+      body: JSON.stringify({ userId, forceRegenerate }),
     });
   }
 }

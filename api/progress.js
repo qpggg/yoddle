@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       let progress = progressResult.rows[0];
       if (!progress) {
         await client.query(
-          'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion) VALUES ($1, 25, 1, 1, 1, 0, 50)',
+          'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion, onboarding_completed, tour_completed) VALUES ($1, 25, 1, 1, 1, 0, 50, false, false)',
           [user_id]
         );
         
@@ -57,15 +57,18 @@ export default async function handler(req, res) {
           [user_id, 'first_login']
         );
         
-        progress = {
-          user_id,
-          xp: 25,
-          level: 1,
-          login_streak: 1,
-          days_active: 1,
-          benefits_used: 0,
-          profile_completion: 50
-        };
+        // Перезапрашиваем данные из БД, чтобы получить все поля включая onboarding_completed и tour_completed
+        const newProgressResult = await client.query(
+          'SELECT * FROM user_progress WHERE user_id = $1',
+          [user_id]
+        );
+        progress = newProgressResult.rows[0];
+      }
+      
+      // Гарантируем что boolean поля всегда имеют правильные значения (не NULL)
+      if (progress) {
+        progress.onboarding_completed = progress.onboarding_completed === true || progress.onboarding_completed === 'true' || progress.onboarding_completed === 1 || progress.onboarding_completed === 't' || progress.onboarding_completed === 'T';
+        progress.tour_completed = progress.tour_completed === true || progress.tour_completed === 'true' || progress.tour_completed === 1 || progress.tour_completed === 't' || progress.tour_completed === 'T';
       }
       
       await client.end();
@@ -252,24 +255,106 @@ export default async function handler(req, res) {
     try {
       await client.connect();
       
-      const allowedFields = ['login_streak', 'days_active', 'benefits_used', 'profile_completion'];
+      const allowedFields = ['login_streak', 'days_active', 'benefits_used', 'profile_completion', 'onboarding_completed', 'tour_completed'];
       if (!allowedFields.includes(field)) {
         return res.status(400).json({ error: 'Invalid field' });
       }
       
-      await client.query(
-        `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
-        [user_id, value]
+      // Проверяем существует ли запись user_progress для этого пользователя
+      const checkProgressResult = await client.query(
+        'SELECT * FROM user_progress WHERE user_id = $1',
+        [user_id]
       );
       
+      // Если записи нет, создаем базовую запись (как в GET)
+      if (checkProgressResult.rows.length === 0) {
+        await client.query(
+          'INSERT INTO user_progress (user_id, xp, level, login_streak, days_active, benefits_used, profile_completion, onboarding_completed, tour_completed) VALUES ($1, 25, 1, 1, 1, 0, 50, false, false)',
+          [user_id]
+        );
+        console.log(`📝 Created user_progress record for user ${user_id}`);
+      }
+      
+      // Приводим значение к правильному типу для boolean полей
+      let finalValue = value;
+      if (field === 'onboarding_completed' || field === 'tour_completed') {
+        // Явно приводим к boolean
+        finalValue = value === true || value === 'true' || value === 1 || value === '1';
+      }
+      
+      // Для boolean полей используем явное приведение типа в PostgreSQL
+      let updateQuery;
+      if (field === 'onboarding_completed' || field === 'tour_completed') {
+        // Явно приводим к boolean типу в PostgreSQL
+        updateQuery = `UPDATE user_progress SET ${field} = $2::boolean, last_activity = CURRENT_TIMESTAMP`;
+      } else {
+        updateQuery = `UPDATE user_progress SET ${field} = $2, last_activity = CURRENT_TIMESTAMP`;
+      }
+      const queryParams = [user_id, finalValue];
+      
+      if (field === 'onboarding_completed' && finalValue === true) {
+        updateQuery += ', onboarding_completed_at = CURRENT_TIMESTAMP';
+      }
+      if (field === 'tour_completed' && finalValue === true) {
+        updateQuery += ', tour_completed_at = CURRENT_TIMESTAMP';
+      }
+      
+      updateQuery += ' WHERE user_id = $1';
+      
+      console.log(`🔄 Executing query: ${updateQuery} with params: [${user_id}, ${finalValue} (${typeof finalValue})]`);
+      const result = await client.query(updateQuery, queryParams);
+      
+      // Проверяем что обновление прошло успешно
+      if (result.rowCount === 0) {
+        await client.end();
+        return res.status(500).json({ error: 'Failed to update user progress' });
+      }
+      
+      // Логируем успешное обновление для отладки
+      console.log(`✅ Updated ${field} to ${value} (type: ${typeof value}) for user ${user_id}`);
+      
+      // Проверяем что значение действительно обновилось - получаем полную запись
+      const checkResult = await client.query(
+        `SELECT * FROM user_progress WHERE user_id = $1`,
+        [user_id]
+      );
+      const updatedProgress = checkResult.rows[0];
+      const actualValue = updatedProgress?.[field];
+      
+      console.log(`✅ Verified update for user ${user_id}:`);
+      console.log(`   ${field} = ${actualValue} (type: ${typeof actualValue})`);
+      console.log(`   Full progress:`, {
+        onboarding_completed: updatedProgress?.onboarding_completed,
+        tour_completed: updatedProgress?.tour_completed,
+        onboarding_completed_at: updatedProgress?.onboarding_completed_at,
+        tour_completed_at: updatedProgress?.tour_completed_at
+      });
+      
       await client.end();
       
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ 
+        success: true, 
+        updated_value: actualValue,
+        progress: updatedProgress
+      });
       
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('❌ Database error in PATCH /api/progress:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        hint: error.hint,
+        user_id,
+        field,
+        value
+      });
       await client.end();
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ 
+        error: 'Database error',
+        message: error.message,
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   }
 

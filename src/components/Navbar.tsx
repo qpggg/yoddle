@@ -36,22 +36,31 @@ const Navbar: React.FC = () => {
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [walletPreview, setWalletPreview] = useState<string>('…');
 
-  useEffect(() => {
-    const loadWallet = async () => {
-      try {
-        if (user?.id) {
-          const r = await fetch(`/api/wallet?user_id=${user.id}`);
-          const d = await r.json();
-          if (d && d.success) setWalletPreview(Number(d.balance || 0).toLocaleString('ru-RU'));
-          else setWalletPreview('—');
-        } else setWalletPreview('—');
-      } catch { setWalletPreview('—'); }
-    };
-    loadWallet();
+  const loadWallet = React.useCallback(async () => {
+    try {
+      if (user?.id) {
+        const r = await fetch(`/api/wallet?user_id=${user.id}`);
+        const d = await r.json();
+        if (d && d.success) setWalletPreview(Number(d.balance || 0).toLocaleString('ru-RU'));
+        else setWalletPreview('—');
+      } else setWalletPreview('—');
+    } catch { setWalletPreview('—'); }
   }, [user?.id]);
+
+  useEffect(() => {
+    loadWallet();
+  }, [loadWallet]);
+
+  // Обновлять баланс в меню после любой операции с кошельком (покупка, возврат, начисление)
+  useEffect(() => {
+    const onWalletUpdated = () => loadWallet();
+    window.addEventListener('wallet-updated', onWalletUpdated);
+    return () => window.removeEventListener('wallet-updated', onWalletUpdated);
+  }, [loadWallet]);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
+    loadWallet(); // при открытии меню подтягиваем актуальный баланс
   };
 
   const handleClose = () => setAnchorEl(null);

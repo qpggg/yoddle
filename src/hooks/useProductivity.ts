@@ -371,6 +371,7 @@ export const useProductivity = () => {
         setDailyMoodData(result.dailyData);
         console.log('📊 Загружены проценты настроения из БД:', result.percentages);
         console.log('📊 Ежедневные данные настроения:', result.dailyData.length, 'дней');
+        console.log('📊 Пример ежедневных данных:', result.dailyData.slice(0, 2));
       } else {
         setError(result.message || 'Ошибка при загрузке процентов настроения');
       }

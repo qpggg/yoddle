@@ -135,7 +135,7 @@ function calculateActivityQuality(activity, category, duration, success, notes) 
 // POST /api/ai/analyze-mood - Анализ настроения пользователя
 router.post('/analyze-mood', async (req, res) => {
   try {
-    const { mood, activities, notes, stressLevel } = req.body;
+    const { mood, energy, activities, notes, stressLevel } = req.body;
     let userId = req.body.userId || 1; // По умолчанию используем ID = 1 (тестовый пользователь)
     const originalUserId = userId; // Сохраняем оригинальный ID для логирования
     
@@ -203,14 +203,15 @@ router.post('/analyze-mood', async (req, res) => {
     const signalQuery = `
       INSERT INTO ai_signals (
         user_id, type, data, timestamp, 
-        mood_rating, stress_rating, notes, quality_score
+        mood_rating, energy_rating, stress_rating, notes, quality_score
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
     
     const signalData = {
       mood,
+      energy: energy != null ? energy : undefined,
       activities: Array.isArray(activities) ? activities : [activities],
       notes,
       stressLevel,
@@ -232,8 +233,9 @@ router.post('/analyze-mood', async (req, res) => {
       'mood',
       JSON.stringify(signalData),
       new Date(),
-      mood || 0,
-      stressLevel || 0,
+      mood ?? 0,
+      energy != null ? energy : null,
+      stressLevel ?? 0,
       notes || '',
       qualityScore
     ]);
@@ -442,8 +444,10 @@ router.post('/log-activity', async (req, res) => {
     
     console.log('✅ Активность сохранена в ai_signals, ID:', activityResult.rows[0]?.id);
 
-    // Генерируем AI рекомендацию
-    const prompt = `
+    // Генерируем AI рекомендацию (при ошибке API — активность уже сохранена, возвращаем fallback)
+    let recommendation;
+    try {
+      const prompt = `
       You are a friendly AI coach working to increase user engagement and loyalty in HR-tech tasks. Your goal is to provide a thoughtful, empathetic response to the user's reported activity, understanding their situation and offering appropriate advice.
 
 Here is the information about the user's activity:
@@ -489,64 +493,54 @@ Your response should adhere to the following style guidelines:
 Remember to vary your responses and use different forms of support to keep the feedback fresh and engaging. Your goal is to create a connection with the user and inspire them to keep improving.
 
 Provide your response directly without any XML tags.
-    `;
+      `;
 
-    const message = await retryApiCall(async () => {
-      return await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
+      const message = await retryApiCall(async () => {
+        return await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        });
       });
-    });
 
-    const recommendation = cleanClaudeOutput(message.content[0].text);
-    console.log('✅ AI рекомендация получена, длина:', recommendation.length);
-    console.log('📝 Полный ответ:', recommendation);
+      recommendation = cleanClaudeOutput(message.content[0].text);
+      console.log('✅ AI рекомендация получена, длина:', recommendation.length);
 
-    // Сохраняем AI рекомендацию
-    const recommendationQuery = `
-      INSERT INTO ai_recommendations (user_id, category, message, priority, created_at)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id
-    `;
+      const recommendationQuery = `
+        INSERT INTO ai_recommendations (user_id, category, message, priority, created_at)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+      `;
+      await pool.query(recommendationQuery, [
+        userId,
+        category || 'general',
+        recommendation,
+        'medium',
+        new Date()
+      ]);
 
-    await pool.query(recommendationQuery, [
-      userId,
-      category || 'general',
-      recommendation,
-      'medium',
-      new Date()
-    ]);
+      const insightQuery = `
+        INSERT INTO ai_insights (user_id, type, content, created_at)
+        VALUES ($1, $2, $3, $4)
+      `;
+      await pool.query(insightQuery, [
+        userId,
+        'activity_analysis',
+        recommendation,
+        new Date()
+      ]);
+    } catch (aiError) {
+      console.error('AI recommendation failed (activity already saved):', aiError?.status || aiError?.message);
+      recommendation = success
+        ? '💪 Так держать! Активность записана. Рекомендация временно недоступна.'
+        : '🔄 Продолжай пробовать! Активность записана. Рекомендация временно недоступна.';
+    }
 
-    // ВРЕМЕННО ОТКЛЮЧЕНО: Интеграция с системой продуктивности
-    // TODO: Исправить проблему с достижениями перед включением
-    console.log('ℹ️ Интеграция с продуктивностью временно отключена (проблема с достижениями)');
-
-    // Сохраняем инсайт об активности
-    const insightQuery = `
-      INSERT INTO ai_insights (user_id, type, content, created_at)
-      VALUES ($1, $2, $3, $4)
-    `;
-
-    console.log('💾 Сохраняем инсайт об активности в БД...');
-    console.log('📊 Данные для сохранения:', { userId, type: 'activity_analysis', content: recommendation });
-    
-    const insightResult = await pool.query(insightQuery, [
-      userId,
-      'activity_analysis',
-      recommendation,
-      new Date()
-    ]);
-    
-    console.log('✅ Инсайт об активности сохранен в БД, ID:', insightResult.rows[0]?.id);
-
-    console.log('📤 Отправляем ответ клиенту, длина рекомендации:', recommendation.length);
-    
     res.json({
       success: true,
       recommendation,
@@ -984,8 +978,15 @@ router.post('/generate-personal-recommendations', async (req, res) => {
 // POST /api/ai/generate-daily-insight - Генерация дневного инсайта
 router.post('/generate-daily-insight', async (req, res) => {
   try {
-    const userId = req.body.userId || 1; // Временно используем ID = 1
-    const forceRegenerate = req.body.forceRegenerate || false; // Принудительная регенерация
+    const userId = req.body.userId;
+    if (!userId) {
+      console.log('⚠️ userId не передан в запросе');
+      return res.status(400).json({
+        success: false,
+        message: 'userId обязателен для генерации недельного инсайта'
+      });
+    }
+    const forceRegenerate = req.body.forceRegenerate || false;
     console.log(`🔍 Генерация недельного инсайта для пользователя ${userId}`);
 
     // Проверяем, есть ли уже инсайт за текущую неделю
@@ -999,6 +1000,7 @@ router.post('/generate-daily-insight', async (req, res) => {
         WHERE user_id = $1 
         AND type = 'weekly_insight'
         AND created_at >= $2
+        AND (metadata::text NOT LIKE '%testMode%' AND content NOT LIKE '%тестовый%' AND content NOT LIKE '%тест%')
         ORDER BY created_at DESC
         LIMIT 1
       `;
@@ -1014,13 +1016,33 @@ router.post('/generate-daily-insight', async (req, res) => {
           weekStart: weekStart.toISOString()
         });
       }
+      
+      // Если есть только тестовый инсайт - удаляем его и генерируем новый
+      const testInsightQuery = `
+        SELECT * FROM ai_insights 
+        WHERE user_id = $1 
+        AND type = 'weekly_insight'
+        AND created_at >= $2
+        AND (metadata::text LIKE '%testMode%' OR content LIKE '%тестовый%' OR content LIKE '%тест%')
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      const testInsight = await pool.query(testInsightQuery, [userId, weekStart]);
+      if (testInsight.rows.length > 0) {
+        console.log('🧹 Найден тестовый инсайт, удаляем его для генерации нового');
+        await pool.query(`
+          DELETE FROM ai_insights 
+          WHERE id = $1
+        `, [testInsight.rows[0].id]);
+      }
     }
 
     // Получаем данные за последние 7 дней
+    // ИСПРАВЛЕНО: используем CURRENT_DATE для корректного сравнения дат (включая сегодня)
     const dataQuery = `
       SELECT * FROM ai_signals 
       WHERE user_id = $1 
-      AND timestamp >= NOW() - INTERVAL '7 days'
+      AND DATE(timestamp) >= (CURRENT_DATE - INTERVAL '6 days')
       ORDER BY timestamp DESC
     `;
 
@@ -1028,38 +1050,110 @@ router.post('/generate-daily-insight', async (req, res) => {
     console.log(`📊 Найдено записей за неделю: ${dataResult.rows.length}`);
 
     // Проверяем минимальное количество записей для анализа
-    if (dataResult.rows.length < 3) {
-      console.log('ℹ️ Недостаточно данных для анализа (нужно минимум 3 записи)');
+    // ИСПРАВЛЕНО: считаем записи настроения И активности
+    const moodCount = dataResult.rows.filter(row => row.type === 'mood' || row.type === 'daily_mood_check').length;
+    const activityCount = dataResult.rows.filter(row => row.type === 'activity' || row.type === 'activity_analysis').length;
+    const totalCount = moodCount + activityCount;
+    
+    console.log(`📊 Данные для недельного отчета: настроений=${moodCount}, активностей=${activityCount}, всего=${totalCount}`);
+    console.log(`📊 Типы записей в данных:`, [...new Set(dataResult.rows.map(r => r.type))]);
+    
+    
+    if (totalCount < 3) {
+      console.log(`ℹ️ Недостаточно данных для анализа (нужно минимум 3 записи, есть ${totalCount})`);
       return res.json({
         success: true,
         insight: 'Пока недостаточно данных для анализа. Продолжайте вести дневник настроения и активности!',
         isNew: false,
-        weekStart: weekStart.toISOString()
+        weekStart: weekStart.toISOString(),
+        metadata: {
+          moodEntries: moodCount,
+          activityEntries: activityCount,
+          totalEntries: totalCount,
+          availableTypes: [...new Set(dataResult.rows.map(r => r.type))]
+        }
       });
     }
+    
+    console.log(`✅ Достаточно данных для генерации недельного отчета (${totalCount} записей)`);
 
     // Анализируем паттерны
-    const moodData = dataResult.rows
-      .filter(row => row.type === 'mood')
-      .map(row => {
-        try {
-          return JSON.parse(row.data);
-        } catch (e) {
-          console.log(`⚠️ Ошибка парсинга mood данных: ${e.message}`);
-          return null;
+    // ИСПРАВЛЕНО: используем правильные типы из БД
+    const moodRows = dataResult.rows.filter(row => row.type === 'mood' || row.type === 'daily_mood_check');
+    console.log(`📊 Найдено строк настроения для обработки: ${moodRows.length}`);
+    
+    const moodData = moodRows
+      .map((row, index) => {
+        // Если есть поля mood_rating, energy_rating, stress_rating напрямую - используем их
+        if (row.mood_rating !== undefined && row.mood_rating !== null) {
+          const parsed = {
+            mood: row.mood_rating,
+            energy: row.energy_rating || 5,
+            stress: row.stress_rating || 5
+          };
+          console.log(`✅ Mood запись ${index + 1}: использованы прямые поля`, parsed);
+          return parsed;
         }
+        // Иначе пытаемся парсить из data JSONB
+        if (row.data) {
+          try {
+            const parsed = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+            // Проверяем, что это объект настроения
+            if (parsed && (parsed.mood !== undefined || parsed.mood_rating !== undefined)) {
+              const result = {
+                mood: parsed.mood || parsed.mood_rating || 5,
+                energy: parsed.energy || parsed.energy_rating || 5,
+                stress: parsed.stress || parsed.stress_rating || 5
+              };
+              console.log(`✅ Mood запись ${index + 1}: распарсена из JSON`, result);
+              return result;
+            }
+          } catch (e) {
+            console.log(`⚠️ Ошибка парсинга mood данных ${index + 1}: ${e.message}`, row.data);
+          }
+        }
+        console.log(`⚠️ Mood запись ${index + 1}: пропущена (нет данных)`);
+        return null;
       })
       .filter(Boolean);
 
-    const activityData = dataResult.rows
-      .filter(row => row.type === 'activity')
-      .map(row => {
-        try {
-          return JSON.parse(row.data);
-        } catch (e) {
-          console.log(`⚠️ Ошибка парсинга activity данных: ${e.message}`);
-          return null;
+    const activityRows = dataResult.rows.filter(row => row.type === 'activity' || row.type === 'activity_analysis');
+    console.log(`📊 Найдено строк активности для обработки: ${activityRows.length}`);
+    
+    const activityData = activityRows
+      .map((row, index) => {
+        // Если есть поля напрямую - используем их
+        if (row.success_rating !== undefined && row.success_rating !== null) {
+          const parsed = {
+            success: row.success_rating >= 7,
+            success_rating: row.success_rating,
+            category: row.activity_category || 'other',
+            notes: row.notes || ''
+          };
+          console.log(`✅ Activity запись ${index + 1}: использованы прямые поля`, parsed);
+          return parsed;
         }
+        // Иначе пытаемся парсить из data JSONB
+        if (row.data) {
+          try {
+            const parsed = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+            // Проверяем, что это объект активности
+            if (parsed && (parsed.success !== undefined || parsed.success_rating !== undefined || parsed.activity !== undefined)) {
+              const result = {
+                success: parsed.success || (parsed.success_rating !== undefined ? parsed.success_rating >= 7 : true),
+                success_rating: parsed.success_rating || (parsed.success ? 8 : 4),
+                category: parsed.category || parsed.activity_category || 'other',
+                notes: parsed.notes || ''
+              };
+              console.log(`✅ Activity запись ${index + 1}: распарсена из JSON`, result);
+              return result;
+            }
+          } catch (e) {
+            console.log(`⚠️ Ошибка парсинга activity данных ${index + 1}: ${e.message}`, row.data);
+          }
+        }
+        console.log(`⚠️ Activity запись ${index + 1}: пропущена (нет данных)`);
+        return null;
       })
       .filter(Boolean);
 
@@ -1079,8 +1173,25 @@ router.post('/generate-daily-insight', async (req, res) => {
       console.log('ℹ️ Таблица геймификации не найдена, пропускаем');
     }
 
-    console.log(`📈 Данные настроения: ${moodData.length} записей`);
-    console.log(`📝 Данные активности: ${activityData.length} записей`);
+    console.log(`📈 Данные настроения после фильтрации: ${moodData.length} записей`);
+    console.log(`📝 Данные активности после фильтрации: ${activityData.length} записей`);
+    
+    // Проверяем, что данные действительно есть после фильтрации
+    if (moodData.length === 0 && activityData.length === 0) {
+      console.log('⚠️ После фильтрации данных не осталось!');
+      return res.json({
+        success: true,
+        insight: 'Пока недостаточно данных для анализа. Продолжайте вести дневник настроения и активности!',
+        isNew: false,
+        weekStart: weekStart.toISOString(),
+        metadata: {
+          moodEntries: moodData.length,
+          activityEntries: activityData.length,
+          totalEntries: moodData.length + activityData.length,
+          rawDataCount: dataResult.rows.length
+        }
+      });
+    }
 
     // Формируем контекст для AI
     let context = '';

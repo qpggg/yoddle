@@ -73,16 +73,42 @@ router.post('/mood-check', async (req, res) => {
       SELECT * FROM get_user_productivity_stats($1)
     `, [userId]);
     
+    // Рассчитываем недельный и месячный рейтинги отдельно (если функции существуют)
+    let weeklyRating = stats.rows[0]?.overall_rating || 0;
+    let monthlyRating = stats.rows[0]?.overall_rating || 0;
+    
+    try {
+      const weeklyRatingResult = await db.query(`
+        SELECT calculate_weekly_rating($1) as weekly_rating
+      `, [userId]);
+      weeklyRating = weeklyRatingResult.rows[0]?.weekly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_weekly_rating не найдена, используем overall_rating');
+    }
+    
+    try {
+      const monthlyRatingResult = await db.query(`
+        SELECT calculate_monthly_rating($1) as monthly_rating
+      `, [userId]);
+      monthlyRating = monthlyRatingResult.rows[0]?.monthly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_monthly_rating не найдена, используем overall_rating');
+    }
+    
     res.json({
       success: true,
       message: 'Настроение записано и проанализировано',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
       stats: {
         current_rating: stats.rows[0]?.overall_rating || 0,
-        weekly_rating: stats.rows[0]?.overall_rating || 0,
-        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: weeklyRating,
+        monthly_rating: monthlyRating,
         tracked_days: stats.rows[0]?.total_records || 0,
-        achievements_count: 0
+        achievements_count: stats.rows[0]?.total_achievements || 0,
+        mood_stability: stats.rows[0]?.mood_stability || 0,
+        energy_consistency: stats.rows[0]?.energy_consistency || 0,
+        stress_management: stats.rows[0]?.stress_management || 0,
+        xp_multiplier: stats.rows[0]?.xp_multiplier || 1.0
       }
     });
     
@@ -99,7 +125,7 @@ router.post('/mood-check', async (req, res) => {
 // POST /api/productivity/activity-log - Логирование активности
 router.post('/activity-log', async (req, res) => {
   try {
-    const { userId, activity, category, duration, success, success_rating, notes, mood, energy, stress } = req.body;
+    const { userId, activity, category, duration, success, success_rating, notes } = req.body;
     
     // Проверяем общий лимит записей в день (максимум 5)
     const dailyTotalCheck = await db.query(`
@@ -122,12 +148,16 @@ router.post('/activity-log', async (req, res) => {
       ? Math.max(0, Math.min(10, Number(success_rating)))
       : (success === true ? 10 : (success === false ? 0 : 5)));
 
+    // Рассчитываем quality_score на основе длины notes
+    const qualityScore = notes && notes.length >= 30 ? 1.0 : 
+                         notes && notes.length >= 20 ? 0.8 : 
+                         notes && notes.length >= 10 ? 0.6 : 0.4;
+
     const activityResult = await db.query(`
       INSERT INTO ai_signals (
         user_id, type, notes, activity_category, duration_minutes, 
-        success_rating, mood_rating, energy_rating, stress_rating,
-        quality_score, timestamp
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        success_rating, quality_score, timestamp
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       RETURNING id
     `, [
       userId,
@@ -136,10 +166,7 @@ router.post('/activity-log', async (req, res) => {
       category,
       duration,
       normalizedSuccessRating,
-      mood,
-      energy,
-      stress,
-      notes && notes.length >= 30 ? 1.0 : notes && notes.length >= 20 ? 0.8 : notes && notes.length >= 10 ? 0.6 : 0.4
+      qualityScore
     ]);
     
     // Автоматически рассчитываем продуктивность
@@ -152,16 +179,42 @@ router.post('/activity-log', async (req, res) => {
       SELECT * FROM get_user_productivity_stats($1)
     `, [userId]);
     
+    // Рассчитываем недельный и месячный рейтинги отдельно (если функции существуют)
+    let weeklyRating = stats.rows[0]?.overall_rating || 0;
+    let monthlyRating = stats.rows[0]?.overall_rating || 0;
+    
+    try {
+      const weeklyRatingResult = await db.query(`
+        SELECT calculate_weekly_rating($1) as weekly_rating
+      `, [userId]);
+      weeklyRating = weeklyRatingResult.rows[0]?.weekly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_weekly_rating не найдена, используем overall_rating');
+    }
+    
+    try {
+      const monthlyRatingResult = await db.query(`
+        SELECT calculate_monthly_rating($1) as monthly_rating
+      `, [userId]);
+      monthlyRating = monthlyRatingResult.rows[0]?.monthly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_monthly_rating не найдена, используем overall_rating');
+    }
+    
     res.json({
       success: true,
       message: 'Активность записана и проанализирована',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
       stats: {
         current_rating: stats.rows[0]?.overall_rating || 0,
-        weekly_rating: stats.rows[0]?.overall_rating || 0,
-        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: weeklyRating,
+        monthly_rating: monthlyRating,
         tracked_days: stats.rows[0]?.total_records || 0,
-        achievements_count: 0
+        achievements_count: stats.rows[0]?.total_achievements || 0,
+        mood_stability: stats.rows[0]?.mood_stability || 0,
+        energy_consistency: stats.rows[0]?.energy_consistency || 0,
+        stress_management: stats.rows[0]?.stress_management || 0,
+        xp_multiplier: stats.rows[0]?.xp_multiplier || 1.0
       }
     });
     
@@ -223,14 +276,40 @@ router.get('/stats/:userId', async (req, res) => {
     const stats = statsResult.rows[0];
     console.log('📊 Returning real stats from DB:', stats);
     
+    // Рассчитываем недельный и месячный рейтинги отдельно (если функции существуют)
+    let weeklyRating = stats.overall_rating || 0;
+    let monthlyRating = stats.overall_rating || 0;
+    
+    try {
+      const weeklyRatingResult = await db.query(`
+        SELECT calculate_weekly_rating($1) as weekly_rating
+      `, [userId]);
+      weeklyRating = weeklyRatingResult.rows[0]?.weekly_rating || stats.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_weekly_rating не найдена, используем overall_rating');
+    }
+    
+    try {
+      const monthlyRatingResult = await db.query(`
+        SELECT calculate_monthly_rating($1) as monthly_rating
+      `, [userId]);
+      monthlyRating = monthlyRatingResult.rows[0]?.monthly_rating || stats.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_monthly_rating не найдена, используем overall_rating');
+    }
+    
     res.json({
       success: true,
       stats: {
         current_rating: stats.overall_rating || 0,
-        weekly_rating: stats.overall_rating || 0,
-        monthly_rating: stats.overall_rating || 0,
+        weekly_rating: weeklyRating,
+        monthly_rating: monthlyRating,
         tracked_days: stats.total_records || 0,
-        achievements_count: 0
+        achievements_count: stats.total_achievements || 0,
+        mood_stability: stats.mood_stability || 0,
+        energy_consistency: stats.energy_consistency || 0,
+        stress_management: stats.stress_management || 0,
+        xp_multiplier: stats.xp_multiplier || 1.0
       }
     });
     
@@ -303,6 +382,30 @@ router.get('/dashboard/:userId', async (req, res) => {
     const calculatedLevel = calculateLevelFromRating(overallRating);
     const calculatedTier = calculateTierFromRating(overallRating);
     
+    // Рассчитываем недельный и месячный рейтинги отдельно (если функции существуют)
+    let weeklyRating = overallRating;
+    let monthlyRating = overallRating;
+    
+    try {
+      const weeklyRatingResult = await db.query(`
+        SELECT calculate_weekly_rating($1) as weekly_rating
+      `, [userId]);
+      weeklyRating = weeklyRatingResult.rows[0]?.weekly_rating || overallRating;
+    } catch (err) {
+      console.warn('⚠️ calculate_weekly_rating ошибка:', err.message);
+      console.warn('⚠️ Детали ошибки:', err);
+    }
+    
+    try {
+      const monthlyRatingResult = await db.query(`
+        SELECT calculate_monthly_rating($1) as monthly_rating
+      `, [userId]);
+      monthlyRating = monthlyRatingResult.rows[0]?.monthly_rating || overallRating;
+    } catch (err) {
+      console.warn('⚠️ calculate_monthly_rating ошибка:', err.message);
+      console.warn('⚠️ Детали ошибки:', err);
+    }
+    
     const dashboard = {
       productivity_level: calculatedLevel,
       level_icon: getLevelIcon(calculatedLevel, calculatedTier),
@@ -311,8 +414,8 @@ router.get('/dashboard/:userId', async (req, res) => {
       current_level: calculatedLevel,
       current_tier: calculatedTier,
       xp_multiplier: stats.xp_multiplier || 1.0,
-      weekly_average: overallRating,
-      monthly_average: overallRating,
+      weekly_average: weeklyRating,
+      monthly_average: monthlyRating,
       mood_stability: stats.mood_stability || 0,
       energy_consistency: stats.energy_consistency || 0,
       stress_management: stats.stress_management || 0,
@@ -322,8 +425,8 @@ router.get('/dashboard/:userId', async (req, res) => {
       tier: calculatedTier,
       // Добавляем поля для фронтенда
       productivity_score: overallRating,
-      weekly_productivity: overallRating,
-      monthly_productivity: overallRating,
+      weekly_productivity: weeklyRating,
+      monthly_productivity: monthlyRating,
       days_tracked_this_week: stats.total_records || 0
     };
     
@@ -482,16 +585,42 @@ router.post('/calculate/:userId', async (req, res) => {
       SELECT * FROM get_user_productivity_stats($1)
     `, [userId]);
     
+    // Рассчитываем недельный и месячный рейтинги отдельно (если функции существуют)
+    let weeklyRating = stats.rows[0]?.overall_rating || 0;
+    let monthlyRating = stats.rows[0]?.overall_rating || 0;
+    
+    try {
+      const weeklyRatingResult = await db.query(`
+        SELECT calculate_weekly_rating($1) as weekly_rating
+      `, [userId]);
+      weeklyRating = weeklyRatingResult.rows[0]?.weekly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_weekly_rating не найдена, используем overall_rating');
+    }
+    
+    try {
+      const monthlyRatingResult = await db.query(`
+        SELECT calculate_monthly_rating($1) as monthly_rating
+      `, [userId]);
+      monthlyRating = monthlyRatingResult.rows[0]?.monthly_rating || stats.rows[0]?.overall_rating || 0;
+    } catch (err) {
+      console.warn('⚠️ calculate_monthly_rating не найдена, используем overall_rating');
+    }
+    
     res.json({
       success: true,
       message: 'Продуктивность пересчитана',
       productivityScore: productivityScore.rows[0].calculate_productivity_score,
       stats: {
         current_rating: stats.rows[0]?.overall_rating || 0,
-        weekly_rating: stats.rows[0]?.overall_rating || 0,
-        monthly_rating: stats.rows[0]?.overall_rating || 0,
+        weekly_rating: weeklyRating,
+        monthly_rating: monthlyRating,
         tracked_days: stats.rows[0]?.total_records || 0,
-        achievements_count: 0
+        achievements_count: stats.rows[0]?.total_achievements || 0,
+        mood_stability: stats.rows[0]?.mood_stability || 0,
+        energy_consistency: stats.rows[0]?.energy_consistency || 0,
+        stress_management: stats.rows[0]?.stress_management || 0,
+        xp_multiplier: stats.rows[0]?.xp_multiplier || 1.0
       }
     });
     
@@ -515,7 +644,7 @@ router.get('/weekly/:userId', async (req, res) => {
     const weeklyResult = await db.query(`
       SELECT 
         date,
-        final_score,
+        final_score as rating,
         mood_component,
         activity_component,
         quality_multiplier,
@@ -525,7 +654,7 @@ router.get('/weekly/:userId', async (req, res) => {
       FROM productivity_scores 
       WHERE user_id = $1 
       AND date >= CURRENT_DATE - INTERVAL '7 days'
-      ORDER BY date DESC
+      ORDER BY date ASC
     `, [userId]);
     
     const weeklyData = weeklyResult.rows;
@@ -541,6 +670,71 @@ router.get('/weekly/:userId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении недельных данных',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/productivity/rating-chart/:userId - Данные для графика зависимости рейтинга от активностей (НАКОПИТЕЛЬНЫЙ)
+router.get('/rating-chart/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { days = 14 } = req.query; // По умолчанию 14 дней
+    console.log('📊 Rating vs Activities chart data request for user:', userId, 'days:', days);
+    
+    // Используем функцию для получения накопительного рейтинга и данных об активностях
+    const chartResult = await db.query(`
+      SELECT * FROM get_rating_vs_activities_chart($1, $2)
+      ORDER BY date ASC
+    `, [userId, days]);
+    
+    const chartData = chartResult.rows;
+    console.log('📊 Returning cumulative rating chart data:', chartData.length, 'days');
+    
+    // Рассчитываем статистику
+    const ratings = chartData.map(d => parseFloat(d.rating) || 0);
+    const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+    const minRating = Math.min(...ratings);
+    const maxRating = Math.max(...ratings);
+    
+    // Статистика по активностям
+    const totalActivities = chartData.reduce((sum, d) => sum + parseInt(d.total_activities || 0), 0);
+    const successfulActivities = chartData.reduce((sum, d) => sum + parseInt(d.successful_activities || 0), 0);
+    const failedActivities = chartData.reduce((sum, d) => sum + parseInt(d.failed_activities || 0), 0);
+    
+    console.log('📊 Chart data from function:', chartData.length, 'records');
+    console.log('📊 Sample chart data:', chartData.slice(0, 3));
+    
+    res.json({
+      success: true,
+      chartData: chartData.map(d => ({
+        date: d.date,
+        rating: parseFloat(d.rating) || 0,
+        total_activities: parseInt(d.total_activities) || 0,
+        successful_activities: parseInt(d.successful_activities) || 0,
+        failed_activities: parseInt(d.failed_activities) || 0,
+        mood_records: parseInt(d.mood_records) || 0,
+        activity_log_actions: parseInt(d.activity_log_actions) || 0,
+        cumulative_mood_score: parseFloat(d.cumulative_mood_score) || 0,
+        cumulative_activity_score: parseFloat(d.cumulative_activity_score) || 0
+      })),
+      stats: {
+        average: parseFloat(avgRating.toFixed(2)),
+        min: parseFloat(minRating.toFixed(2)),
+        max: parseFloat(maxRating.toFixed(2)),
+        days: chartData.length,
+        total_activities: totalActivities,
+        successful_activities: successfulActivities,
+        failed_activities: failedActivities,
+        success_rate: totalActivities > 0 ? parseFloat((successfulActivities / totalActivities * 100).toFixed(2)) : 0
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting rating chart data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении данных для графика',
       error: error.message
     });
   }
@@ -595,14 +789,21 @@ router.get('/mood-percentages/:userId', async (req, res) => {
     console.log('📊 Returning mood percentages from DB:', percentages);
     console.log('📊 Daily data count:', dailyData.length);
     
+    // Функция теперь возвращает проценты (0-100), используем их напрямую
     res.json({
       success: true,
       percentages: {
-        mood: percentages.mood_average || 0,
-        energy: percentages.energy_average || 0,
-        calmness: percentages.calmness_average || 0
+        mood: parseFloat(percentages.mood_average) || 0,
+        energy: parseFloat(percentages.energy_average) || 0,
+        calmness: parseFloat(percentages.calmness_average) || 0
       },
-      dailyData: dailyData
+      dailyData: dailyData.map(d => ({
+        date: d.date,
+        day_name: d.day_name,
+        mood: parseFloat(d.mood_percent) || 0,
+        energy: parseFloat(d.energy_percent) || 0,
+        calmness: parseFloat(d.calmness_percent) || 0
+      }))
     });
     
   } catch (error) {
