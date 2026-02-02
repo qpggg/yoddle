@@ -1,8 +1,9 @@
 import React from 'react';
 import { Container, Typography, Box, TextField, Button, Paper, Alert, Slide } from '@mui/material';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../hooks/useUser';
+import { setAdminUser } from './admin/AdminLogin';
 
 
 const Login: React.FC = () => {
@@ -11,6 +12,8 @@ const Login: React.FC = () => {
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '';
   const { setUser } = useUser();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,10 +35,15 @@ const Login: React.FC = () => {
       }
 
       const data = await response.json();
-      
-      // 🚀 БЫСТРЫЙ ПЕРЕХОД + ЛОГИРОВАНИЕ ДЛЯ ГЕЙМИФИКАЦИИ
+
+      // Единый вход: админ — в админку, сотрудник — в кабинет
       setUser(data.user);
-      navigate('/dashboard');
+      if (data.isAdmin) {
+        setAdminUser(data.user);
+        navigate(redirect && redirect.startsWith('/admin') ? redirect : '/admin/dashboard');
+      } else {
+        navigate(redirect && !redirect.startsWith('/admin') ? redirect : '/dashboard');
+      }
       
       // 🎮 ЛОГИРОВАНИЕ ДЛЯ ГЕЙМИФИКАЦИИ (в фоне)
       setTimeout(async () => {

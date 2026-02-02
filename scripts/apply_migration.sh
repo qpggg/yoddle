@@ -1,12 +1,18 @@
 #!/bin/bash
-# Скрипт для применения миграции онбординга
+# Скрипт для применения миграции онбординга (запуск из корня проекта)
 
-# Параметры подключения из .env
-PGHOST="${PGHOST:-185.185.69.254}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT"
+[ -f .env ] && source .env 2>/dev/null || true
+
+if [ -z "$PGHOST" ] || [ -z "$PGPASSWORD" ]; then
+  echo "Задайте PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD в .env"
+  exit 1
+fi
 PGPORT="${PGPORT:-5432}"
 PGDATABASE="${PGDATABASE:-yoddle_db}"
 PGUSER="${PGUSER:-yoddle_user}"
-PGPASSWORD="${PGPASSWORD:-1WIzL7aP_F}"
 
 # Путь к SQL файлу миграции
 MIGRATION_FILE="scripts/sql/add_onboarding_fields.sql"

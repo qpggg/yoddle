@@ -1,5 +1,5 @@
 import './styles/index.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
@@ -28,6 +28,12 @@ import Productivity from './pages/Productivity';
 import Metrics from './pages/Metrics';
 import BalancePage from './pages/Balance';
 import ContactsPage from './pages/Contacts';
+import AdminLayout from './layouts/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminEmployees from './pages/admin/AdminEmployees';
+import AdminReports from './pages/admin/AdminReports';
+import AdminManagement from './pages/admin/AdminManagement';
+import AdminFinance from './pages/admin/AdminFinance';
 import TermsPage from './pages/Terms';
 import PrivacyPage from './pages/Privacy';
 import ToastNotification, { useToast } from './components/ToastNotification';
@@ -116,6 +122,15 @@ const App = () => {
               <Route path="/preferences" element={<Preferences />} />
               <Route path="/metrics" element={<Metrics />} />
               <Route path="/balance" element={<BalancePage />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="login" element={<Navigate to="/login?redirect=/admin/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="employees" element={<AdminEmployees />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="management" element={<AdminManagement />} />
+                <Route path="finance" element={<AdminFinance />} />
+                <Route index element={<AdminDashboard />} />
+              </Route>
             </Routes>
             <Footer />
           </Box>

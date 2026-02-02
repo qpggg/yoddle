@@ -62,6 +62,25 @@ function cleanClaudeOutput(text) {
   }
 }
 
+/**
+ * Границы календарной недели (понедельник — воскресенье).
+ * Правило: один еженедельный отчёт за неделю при достаточности данных.
+ * @param {Date} [date=new Date()] — дата, по которой определяется неделя
+ * @returns {{ weekStart: Date, weekEnd: Date }} weekStart = пн 00:00, weekEnd = вс 23:59:59.999
+ */
+function getWeekBounds(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 = вс, 1 = пн, ..., 6 = сб
+  const diff = day === 0 ? 6 : day - 1; // дней назад до понедельника
+  const weekStart = new Date(d);
+  weekStart.setDate(d.getDate() - diff);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  return { weekStart, weekEnd };
+}
+
 // Database connection
 // Используем PG_CONNECTION_STRING (как в db.js) или DATABASE_URL для обратной совместимости
 const pool = new Pool({
@@ -835,12 +854,19 @@ router.post('/generate-personal-recommendations', async (req, res) => {
 
     console.log(`🎯 Генерация персональных рекомендаций для пользователя ${targetUserId}`);
 
-    // Получаем все данные пользователя
+    // Получаем все данные пользователя (включая колонки mood_rating, stress_rating, success_rating для daily_mood_check и activity_analysis)
     const userDataQuery = `
       SELECT 
         s.type,
         s.data,
         s.timestamp,
+        s.mood_rating,
+        s.energy_rating,
+        s.stress_rating,
+        s.success_rating,
+        s.notes,
+        s.activity_category,
+        s.duration_minutes,
         i.content as insight_content
       FROM ai_signals s
       LEFT JOIN ai_insights i ON s.user_id = i.user_id
@@ -861,74 +887,83 @@ router.post('/generate-personal-recommendations', async (req, res) => {
       });
     }
 
-    // Безопасно парсим данные из БД
+    // Безопасно парсим data (JSON)
     const parseSignalData = (data) => {
       if (!data) return null;
       if (typeof data === 'object') return data;
       try {
         return JSON.parse(data);
       } catch (e) {
-        console.warn('⚠️ Не удалось распарсить данные сигнала в generate-personal-recommendations:', e.message);
         return null;
       }
     };
 
-    // Анализируем данные
-    const moodData = userDataResult.rows
-      .filter(row => row.type === 'mood')
-      .map(row => {
+    // Настроение: учитываем и type=mood (из data), и type=daily_mood_check (из колонок mood_rating, stress_rating)
+    const moodData = [];
+    for (const row of userDataResult.rows) {
+      if (row.type === 'mood') {
         const data = parseSignalData(row.data);
-        if (!data) return null;
-        return { mood: data.mood, stress: data.stressLevel, timestamp: row.timestamp };
-      })
-      .filter(Boolean);
+        if (data && (data.mood != null || data.stressLevel != null))
+          moodData.push({ mood: data.mood, stress: data.stressLevel ?? data.stress, timestamp: row.timestamp });
+      } else if (row.type === 'daily_mood_check') {
+        if (row.mood_rating != null || row.stress_rating != null)
+          moodData.push({ mood: row.mood_rating, stress: row.stress_rating, timestamp: row.timestamp });
+      }
+    }
 
-    const activityData = userDataResult.rows
-      .filter(row => row.type === 'activity')
-      .map(row => {
+    // Активности: учитываем и type=activity (из data), и type=activity_analysis (из колонок notes, success_rating)
+    const activityData = [];
+    for (const row of userDataResult.rows) {
+      if (row.type === 'activity') {
         const data = parseSignalData(row.data);
-        if (!data) return null;
-        return { activity: data.activity, success: data.success, duration: data.duration };
-      })
-      .filter(Boolean);
-    
-    console.log(`📈 Обработано ${moodData.length} записей настроения и ${activityData.length} активностей`);
+        if (data)
+          activityData.push({
+            activity: data.activity ?? row.notes ?? row.activity_category ?? 'активность',
+            success: data.success ?? (row.success_rating != null && row.success_rating >= 5),
+            duration: data.duration ?? row.duration_minutes,
+            timestamp: row.timestamp
+          });
+      } else if (row.type === 'activity_analysis') {
+        activityData.push({
+          activity: row.notes ?? row.activity_category ?? 'активность',
+          success: row.success_rating != null && Number(row.success_rating) >= 5,
+          duration: row.duration_minutes,
+          timestamp: row.timestamp
+        });
+      }
+    }
+
+    console.log(`📈 Обработано ${moodData.length} записей настроения и ${activityData.length} активностей (включая daily_mood_check и activity_analysis)`);
+
+    const moodList = moodData.map(d => d.mood != null ? d.mood : '-').join(', ');
+    const stressList = moodData.map(d => d.stress != null ? d.stress : '-').join(', ');
+    const activityList = activityData.map(d => d.activity || '-').join(', ');
+    const successCount = activityData.filter(d => d.success).length;
+    const totalActivities = activityData.length;
+    const successPct = totalActivities ? Math.round((successCount / totalActivities) * 100) : 0;
 
     const prompt = `
       Ты - AI-эксперт по продуктивности и личному развитию. Проанализируй данные пользователя и создай 5 персонализированных рекомендаций.
       
-      ДАННЫЕ ПОЛЬЗОВАТЕЛЯ:
-      📊 Настроение (${moodData.length} записей): ${moodData.map(d => d.mood).join(', ')}
-      📈 Уровень стресса: ${moodData.map(d => d.stress).join(', ')}
-      🎯 Активности (${activityData.length} записей): ${activityData.map(d => d.activity).join(', ')}
-      ✅ Успешность: ${activityData.filter(d => d.success).length}/${activityData.length}
+      ДАННЫЕ ПОЛЬЗОВАТЕЛЯ (реальные записи настроения и активностей):
+      📊 Настроение (${moodData.length} записей, шкала 0-10): ${moodList || 'нет данных'}
+      📈 Уровень стресса (${moodData.length} записей, шкала 0-10): ${stressList || 'нет данных'}
+      🎯 Активности (${activityData.length} записей): ${activityList || 'нет данных'}
+      ✅ Успешность выполнения: ${successCount}/${totalActivities} (${successPct}%)
       
       ЗАДАЧА:
-      Создай 5 конкретных, персонализированных рекомендаций в формате:
+      Создай 5 конкретных рекомендаций в формате: 🎯 РЕКОМЕНДАЦИЯ N: [Название] + 1-2 предложения по сути. Кратко.
       
-      🎯 РЕКОМЕНДАЦИЯ 1: [Название]
-      [Описание действия и ожидаемый результат]
-      
-      🎯 РЕКОМЕНДАЦИЯ 2: [Название]
-      [Описание действия и ожидаемый результат]
-      
-      [И так далее для всех 5 рекомендаций]
-      
-      СТИЛЬ: 
-      - Конкретные, выполнимые действия
-      - Учет индивидуальных паттернов пользователя
-      - Мотивирующий, но реалистичный тон
-      - Используй эмодзи для структурирования
-      
-      Тон: поддерживающий, мотивирующий, конкретный. На русском языке.
-      ДЛИНА: 300-400 слов.
+      СТИЛЬ: конкретные действия, мотивирующий тон, эмодзи для структуры. Используй реальные цифры из ДАННЫХ выше; при разбросе — диапазон или «в среднем», не одну цифру.
+      Тон: поддерживающий, на русском.
+      ДЛИНА: 180-220 слов всего.
     `;
 
     console.log('🤖 Генерируем персональные рекомендации...');
     const message = await retryApiCall(async () => {
       return await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
+        max_tokens: 450,
         messages: [
           {
             role: 'user',
@@ -975,7 +1010,8 @@ router.post('/generate-personal-recommendations', async (req, res) => {
   }
 });
 
-// POST /api/ai/generate-daily-insight - Генерация дневного инсайта
+// POST /api/ai/generate-daily-insight - Генерация еженедельного инсайта
+// Правило: один отчёт за календарную неделю (пн–вс), при достаточности данных (минимум 3 записи за неделю)
 router.post('/generate-daily-insight', async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -989,64 +1025,59 @@ router.post('/generate-daily-insight', async (req, res) => {
     const forceRegenerate = req.body.forceRegenerate || false;
     console.log(`🔍 Генерация недельного инсайта для пользователя ${userId}`);
 
-    // Проверяем, есть ли уже инсайт за текущую неделю
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Начало недели (воскресенье)
-    weekStart.setHours(0, 0, 0, 0);
+    // Правило: один отчёт за календарную неделю (пн–вс) при достаточности данных
+    const { weekStart, weekEnd } = getWeekBounds(new Date());
+    const weekStartIso = weekStart.toISOString();
 
     if (!forceRegenerate) {
+      // Есть ли уже инсайт за эту неделю (по metadata.weekStart)
       const existingInsightQuery = `
         SELECT * FROM ai_insights 
         WHERE user_id = $1 
         AND type = 'weekly_insight'
-        AND created_at >= $2
+        AND metadata->>'weekStart' = $2
         AND (metadata::text NOT LIKE '%testMode%' AND content NOT LIKE '%тестовый%' AND content NOT LIKE '%тест%')
         ORDER BY created_at DESC
         LIMIT 1
       `;
-      
-      const existingInsight = await pool.query(existingInsightQuery, [userId, weekStart]);
-      
+      const existingInsight = await pool.query(existingInsightQuery, [userId, weekStartIso]);
+
       if (existingInsight.rows.length > 0) {
-        console.log('ℹ️ Недельный инсайт уже существует за эту неделю');
+        console.log('ℹ️ Недельный инсайт уже существует за эту неделю (раз в неделю)');
         return res.json({
           success: true,
           insight: existingInsight.rows[0].content,
           isNew: false,
-          weekStart: weekStart.toISOString()
+          weekStart: weekStartIso
         });
       }
-      
-      // Если есть только тестовый инсайт - удаляем его и генерируем новый
+
+      // Если есть тестовый инсайт за эту неделю — удаляем и генерируем новый
       const testInsightQuery = `
         SELECT * FROM ai_insights 
         WHERE user_id = $1 
         AND type = 'weekly_insight'
-        AND created_at >= $2
+        AND metadata->>'weekStart' = $2
         AND (metadata::text LIKE '%testMode%' OR content LIKE '%тестовый%' OR content LIKE '%тест%')
         ORDER BY created_at DESC
         LIMIT 1
       `;
-      const testInsight = await pool.query(testInsightQuery, [userId, weekStart]);
+      const testInsight = await pool.query(testInsightQuery, [userId, weekStartIso]);
       if (testInsight.rows.length > 0) {
-        console.log('🧹 Найден тестовый инсайт, удаляем его для генерации нового');
-        await pool.query(`
-          DELETE FROM ai_insights 
-          WHERE id = $1
-        `, [testInsight.rows[0].id]);
+        console.log('🧹 Найден тестовый инсайт за неделю, удаляем для генерации нового');
+        await pool.query(`DELETE FROM ai_insights WHERE id = $1`, [testInsight.rows[0].id]);
       }
     }
 
-    // Получаем данные за последние 7 дней
-    // ИСПРАВЛЕНО: используем CURRENT_DATE для корректного сравнения дат (включая сегодня)
+    // Данные строго за текущую календарную неделю (пн 00:00 — вс 23:59)
     const dataQuery = `
       SELECT * FROM ai_signals 
       WHERE user_id = $1 
-      AND DATE(timestamp) >= (CURRENT_DATE - INTERVAL '6 days')
+      AND timestamp >= $2
+      AND timestamp <= $3
       ORDER BY timestamp DESC
     `;
-
-    const dataResult = await pool.query(dataQuery, [userId]);
+    const dataResult = await pool.query(dataQuery, [userId, weekStart, weekEnd]);
     console.log(`📊 Найдено записей за неделю: ${dataResult.rows.length}`);
 
     // Проверяем минимальное количество записей для анализа
@@ -1060,12 +1091,21 @@ router.post('/generate-daily-insight', async (req, res) => {
     
     
     if (totalCount < 3) {
-      console.log(`ℹ️ Недостаточно данных для анализа (нужно минимум 3 записи, есть ${totalCount})`);
+      console.log(`ℹ️ Недостаточно данных за текущую неделю (нужно минимум 3 записи, есть ${totalCount})`);
+      // Возвращаем последний сохранённый недельный инсайт (за прошлую неделю), если есть
+      const latestQuery = `
+        SELECT * FROM ai_insights 
+        WHERE user_id = $1 AND type = 'weekly_insight'
+        AND (metadata::text NOT LIKE '%testMode%' AND content NOT LIKE '%тестовый%' AND content NOT LIKE '%тест%')
+        ORDER BY created_at DESC LIMIT 1
+      `;
+      const latest = await pool.query(latestQuery, [userId]);
+      const fallbackInsight = latest.rows[0]?.content || 'Пока недостаточно данных за эту неделю для анализа. Продолжайте вести дневник настроения и активности — отчёт появится раз в неделю при достаточности данных.';
       return res.json({
         success: true,
-        insight: 'Пока недостаточно данных для анализа. Продолжайте вести дневник настроения и активности!',
+        insight: fallbackInsight,
         isNew: false,
-        weekStart: weekStart.toISOString(),
+        weekStart: weekStartIso,
         metadata: {
           moodEntries: moodCount,
           activityEntries: activityCount,
@@ -1178,12 +1218,20 @@ router.post('/generate-daily-insight', async (req, res) => {
     
     // Проверяем, что данные действительно есть после фильтрации
     if (moodData.length === 0 && activityData.length === 0) {
-      console.log('⚠️ После фильтрации данных не осталось!');
+      console.log('⚠️ После фильтрации данных за неделю не осталось');
+      const latestQuery = `
+        SELECT * FROM ai_insights 
+        WHERE user_id = $1 AND type = 'weekly_insight'
+        AND (metadata::text NOT LIKE '%testMode%' AND content NOT LIKE '%тестовый%' AND content NOT LIKE '%тест%')
+        ORDER BY created_at DESC LIMIT 1
+      `;
+      const latest = await pool.query(latestQuery, [userId]);
+      const fallbackInsight = latest.rows[0]?.content || 'Пока недостаточно данных за эту неделю. Отчёт генерируется раз в неделю при достаточности данных.';
       return res.json({
         success: true,
-        insight: 'Пока недостаточно данных для анализа. Продолжайте вести дневник настроения и активности!',
+        insight: fallbackInsight,
         isNew: false,
-        weekStart: weekStart.toISOString(),
+        weekStart: weekStartIso,
         metadata: {
           moodEntries: moodData.length,
           activityEntries: activityData.length,
@@ -1439,29 +1487,22 @@ router.post('/analyze-trends', async (req, res) => {
 // POST /api/ai/force-weekly-insight - Принудительная регенерация недельного инсайта (для разработчиков)
 router.post('/force-weekly-insight', async (req, res) => {
   try {
-    const { userId, weekOffset = 0 } = req.body; // weekOffset: 0 = текущая неделя, -1 = прошлая неделя
+    const { userId, weekOffset = 0 } = req.body; // weekOffset: 0 = текущая неделя, -1 = прошлая
     const targetUserId = userId || 1;
-    
-    console.log(`🔧 Принудительная регенерация недельного инсайта для пользователя ${targetUserId}, неделя: ${weekOffset}`);
+    const refDate = new Date();
+    refDate.setDate(refDate.getDate() + weekOffset * 7);
+    const { weekStart, weekEnd } = getWeekBounds(refDate);
 
-    // Вычисляем начало недели с учетом смещения
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekOffset * 7));
-    weekStart.setHours(0, 0, 0, 0);
+    console.log(`🔧 Принудительная регенерация недельного инсайта для пользователя ${targetUserId}, неделя: ${weekOffset} (пн–вс)`);
 
-    // Удаляем существующий инсайт за эту неделю
+    // Удаляем существующий инсайт за эту неделю (по metadata.weekStart)
     const deleteQuery = `
       DELETE FROM ai_insights 
       WHERE user_id = $1 
       AND type = 'weekly_insight'
-      AND created_at >= $2
-      AND created_at < $3
+      AND metadata->>'weekStart' = $2
     `;
-    
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-    
-    await pool.query(deleteQuery, [targetUserId, weekStart, weekEnd]);
+    await pool.query(deleteQuery, [targetUserId, weekStart.toISOString()]);
     console.log('🗑️ Удален существующий инсайт за неделю');
 
     // Генерируем новый инсайт
@@ -1498,12 +1539,12 @@ router.post('/force-weekly-insight', async (req, res) => {
 // Вспомогательная функция для генерации недельного инсайта
 async function generateWeeklyInsight(userId, weekStart, weekEnd) {
   try {
-    // Получаем данные за указанную неделю
+    // Получаем данные за указанную календарную неделю (включительно по weekEnd)
     const dataQuery = `
       SELECT * FROM ai_signals 
       WHERE user_id = $1 
       AND timestamp >= $2
-      AND timestamp < $3
+      AND timestamp <= $3
       ORDER BY timestamp DESC
     `;
 
@@ -1546,7 +1587,7 @@ async function generateWeeklyInsight(userId, weekStart, weekEnd) {
         SELECT * FROM user_progress 
         WHERE user_id = $1 
         AND updated_at >= $2
-        AND updated_at < $3
+        AND updated_at <= $3
         ORDER BY updated_at DESC
       `;
       const gamificationResult = await pool.query(gamificationQuery, [userId, weekStart, weekEnd]);

@@ -1,11 +1,11 @@
 import { Client } from 'pg';
 
 function createDbClient() {
-  const connectionString = 'postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres';
-  
+  const connectionString = process.env.PG_CONNECTION_STRING;
+  if (!connectionString) throw new Error('PG_CONNECTION_STRING is not set');
   return new Client({
-    connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
+    connectionString,
+    ssl: /supabase\.com/i.test(connectionString) ? { rejectUnauthorized: false } : false
   });
 }
 

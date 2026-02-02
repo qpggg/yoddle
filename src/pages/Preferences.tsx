@@ -42,6 +42,19 @@ const cardStyle = {
   flexDirection: 'column'
 };
 
+/** Убирает markdown-символы (##, **, __ и т.п.) из текста для отображения */
+function stripMarkdownForDisplay(text: string | null): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/^#{1,6}\s*/gm, '')   // ## Заголовок → Заголовок
+    .replace(/\*\*([^*]*)\*\*/g, '$1')  // **жирный** → жирный
+    .replace(/__([^_]*)__/g, '$1')
+    .replace(/\*([^*]*)\*/g, '$1')      // *курсив* → курсив
+    .replace(/_([^_]*)_/g, '$1')
+    .replace(/^\s*[-*]\s+/gm, '• ')     // списки оставляем с буллетом
+    .trim();
+}
+
 interface Question {
   id: number;
   text: string;
@@ -493,16 +506,24 @@ const Preferences: React.FC = () => {
           console.log('✅ Достаточно рекомендаций получено!');
           setAiProgress('AI рекомендации получены! ✅');
           
-          const enhancedRecs = aiRecsData.recommendations.map((rec: any) => ({
-            ...rec,
-            confidence: rec.confidence || 0.8,
-            explanations: rec.explanations || ['AI анализ', 'персональный подбор'],
-            score: rec.score || rec.score_breakdown?.final || 0.8,
-            algorithm_variant: rec.algorithm_variant || 'hybrid_v1'
+          // Приводим к полному виду BenefitRecommendation (title, icon, examples обязательны для рендера)
+          const enhancedRecs: BenefitRecommendation[] = aiRecsData.recommendations.map((rec: any) => ({
+            category: rec.category ?? rec.name ?? 'Льгота',
+            icon: categoryIcons[rec.category || ''] || <FaBook />,
+            title: rec.title ?? rec.name ?? 'Рекомендация',
+            description: rec.description ?? 'Подобрано на основе ваших ответов',
+            examples: benefitExamples[rec.benefit_id] ?? ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
+            explanations: Array.isArray(rec.explanations) && rec.explanations.length > 0 ? rec.explanations : ['AI анализ', 'персональный подбор'],
+            confidence: typeof rec.confidence === 'number' ? rec.confidence : 0.8,
+            score: rec.score ?? rec.score_breakdown?.final ?? 0.8,
+            algorithm_variant: rec.algorithm_variant ?? 'hybrid_v1',
+            benefit_id: rec.benefit_id
           }));
           
           setSavedRecommendations(enhancedRecs);
           setHasExistingResults(true);
+          setFeedbackSent({});
+          setFeedbackPermanent({});
           console.log('✅ AI рекомендации готовы, количество:', enhancedRecs.length);
           return; // Успешно получили рекомендации
         }
@@ -565,6 +586,8 @@ const Preferences: React.FC = () => {
     setHasExistingResults(false);
     setSavedRecommendations([]);
     setShowIntro(true);
+    setFeedbackSent({});
+    setFeedbackPermanent({});
   };
 
   const progress = ((currentQuestion + 1) / questions.length) * 100;
@@ -1092,9 +1115,9 @@ const Preferences: React.FC = () => {
                 justifyContent: 'center',
                 mb: 6
               }}>
-                {recommendations.map((rec) => (
+                {recommendations.map((rec, idx) => (
                   <motion.div
-                    key={rec.category}
+                    key={rec.benefit_id ?? rec.category ?? `rec-${idx}`}
                     variants={itemVariants}
                     whileHover={{ 
                       y: -8, 
@@ -1131,7 +1154,7 @@ const Preferences: React.FC = () => {
                           }
                         }}
                       >
-                        {rec.icon}
+                        {rec.icon ?? <FaBook />}
                       </Box>
                       
                       <Typography
@@ -1143,7 +1166,7 @@ const Preferences: React.FC = () => {
                           mb: 2
                         }}
                       >
-                        {rec.title}
+                        {rec.title ?? 'Рекомендация'}
                       </Typography>
                       
                       <Typography
@@ -1155,7 +1178,7 @@ const Preferences: React.FC = () => {
                           lineHeight: 1.6
                         }}
                       >
-                        {rec.description}
+                        {rec.description ?? ''}
                       </Typography>
                       
                       <Box sx={{ mb: 2 }}>
@@ -1166,22 +1189,17 @@ const Preferences: React.FC = () => {
                           Почему подобрано:
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {rec.explanations.map((explanation, idx) => (
-                            <Chip key={idx} label={explanation} size="small" sx={{ borderRadius: '10px' }} />
+                          {(rec.explanations ?? []).map((explanation: string, explIdx: number) => (
+                            <Chip key={explIdx} label={explanation} size="small" sx={{ borderRadius: '10px' }} />
                           ))}
                         </Box>
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" sx={{ color: '#666', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600 }}>
-                          Уверенность: {Math.round(rec.confidence * 100)}%
-                        </Typography>
-                        <LinearProgress
-                          variant="determinate"
-                          value={Math.max(0, Math.min(100, rec.confidence * 100))}
-                          sx={{ height: 6, borderRadius: 3, mt: 0.5, '& .MuiLinearProgress-bar': { background: 'linear-gradient(45deg, #8B0000, #B22222)' } }}
-                        />
-                      </Box>
+                      {/* Концепт: блок «Уверенность» временно скрыт — расчёт confidence пока не корректен */}
+                      {/* <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption">Уверенность: {Math.round((rec.confidence ?? 0.8) * 100)}%</Typography>
+                        <LinearProgress variant="determinate" value={Math.max(0, Math.min(100, (rec.confidence ?? 0.8) * 100))} sx={{ height: 6, borderRadius: 3, mt: 0.5 }} />
+                      </Box> */}
 
                       <Box sx={{ mb: 3, flexGrow: 1 }}>
                         <Typography
@@ -1195,9 +1213,9 @@ const Preferences: React.FC = () => {
                         >
                           Примеры льгот:
                         </Typography>
-                        {rec.examples.map((example, idx) => (
+                        {(rec.examples ?? []).map((example: string, exIdx: number) => (
                           <Typography
-                            key={idx}
+                            key={exIdx}
                             variant="body2"
                             sx={{
                               fontFamily: 'Inter, system-ui, sans-serif',
@@ -1549,7 +1567,7 @@ const Preferences: React.FC = () => {
                         mx: 'auto'
                       }}
                     >
-                      {aiRecommendationsReport}
+                      {stripMarkdownForDisplay(aiRecommendationsReport)}
                     </Typography>
 
                     <Divider sx={{ my: 3, background: 'rgba(139,0,0,0.12)' }} />

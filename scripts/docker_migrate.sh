@@ -1,19 +1,20 @@
 #!/bin/bash
-# Скрипт для применения SQL миграций через Docker
+# Скрипт для применения SQL миграций через Docker (запуск из корня проекта)
 
 set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT"
 
-# Цвета для вывода
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Параметры подключения (можно переопределить через переменные окружения)
-PGHOST="${PGHOST:-185.185.69.254}"
+# Параметры подключения из .env (задайте в .env: PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD)
+[ -f .env ] && source .env 2>/dev/null || true
+if [ -z "$PGHOST" ] || [ -z "$PGPASSWORD" ]; then
+  echo "Задайте PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD в .env"
+  exit 1
+fi
 PGPORT="${PGPORT:-5432}"
 PGDATABASE="${PGDATABASE:-yoddle_db}"
 PGUSER="${PGUSER:-yoddle_user}"
-PGPASSWORD="${PGPASSWORD:-1WIzL7aP_F}"
 
 # Проверка аргументов
 if [ -z "$1" ]; then

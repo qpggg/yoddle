@@ -9,7 +9,7 @@
 **Решение:** Убедитесь, что в `.env` на сервере есть `PG_CONNECTION_STRING`:
 
 ```env
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 ```
 
 ### 2. Ошибка API: `404 Not Found` на `http://localhost:3000/api/ai/analyze-mood`
@@ -39,7 +39,7 @@ cat .env | grep -E "PG_CONNECTION_STRING|API_BASE_URL|BOT_TOKEN"
 
 Должно быть:
 ```env
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 API_BASE_URL=http://localhost:3000
 BOT_TOKEN=your_bot_token
 ```
@@ -47,7 +47,7 @@ BOT_TOKEN=your_bot_token
 ### 2. Проверьте подключение к БД
 
 ```bash
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT 1;"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1;"
 ```
 
 Если работает - БД настроена правильно.
@@ -116,7 +116,7 @@ pm2 logs yoddle-tg --lines 50
 
 ```env
 # Database (ОБЯЗАТЕЛЬНО!)
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 
 # API (для продакшена)
 API_BASE_URL=http://localhost:3000

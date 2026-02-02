@@ -205,10 +205,23 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
       return res.status(401).json({ error: 'Invalid login or password' });
     }
 
-    // Удаляем пароль из ответа
+    // Единый вход: проверка прав админа (user_roles или ADMIN_LOGINS) для редиректа в админку
+    let isAdmin = false;
+    const db = client || createDbClient();
+    try {
+      const roleResult = await db.query(
+        "SELECT 1 FROM user_roles WHERE user_id = $1 AND role = 'admin'",
+        [user.id]
+      );
+      if (roleResult.rows.length > 0) isAdmin = true;
+    } catch (_) {}
+    if (!isAdmin && process.env.ADMIN_LOGINS) {
+      const allowed = String(process.env.ADMIN_LOGINS).split(',').map(s => s.trim().toLowerCase());
+      if (allowed.includes(String(login).toLowerCase())) isAdmin = true;
+    }
+
     delete user.password;
-    
-    return res.status(200).json({ success: true, user });
+    return res.status(200).json({ success: true, user, isAdmin: !!isAdmin });
   } catch (error) {
     console.error('Database connection error:', error);
     return res.status(500).json({ error: 'Database connection error' });
@@ -217,6 +230,65 @@ app.post('/api/login', rateLimit, validateLogin, async (req, res) => {
     if (client) {
       await client.end();
     }
+  }
+});
+
+// POST /api/admin/auth — вход в админку (тот же enter, проверка роли или списка ADMIN_LOGINS)
+app.post('/api/admin/auth', rateLimit, async (req, res) => {
+  const { login, password } = req.body;
+  if (!login || !password) {
+    return res.status(400).json({ error: 'Login and password required' });
+  }
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+    const userResult = await client.query(
+      'SELECT id, name, login AS email, phone, position, avatar_url AS avatar, password FROM enter WHERE login = $1',
+      [login]
+    );
+    if (userResult.rows.length === 0) {
+      await client.end();
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+
+    const user = userResult.rows[0];
+    let passwordValid = false;
+    if (user.password && user.password.startsWith('$2')) {
+      passwordValid = await bcrypt.compare(password, user.password);
+    } else {
+      passwordValid = password === user.password;
+    }
+    if (!passwordValid) {
+      await client.end();
+      return res.status(401).json({ error: 'Invalid login or password' });
+    }
+
+    // Проверка прав админа: user_roles (если есть) или env ADMIN_LOGINS (логины через запятую)
+    let isAdmin = false;
+    try {
+      const roleResult = await client.query(
+        "SELECT 1 FROM user_roles WHERE user_id = $1 AND role = 'admin'",
+        [user.id]
+      );
+      if (roleResult.rows.length > 0) isAdmin = true;
+    } catch (_) {}
+    if (!isAdmin && process.env.ADMIN_LOGINS) {
+      const allowed = String(process.env.ADMIN_LOGINS).split(',').map(s => s.trim().toLowerCase());
+      if (allowed.includes(String(login).toLowerCase())) isAdmin = true;
+    }
+
+    await client.end();
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    delete user.password;
+    return res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    if (client) await client.end();
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -458,6 +530,77 @@ app.get('/api/activity', rateLimit, validateActivityParams, async (req, res) => 
     console.error('Ошибка получения данных активности:', error);
     await client.end();
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /api/activity - логирование действия и начисление XP (без достижений, для пилота)
+// Ограничения: progress_view/page_view — начисление раз в день; avatar_upload — раз в неделю
+app.post('/api/activity', rateLimit, async (req, res) => {
+  const { userId, user_id, action, xp_earned = 0, xpEarned, description, details } = req.body;
+  const uid = userId ?? user_id;
+  let xp = Number(xp_earned ?? xpEarned ?? 0) || 0;
+  const desc = description ?? details ?? null;
+
+  if (!uid || !action) {
+    return res.status(400).json({ success: false, error: 'User ID and action required' });
+  }
+
+  const client = createDbClient();
+  try {
+    await client.connect();
+
+    // Просмотр прогресса: начисление раз в день (фото 1)
+    const isProgressView = action === 'progress_view' || action === 'page_view';
+    if (isProgressView && xp > 0) {
+      const alreadyToday = await client.query(
+        `SELECT 1 FROM activity_log WHERE user_id = $1 AND action = $2 AND DATE(created_at) = CURRENT_DATE LIMIT 1`,
+        [uid, action]
+      );
+      if (alreadyToday.rows.length > 0) {
+        xp = 0; // уже начисляли сегодня, только лог без XP
+      }
+    }
+
+    // Загрузка аватара: начисление раз в неделю (фото 2), обновлять можно сколько угодно
+    if (action === 'avatar_upload' && xp > 0) {
+      const alreadyThisWeek = await client.query(
+        `SELECT 1 FROM activity_log WHERE user_id = $1 AND action = 'avatar_upload' AND created_at >= (CURRENT_DATE - INTERVAL '6 days') LIMIT 1`,
+        [uid]
+      );
+      if (alreadyThisWeek.rows.length > 0) {
+        xp = 0; // уже начисляли за последние 7 дней
+      }
+    }
+
+    await client.query(
+      'INSERT INTO activity_log (user_id, action, xp_earned, description, created_at) VALUES ($1, $2, $3, $4, NOW())',
+      [uid, action, xp, desc]
+    );
+
+    if (xp > 0) {
+      await client.query(
+        `INSERT INTO user_progress (user_id, xp, level, login_streak, last_activity)
+         VALUES ($1, $2, 1, 0, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+           xp = user_progress.xp + $2,
+           level = CASE
+             WHEN user_progress.xp + $2 >= 1001 THEN 5
+             WHEN user_progress.xp + $2 >= 501 THEN 4
+             WHEN user_progress.xp + $2 >= 301 THEN 3
+             WHEN user_progress.xp + $2 >= 101 THEN 2
+             ELSE 1
+           END,
+           last_activity = CURRENT_TIMESTAMP`,
+        [uid, xp]
+      );
+    }
+
+    await client.end();
+    return res.status(200).json({ success: true, activityId: true, xpAwarded: xp });
+  } catch (error) {
+    console.error('POST /api/activity error:', error);
+    if (client) await client.end();
+    return res.status(500).json({ success: false, error: 'Failed to process activity' });
   }
 });
 
@@ -1007,34 +1150,14 @@ app.post('/api/progress', rateLimit, validateProgress, async (req, res) => {
       currentProgress = { ...currentProgress, xp: newXP, level: newLevel };
     }
     
-    // Проверяем и разблокируем достижения
+    // Достижения заморожены для пилота — не разблокируем и не начисляем XP за достижения
+    // (разблокировка отключена, лишнего начисления XP за достижения нет)
     const achievementsToUnlock = [];
-    
-    // Логика достижений
-    if (action === 'profile_complete' && !achievementsToUnlock.includes('profile_complete')) {
-      achievementsToUnlock.push('profile_complete');
-    }
-    
-    if (action === 'first_benefit' && !achievementsToUnlock.includes('first_benefit')) {
-      achievementsToUnlock.push('first_benefit');
-    }
-    
-    if (currentProgress.xp >= 300 && !achievementsToUnlock.includes('streak_week')) {
-      achievementsToUnlock.push('streak_week');
-    }
-    
-    // Разблокируем достижения
-    for (const achievementId of achievementsToUnlock) {
-      await client.query(
-        'INSERT INTO user_achievements (user_id, achievement_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [user_id, achievementId]
-      );
-    }
-    
+
     await client.end();
-    
-    return res.status(200).json({ 
-      success: true, 
+
+    return res.status(200).json({
+      success: true,
       newXP: currentProgress.xp,
       newLevel: currentProgress.level,
       unlockedAchievements: achievementsToUnlock

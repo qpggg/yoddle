@@ -7,7 +7,7 @@
 Убедитесь, что в корневом `.env` есть `PG_CONNECTION_STRING`:
 
 ```env
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 BOT_TOKEN=your_bot_token
 ```
 

@@ -12,7 +12,7 @@ nano .env
 
 # 1. ДОБАВИТЬ PG_CONNECTION_STRING (для бота)
 # Раскомментируйте эту строку или добавьте её:
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 
 # 2. ДОБАВИТЬ API_BASE_URL (для бота)
 API_BASE_URL=http://localhost:3000
@@ -31,11 +31,11 @@ CLAUDE_BASE_URL=https://anthropic-proxy.yoddle-proxy.workers.dev
 PGHOST=localhost
 PGPORT=5432
 PGDATABASE=yoddle_db
-PGUSER=yoddle_user
-PGPASSWORD=1WIzL7aP_F
+PGUSER=your_db_user
+PGPASSWORD=your_db_password
 
 # Database - для бота (ДОБАВИТЬ!)
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 
 # Server
 PORT=3000

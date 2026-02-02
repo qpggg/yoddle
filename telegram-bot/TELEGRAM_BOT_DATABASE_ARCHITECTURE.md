@@ -15,7 +15,7 @@
 
 **Пример `.env` на сервере:**
 ```env
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 BOT_TOKEN=your_telegram_bot_token
 ```
 
@@ -80,7 +80,7 @@ BOT_TOKEN=your_telegram_bot_token
 |------|-----|----------|--------|
 | `page_url` | TEXT | URL страницы | `"https://yoddle.ru/demo"` |
 | `referrer` | TEXT | Реферер | `"https://google.com"` |
-| `ip_address` | VARCHAR(50) | IP адрес | `"185.185.69.254"` |
+| `ip_address` | VARCHAR(50) | IP адрес | пример: `"192.168.1.1"` |
 | `user_agent` | TEXT | User Agent | `"Mozilla/5.0..."` |
 
 #### 6. Статус в воронке продаж

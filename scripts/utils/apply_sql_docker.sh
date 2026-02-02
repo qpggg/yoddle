@@ -1,29 +1,31 @@
 #!/bin/bash
+# Применение SQL через Docker. Задайте PG_CONNECTION_STRING в .env (не храните пароль в скрипте).
 
-# Скрипт для применения SQL через Docker с вашей строкой подключения
-# postgresql://f1111323_yoddle:Nei3wmOK@host.docker.internal:6543/supa_full?sslmode=disable
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$ROOT"
+[ -f .env ] && source .env 2>/dev/null || true
+
+if [ -z "$PG_CONNECTION_STRING" ]; then
+  echo "Задайте PG_CONNECTION_STRING в .env"
+  exit 1
+fi
 
 echo "🗃️ Применение SQL расширений для умных рекомендаций..."
 
-# Применяем SQL файл через docker exec с psql
-docker exec -i $(docker ps --format "table {{.Names}}" | grep -E "(postgres|db)" | head -1) \
-  psql "postgresql://f1111323_yoddle:Nei3wmOK@host.docker.internal:6543/supa_full?sslmode=disable" \
-  < sql_commands_for_recommendations.sql
+CONTAINER=$(docker ps --format "{{.Names}}" | grep -E "(postgres|db)" | head -1)
+if [ -z "$CONTAINER" ]; then
+  echo "Контейнер postgres/db не найден"
+  exit 1
+fi
+
+docker exec -i "$CONTAINER" psql "$PG_CONNECTION_STRING" < scripts/utils/sql_commands_for_recommendations.sql 2>/dev/null || \
+  echo "Если sql_commands_for_recommendations.sql в другой папке, укажите путь"
 
 echo "✅ SQL команды применены"
-
-# Проверяем результат
-echo "🔍 Проверка созданных таблиц и столбцов..."
-
-docker exec -i $(docker ps --format "table {{.Names}}" | grep -E "(postgres|db)" | head -1) \
-  psql "postgresql://f1111323_yoddle:Nei3wmOK@host.docker.internal:6543/supa_full?sslmode=disable" \
-  -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'ai_feedback';"
-
-docker exec -i $(docker ps --format "table {{.Names}}" | grep -E "(postgres|db)" | head -1) \
-  psql "postgresql://f1111323_yoddle:Nei3wmOK@host.docker.internal:6543/supa_full?sslmode=disable" \
-  -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'benefit_recommendations' AND column_name IN ('explanations', 'confidence', 'algorithm_variant', 'score_breakdown');"
-
-echo "🎉 Готово! Теперь можно запускать тест: node test_recommendations_pipeline.js"
+echo "🔍 Проверка: docker exec -i $CONTAINER psql \"\$PG_CONNECTION_STRING\" -c \"SELECT 1;\""
+echo "🎉 Готово"
 
 
 

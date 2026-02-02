@@ -36,14 +36,14 @@
 
 ```env
 # Вариант 1: Использовать PG_CONNECTION_STRING (как основной сервер)
-PG_CONNECTION_STRING=postgresql://yoddle_user:1WIzL7aP_F@localhost:5432/yoddle_db
+PG_CONNECTION_STRING=postgresql://USER:PASSWORD@HOST:5432/yoddle_db
 
 # Или вариант 2: Отдельные переменные
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=yoddle_db
 DB_USER=yoddle_user
-DB_PASSWORD=1WIzL7aP_F
+DB_PASSWORD=your_password_from_env
 
 # Telegram бот
 BOT_TOKEN=your_bot_token
@@ -54,7 +54,7 @@ BOT_TOKEN=your_bot_token
 Если миграция еще не применена:
 
 ```bash
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -f telegram-bot/migrations/add_telegram_activity_fields.sql
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -f telegram-bot/migrations/add_telegram_activity_fields.sql
 ```
 
 ### 3. Проверьте подключение бота к БД

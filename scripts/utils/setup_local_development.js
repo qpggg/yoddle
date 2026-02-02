@@ -139,7 +139,7 @@ function updateEnvFile() {
 PG_CONNECTION_STRING=postgresql://yoddle_user:yoddle123@localhost:5432/yoddle_dev
 
 # Продакшн (закомментировать для локальной разработки)
-# PG_CONNECTION_STRING=postgresql://postgres.wbgagyckqpkeemztsgka:22kiKggfEG2haS5x@aws-0-eu-north-1.pooler.supabase.com:5432/postgres
+# PG_CONNECTION_STRING=postgresql://user:password@host:5432/postgres
 `;
   
   try {

@@ -1,16 +1,4 @@
-import { Client } from 'pg';
-
-// Функция для создания клиента БД
-function createDbClient() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is not set');
-  }
-  
-  return new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: false
-  });
-}
+import { createDbClient } from '../db.js';
 
 export default async function handler(req, res) {
   // CORS headers

@@ -15,17 +15,17 @@
 ssh root@your_server
 
 # Проверьте подключение к БД
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT version();"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT version();"
 ```
 
 ### 2. Сделайте резервную копию БД (на всякий случай)
 
 ```bash
 # Создайте бэкап таблицы leads
-PGPASSWORD=1WIzL7aP_F pg_dump -h localhost -U yoddle_user -d yoddle_db -t leads > backup_leads_$(date +%Y%m%d_%H%M%S).sql
+PGPASSWORD="$PGPASSWORD" pg_dump -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -t leads > backup_leads_$(date +%Y%m%d_%H%M%S).sql
 
 # Или полный бэкап
-PGPASSWORD=1WIzL7aP_F pg_dump -h localhost -U yoddle_user -d yoddle_db > backup_full_$(date +%Y%m%d_%H%M%S).sql
+PGPASSWORD="$PGPASSWORD" pg_dump -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" > backup_full_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ---
@@ -40,17 +40,17 @@ cd /root/yoddle
 git pull origin stable
 
 # 2. Примените миграцию
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -f telegram-bot/migrations/add_telegram_activity_fields.sql
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -f telegram-bot/migrations/add_telegram_activity_fields.sql
 
 # 3. Проверьте, что поля добавлены
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "\d leads"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "\d leads"
 ```
 
 ### Способ 2: Вручную через psql
 
 ```bash
 # 1. Подключитесь к БД
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE"
 
 # 2. Скопируйте и вставьте содержимое файла add_telegram_activity_fields.sql
 # Или выполните команды вручную:
@@ -86,7 +86,7 @@ ALTER TABLE leads
 
 ```bash
 # 1. Проверьте структуру таблицы
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "\d leads"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "\d leads"
 
 # Должны появиться новые поля:
 # - presentation_requested
@@ -98,10 +98,10 @@ PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "\d leads
 # и т.д.
 
 # 2. Проверьте view для горячих лидов
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT * FROM telegram_hot_leads LIMIT 5;"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT * FROM telegram_hot_leads LIMIT 5;"
 
 # 3. Проверьте статистику активности
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT * FROM telegram_leads_activity_stats;"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT * FROM telegram_leads_activity_stats;"
 ```
 
 ---
@@ -111,7 +111,7 @@ PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db -c "SELECT *
 ```bash
 # Если нужно откатить изменения, выполните:
 
-PGPASSWORD=1WIzL7aP_F psql -h localhost -U yoddle_user -d yoddle_db << EOF
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" << EOF
 
 -- Удаляем view
 DROP VIEW IF EXISTS telegram_hot_leads;

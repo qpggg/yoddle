@@ -260,52 +260,34 @@ const Dashboard: React.FC = () => {
 
   // Проверка первого входа и показ приветственного тура
   useEffect(() => {
-    console.log('[Dashboard] Tour check useEffect:', {
-      tourWasClosed,
-      showWelcomeTour,
-      userLoading,
-      userId: user?.id,
-      tourCompleted: userProgress?.tour_completed,
-      tourCompletedType: typeof userProgress?.tour_completed
-    });
-    
-    // НЕ показываем тур если:
-    // 1. Тур уже был закрыт пользователем в этой сессии
-    // 2. Тур уже показывается
-    if (tourWasClosed || showWelcomeTour) {
-      console.log('[Dashboard] Tour check: NOT showing (tourWasClosed or already showing)');
+    if (!user?.id || userLoading) return;
+
+    // Не показываем тур если уже закрыт в этой сессии или уже открыт
+    if (tourWasClosed || showWelcomeTour) return;
+
+    // Fallback при релогине: если тур уже был завершён в этом браузере — не показывать снова
+    const storageKey = `yoddle_tour_completed_${user.id}`;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1') {
+      setTourWasClosed(true);
       return;
     }
-    
-    // Строгая проверка: tour_completed должен быть явно false
+
     const tourCompleted = userProgress?.tour_completed;
-    // Не показываем если: true, 'true', 1, 't', 'T', null, undefined
-    const isCompleted = tourCompleted === true || 
-                       tourCompleted === 'true' || 
-                       tourCompleted === 1 || 
+    const isCompleted = tourCompleted === true ||
+                       tourCompleted === 'true' ||
+                       tourCompleted === 1 ||
                        tourCompleted === 't' ||
                        tourCompleted === 'T';
-    
+
     if (isCompleted || tourCompleted === null || tourCompleted === undefined) {
-      console.log('[Dashboard] Tour check: NOT showing (completed or no data)', { tourCompleted, isCompleted });
+      if (isCompleted) setTourWasClosed(true);
       return;
     }
-    
-    // Показываем тур ТОЛЬКО если tour_completed === false или 'f'
-    if (user?.id && !userLoading && userProgress && (tourCompleted === false || tourCompleted === 'f')) {
-      console.log('[Dashboard] Tour check: SHOWING tour (all conditions met)');
-      // Небольшая задержка для плавного появления
-      const timer = setTimeout(() => {
-        setShowWelcomeTour(true);
-      }, 500);
+
+    // Показываем тур только если tour_completed явно false или 'f' в БД
+    if (userProgress && (tourCompleted === false || tourCompleted === 'f')) {
+      const timer = setTimeout(() => setShowWelcomeTour(true), 500);
       return () => clearTimeout(timer);
-    } else {
-      console.log('[Dashboard] Tour check: NOT showing (conditions not met)', {
-        hasUser: !!user?.id,
-        userLoading,
-        hasProgress: !!userProgress,
-        tourCompleted
-      });
     }
   }, [user?.id, userLoading, userProgress?.tour_completed, showWelcomeTour, tourWasClosed]);
 
@@ -318,14 +300,15 @@ const Dashboard: React.FC = () => {
 
   // Обработчик завершения тура
   const handleTourComplete = async () => {
-    // СРАЗУ помечаем что тур был закрыт - это предотвратит повторное открытие
     setTourWasClosed(true);
     setShowWelcomeTour(false);
-    
-    // Затем обновляем статус в БД
+
     if (user?.id) {
+      const storageKey = `yoddle_tour_completed_${user.id}`;
       try {
-        console.log('🔄 Updating tour_completed to true for user:', user.id);
+        if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, '1');
+      } catch (_) {}
+      try {
         const response = await fetch('/api/progress', {
           method: 'PATCH',
           headers: {

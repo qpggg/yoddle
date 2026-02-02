@@ -941,49 +941,67 @@ const Progress: React.FC = () => {
           </Paper>
         </motion.div>
 
-        {/* ПОЛУЧЕННЫЕ ДОСТИЖЕНИЯ */}
-        {unlockedAchievements.length > 0 && (
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
-            <Typography variant="h4" sx={{ 
-              fontWeight: 800, 
-              color: '#1A1A1A', 
-              mb: 4, 
-              textAlign: 'center' 
-            }}>
-              Полученные достижения ({unlockedAchievements.length})
-            </Typography>
-            
-            <Grid container spacing={3}>
-              {unlockedAchievements.map((achievement) => (
-                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
-                  <AchievementCard achievement={achievement} />
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-        )}
+        {/* ДОСТИЖЕНИЯ — в разработке (заморожено для пилота, отлаживаем базовые XP за действия) */}
+        <Box sx={{ position: 'relative', marginBottom: '4rem', minHeight: 220 }}>
+          {/* Оверлей «В разработке» */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(249, 250, 251, 0.85)',
+              borderRadius: '24px',
+              backdropFilter: 'blur(4px)',
+              border: '1px dashed rgba(139, 0, 0, 0.25)',
+              minHeight: 220,
+            }}
+          >
+            <Box sx={{ textAlign: 'center', px: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#8B0000', mb: 0.5 }}>
+                В разработке
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#666' }}>
+                Достижения появятся в следующих обновлениях. Сейчас начисляются базовые XP за действия.
+              </Typography>
+            </Box>
+          </Box>
 
-        {/* ДОСТУПНЫЕ ДОСТИЖЕНИЯ */}
-        {lockedAchievements.length > 0 && (
-          <motion.div variants={containerVariants} initial="hidden" animate="visible">
-            <Typography variant="h4" sx={{ 
-              fontWeight: 800, 
-              color: '#1A1A1A', 
-              mb: 4, 
-              textAlign: 'center' 
-            }}>
-              Доступные достижения ({lockedAchievements.length})
-            </Typography>
-            
-            <Grid container spacing={3}>
-              {lockedAchievements.map((achievement) => (
-                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
-                  <AchievementCard achievement={achievement} />
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-        )}
+          {/* Контент достижений (за затемнением) */}
+          {unlockedAchievements.length > 0 && (
+            <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ marginBottom: '4rem' }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A1A1A', mb: 4, textAlign: 'center' }}>
+                Полученные достижения ({unlockedAchievements.length})
+              </Typography>
+              <Grid container spacing={3}>
+                {unlockedAchievements.map((achievement) => (
+                  <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                    <AchievementCard achievement={achievement} />
+                  </Grid>
+                ))}
+              </Grid>
+            </motion.div>
+          )}
+          {lockedAchievements.length > 0 && (
+            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+              <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A1A1A', mb: 4, textAlign: 'center' }}>
+                Доступные достижения ({lockedAchievements.length})
+              </Typography>
+              <Grid container spacing={3}>
+                {lockedAchievements.map((achievement) => (
+                  <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                    <AchievementCard achievement={achievement} />
+                  </Grid>
+                ))}
+              </Grid>
+            </motion.div>
+          )}
+        </Box>
       </Container>
     </Box>
   );
