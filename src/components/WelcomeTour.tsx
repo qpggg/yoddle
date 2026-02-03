@@ -67,7 +67,7 @@ const TOUR_STEPS = [
   }
 ];
 
-const WelcomeTour: React.FC<WelcomeTourProps> = ({ open, onClose, onComplete }) => {
+const WelcomeTour: React.FC<WelcomeTourProps> = ({ open, onClose: _onClose, onComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
 
   const handleNext = () => {

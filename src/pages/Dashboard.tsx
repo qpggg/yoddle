@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { 
   Brain, 
   Zap, 

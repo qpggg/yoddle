@@ -86,3 +86,6 @@ logs/
 
 # OS
 Thumbs.db
+
+# k6 binary (локальная установка без sudo)
+scripts/load/bin/

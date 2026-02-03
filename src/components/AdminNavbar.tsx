@@ -119,7 +119,7 @@ const AdminNavbar: React.FC = () => {
                   },
                   '&:hover::after': { opacity: 1 },
                 }}
-                onMouseMove={(e: React.MouseEvent<HTMLDivElement>) => {
+                onMouseMove={(e: React.MouseEvent<HTMLElement>) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const x = ((e.clientX - rect.left) / rect.width) * 100;
                   const y = ((e.clientY - rect.top) / rect.height) * 100;

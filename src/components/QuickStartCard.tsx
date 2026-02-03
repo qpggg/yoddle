@@ -34,7 +34,7 @@ const QuickStartCard: React.FC<QuickStartCardProps> = ({
   profileCompletion,
   hasMoodEntries,
   hasBenefits,
-  balance,
+  balance: _balance,
   hasPreferencesTest,
   userId,
   onboardingCompleted = false, // Получаем из пропсов (из БД)

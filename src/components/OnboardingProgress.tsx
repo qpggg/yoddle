@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Box, Typography, LinearProgress } from '@mui/material';
 import { UserCircle, FileText, Gift } from 'lucide-react';
 
