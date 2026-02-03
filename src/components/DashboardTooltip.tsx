@@ -75,7 +75,7 @@ const DashboardTooltip: React.FC<DashboardTooltipProps> = ({
 
       <Dialog
         open={open}
-        onClose={(e, reason) => {
+        onClose={(_e, reason) => {
           if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
             setOpen(false);
           }
