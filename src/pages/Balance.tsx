@@ -82,8 +82,8 @@ const BalancePage: React.FC = () => {
   }, [filter, user?.id]);
 
   return (
-    <motion.div className="balance-page" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: 'easeInOut' }}>
-      <Box sx={{ maxWidth: 960, mx: 'auto', my: 6, px: 2 }}>
+    <motion.div className="balance-page" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: 'easeInOut' }} style={{ overflowX: 'hidden', minWidth: 0 }}>
+      <Box sx={{ maxWidth: 960, mx: 'auto', my: 6, px: 2, overflowX: 'hidden', minWidth: 0, width: '100%' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
           <Box sx={{
             width: '60px',
@@ -314,22 +314,35 @@ const BalancePage: React.FC = () => {
           {policyHint}
         </Alert>
       )}
-      <Box sx={{ mb: 1.5 }}>
+      <Box sx={{ mb: 1.5, width: '100%', minWidth: 0 }}>
         <ToggleButtonGroup
           size="small"
           exclusive
           value={filter}
           onChange={(_, v) => v && setFilter(v)}
           sx={{
+            width: '100%',
+            display: 'flex',
+            flexWrap: 'nowrap',
             borderRadius: 2,
+            '& .MuiToggleButtonGroup-grouped': {
+              flex: '1 1 0',
+              minWidth: 0
+            },
             '& .MuiToggleButton-root': {
               textTransform: 'none',
               fontWeight: 700,
-              px: 2.5,
+              px: { xs: 0.75, sm: 1.5, md: 2.5 },
+              py: 1,
               borderColor: '#eee',
               outline: 'none',
               boxShadow: 'none',
-              fontFamily: (theme) => theme.typography.fontFamily
+              fontFamily: (theme) => theme.typography.fontFamily,
+              flex: '1 1 0',
+              minWidth: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             },
             '& .Mui-selected': {
               bgcolor: '#8B0000',

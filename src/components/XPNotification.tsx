@@ -88,7 +88,9 @@ const XPNotification: React.FC<XPNotificationProps> = ({ xp, action, visible, on
               borderRadius: '24px',
               background: '#fff',
               border: '1px solid #eee',
-              minWidth: 280,
+              minWidth: 0,
+              maxWidth: 360,
+              width: '100%',
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
               overflow: 'hidden',
               position: 'relative'

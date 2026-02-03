@@ -86,59 +86,81 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          className="news-modal-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-          onClick={onClose}
-        >
+        <>
+          <style>{`
+            @media (max-width: 600px) {
+              .news-modal { max-width: calc(100vw - 24px) !important; }
+              .news-modal-header { padding: 16px 16px !important; }
+              .news-modal-header h2 { font-size: 20px !important; }
+              .news-modal-content { padding: 16px !important; overflow-x: hidden !important; min-width: 0 !important; }
+              .news-modal-content h1 { font-size: 22px !important; word-break: break-word; }
+              .news-modal-nav { padding: 16px !important; flex-wrap: wrap !important; gap: 12px !important; }
+              .news-modal-nav .nav-btn { padding: 10px 14px !important; font-size: 14px !important; }
+              .news-modal-nav .nav-dots { order: 3; width: 100%; justify-content: center; }
+            }
+          `}</style>
           <motion.div
-            className="news-modal"
-            initial={{ scale: 0.9, opacity: 0, y: 50 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 50 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="news-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             style={{
-              background: '#fff',
-              borderRadius: '20px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              position: 'relative'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header с закрытием */}
-            <div style={{
-              padding: '20px 30px',
-              borderBottom: '1px solid #eee',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 1000,
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#fafafa'
-            }}>
-              <div>
+              justifyContent: 'center',
+              padding: '12px',
+              boxSizing: 'border-box'
+            }}
+            onClick={onClose}
+          >
+            <motion.div
+              className="news-modal"
+              initial={{ scale: 0.9, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 50 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              style={{
+                background: '#fff',
+                borderRadius: '20px',
+                maxWidth: '800px',
+                width: '100%',
+                maxHeight: '90vh',
+                minHeight: 0,
+                minWidth: 0,
+                overflow: 'hidden',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                position: 'relative',
+                boxSizing: 'border-box'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header с закрытием */}
+              <div
+                className="news-modal-header"
+                style={{
+                  padding: '20px 30px',
+                  borderBottom: '1px solid #eee',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: '#fafafa',
+                  minWidth: 0
+                }}
+              >
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <h2 style={{ 
                   margin: 0, 
                   color: '#750000', 
                   fontSize: '24px', 
-                  fontWeight: 700 
+                  fontWeight: 700,
+                  wordBreak: 'break-word'
                 }}>
                   Новости Yoddle
                 </h2>
@@ -161,7 +183,8 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'background 0.2s ease'
+                  transition: 'background 0.2s ease',
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0f0'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
@@ -171,11 +194,17 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
             </div>
 
             {/* Контент новости */}
-            <div style={{
-              padding: '30px',
-              maxHeight: 'calc(90vh - 200px)',
-              overflowY: 'auto'
-            }}>
+            <div
+              className="news-modal-content"
+              style={{
+                padding: '30px',
+                maxHeight: 'calc(90vh - 200px)',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                minWidth: 0,
+                boxSizing: 'border-box'
+              }}
+            >
               {loading ? (
                 <div style={{
                   display: 'flex',
@@ -312,7 +341,10 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                     fontSize: '16px',
                     lineHeight: '1.6',
                     color: '#444',
-                    whiteSpace: 'pre-line'
+                    whiteSpace: 'pre-line',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    minWidth: 0
                   }}>
                     {currentNews.content}
                   </div>
@@ -322,15 +354,22 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
 
             {/* Navigation */}
             {!loading && !error && newsData.length > 0 && (
-              <div style={{
-                padding: '20px 30px',
-                borderTop: '1px solid #eee',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: '#fafafa'
-              }}>
+              <div
+                className="news-modal-nav"
+                style={{
+                  padding: '20px 30px',
+                  borderTop: '1px solid #eee',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  background: '#fafafa',
+                  minWidth: 0
+                }}
+              >
                 <motion.button
+                  className="nav-btn"
                   onClick={prevNews}
                   disabled={newsData.length <= 1}
                   whileHover={{ scale: 1.05 }}
@@ -347,7 +386,10 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                     cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
                     fontWeight: 600,
                     opacity: newsData.length <= 1 ? 0.5 : 1,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    flex: '1 1 auto',
+                    minWidth: 0,
+                    justifyContent: 'center'
                   }}
                   onMouseEnter={(e) => {
                     if (newsData.length > 1) {
@@ -363,7 +405,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                 </motion.button>
 
                 {/* Dots indicator */}
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="nav-dots" style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                   {newsData.map((_, index) => (
                     <button
                       key={index}
@@ -382,6 +424,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                 </div>
 
                 <motion.button
+                  className="nav-btn"
                   onClick={nextNews}
                   disabled={newsData.length <= 1}
                   whileHover={{ scale: 1.05 }}
@@ -398,7 +441,10 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
                     cursor: newsData.length <= 1 ? 'not-allowed' : 'pointer',
                     fontWeight: 600,
                     opacity: newsData.length <= 1 ? 0.5 : 1,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    flex: '1 1 auto',
+                    minWidth: 0,
+                    justifyContent: 'center'
                   }}
                   onMouseEnter={(e) => {
                     if (newsData.length > 1) {
@@ -416,6 +462,7 @@ const NewsModal: React.FC<NewsModalProps> = ({ open, onClose }) => {
             )}
           </motion.div>
         </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

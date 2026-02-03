@@ -223,8 +223,8 @@ const Metrics: React.FC = () => {
   const currentMetrics = metrics[selectedYear - 1];
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #FBF7F7 0%, #F8F8F8 100%)' }}>
-      <Container maxWidth="xl" sx={{ pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #FBF7F7 0%, #F8F8F8 100%)', overflowX: 'hidden', minWidth: 0 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 }, minWidth: 0 }}>
         <motion.div
           initial="hidden"
           animate="visible"
@@ -349,8 +349,8 @@ const Metrics: React.FC = () => {
                 </Typography>
               </Box>
               
-              <Box sx={{ width: '100%' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '17px' }}>
+              <Box sx={{ width: '100%', overflowX: 'auto', minWidth: 0, maxWidth: '100%' }}>
+                <table style={{ minWidth: 800, width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '17px' }}>
                   <thead>
                     <tr style={{ background: '#f8f9fa' }}>
                       <th style={{ padding: '20px 8px', textAlign: 'center', fontWeight: 700, borderBottom: '1px solid #e9ecef', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '4%' }}>Год</th>

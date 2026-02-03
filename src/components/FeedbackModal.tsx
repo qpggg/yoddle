@@ -139,92 +139,118 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-          onClick={onClose}
-        >
+        <>
+          <style>{`
+            @media (max-width: 600px) {
+              .feedback-modal { max-width: calc(100vw - 24px) !important; }
+              .feedback-modal-header { padding: 16px !important; }
+              .feedback-modal-header h2 { font-size: 20px !important; }
+              .feedback-modal-content { padding: 16px !important; overflow-x: hidden !important; min-width: 0 !important; }
+            }
+          `}</style>
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 50 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 50 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             style={{
-              background: '#fff',
-              borderRadius: '20px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              position: 'relative'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div style={{
-              padding: '20px 30px',
-              borderBottom: '1px solid #eee',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 1000,
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#fafafa'
-            }}>
-              <div>
-                <h2 style={{ 
-                  margin: 0, 
-                  color: '#750000', 
-                  fontSize: '24px', 
-                  fontWeight: 700 
-                }}>
-                  Отзывы сотрудников
-                </h2>
-                <p style={{ 
-                  margin: '4px 0 0 0', 
-                  color: '#666', 
-                  fontSize: '14px' 
-                }}>
-                  {loading ? 'Загрузка...' : `${recentFeedback.length} отзывов`}
-                </p>
-              </div>
-              <button
-                onClick={onClose}
+              justifyContent: 'center',
+              padding: '12px',
+              boxSizing: 'border-box'
+            }}
+            onClick={onClose}
+          >
+            <motion.div
+              className="feedback-modal"
+              initial={{ scale: 0.9, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 50 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              style={{
+                background: '#fff',
+                borderRadius: '20px',
+                maxWidth: '800px',
+                width: '100%',
+                maxHeight: '90vh',
+                minHeight: 0,
+                minWidth: 0,
+                overflow: 'hidden',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                position: 'relative',
+                boxSizing: 'border-box'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div
+                className="feedback-modal-header"
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '50%',
+                  padding: '20px 30px',
+                  borderBottom: '1px solid #eee',
                   display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.2s ease'
+                  background: '#fafafa',
+                  minWidth: 0
                 }}
               >
-                <X size={24} color="#666" />
-              </button>
-            </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h2 style={{ 
+                    margin: 0, 
+                    color: '#750000', 
+                    fontSize: '24px', 
+                    fontWeight: 700,
+                    wordBreak: 'break-word'
+                  }}>
+                    Отзывы сотрудников
+                  </h2>
+                  <p style={{ 
+                    margin: '4px 0 0 0', 
+                    color: '#666', 
+                    fontSize: '14px' 
+                  }}>
+                    {loading ? 'Загрузка...' : `${recentFeedback.length} отзывов`}
+                  </p>
+                </div>
+                <button
+                  onClick={onClose}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s ease',
+                    flexShrink: 0
+                  }}
+                >
+                  <X size={24} color="#666" />
+                </button>
+              </div>
 
-            {/* Content */}
-            <div style={{
-              padding: '30px',
-              maxHeight: 'calc(90vh - 200px)',
-              overflowY: 'auto'
-            }}>
+              {/* Content */}
+              <div
+                className="feedback-modal-content"
+                style={{
+                  padding: '30px',
+                  maxHeight: 'calc(90vh - 200px)',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  minWidth: 0,
+                  boxSizing: 'border-box'
+                }}
+              >
               {loading ? (
                 <div style={{
                   display: 'flex',
@@ -349,16 +375,26 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
                               padding: '16px',
                               background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
                               borderRadius: '12px',
-                              border: '1px solid #e8e8e8'
+                              border: '1px solid #e8e8e8',
+                              minWidth: 0
                             }}
                           >
                             <div style={{ 
                               display: 'flex', 
+                              flexWrap: 'wrap',
                               justifyContent: 'space-between', 
                               alignItems: 'flex-start',
-                              marginBottom: '12px'
+                              gap: '12px',
+                              marginBottom: '12px',
+                              minWidth: 0
                             }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '12px',
+                                minWidth: 0,
+                                flex: '1 1 0'
+                              }}>
                                 {feedback.avatar ? (
                                   <img 
                                     src={feedback.avatar} 
@@ -367,22 +403,41 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
                                       width: '40px',
                                       height: '40px',
                                       borderRadius: '50%',
-                                      objectFit: 'cover'
+                                      objectFit: 'cover',
+                                      flexShrink: 0
                                     }}
                                   />
                                 ) : (
-                                  <User size={40} color="#750000" />
+                                  <User size={40} color="#750000" style={{ flexShrink: 0 }} />
                                 )}
-                                <div>
-                                  <div style={{ fontWeight: 600, color: '#333' }}>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                  <div style={{ 
+                                    fontWeight: 600, 
+                                    color: '#333',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
                                     {feedback.user_name}
                                   </div>
-                                  <div style={{ fontSize: '12px', color: '#666' }}>
+                                  <div style={{ 
+                                    fontSize: '12px', 
+                                    color: '#666',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
                                     {feedback.position}
                                   </div>
                                 </div>
                               </div>
-                              <div style={{ textAlign: 'right' }}>
+                              <div style={{ 
+                                textAlign: 'right',
+                                flexShrink: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-end'
+                              }}>
                                 {renderStars(feedback.rating)}
                                 <div style={{ 
                                   fontSize: '12px', 
@@ -390,7 +445,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
                                   marginTop: '4px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '4px'
+                                  gap: '4px',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   <Calendar size={12} />
                                   {formatDate(feedback.created_at)}
@@ -401,7 +457,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
                               margin: 0, 
                               color: '#444', 
                               lineHeight: '1.5',
-                              fontStyle: 'italic'
+                              fontStyle: 'italic',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word'
                             }}>
                               "{feedback.comment}"
                             </p>
@@ -415,6 +473,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ open, onClose, userId }) 
             </div>
           </motion.div>
         </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

@@ -186,7 +186,7 @@ function InlineProfileEditModal({ open, onClose, user, setUser }: ProfileEditMod
             exit={{ scale: 0.95, opacity: 0, y: 40 }}
             transition={{ duration: 0.35, ease: 'easeInOut' }}
             style={{
-              background: '#fff', borderRadius: 16, padding: 32, minWidth: 340, boxShadow: '0 8px 32px rgba(0,0,0,0.18)'
+              background: '#fff', borderRadius: 16, padding: 32, minWidth: 0, maxWidth: 340, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)'
             }}
           >
             <div style={{ textAlign: 'right' }}>
@@ -236,6 +236,15 @@ const Dashboard: React.FC = () => {
   const [quickStartDataLoaded, setQuickStartDataLoaded] = useState<boolean>(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false);
   const { user, setUser, isLoading: userLoading, error: userError } = useUser();
+
+  // Сразу при появлении user.id читаем localStorage, чтобы модалка «Поздравляем!» не появлялась снова после добавления льготы (до завершения loadProgress)
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `yoddle_onboarding_completed_${user.id}`;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(key) === '1') {
+      setOnboardingCompleted(true);
+    }
+  }, [user?.id]);
   const { userBenefits, isLoading: benefitsLoading, error: benefitsError } = useUserBenefits();
   const { unreadCount } = useNotifications({ userId: user?.id });
   
@@ -395,19 +404,20 @@ const Dashboard: React.FC = () => {
         
         setUserProgress(progress);
         console.log('[Dashboard] ✅ userProgress state updated successfully');
-        
-        // Синхронизируем статус онбординга из БД
-        // PostgreSQL возвращает boolean как true/false, но может быть и строка
+
+        // Приоритет: localStorage (уже закрыл «Понятно») → БД
+        const storageKey = `yoddle_onboarding_completed_${user.id}`;
+        const fromStorage = typeof localStorage !== 'undefined' && localStorage.getItem(storageKey) === '1';
         const onboardingCompleted = progress?.onboarding_completed;
-        // Проверяем все возможные варианты true
-        const isOnboardingDone = onboardingCompleted === true || 
-                                 onboardingCompleted === 'true' || 
-                                 onboardingCompleted === 1 || 
+        const isOnboardingDoneFromDb = onboardingCompleted === true ||
+                                 onboardingCompleted === 'true' ||
+                                 onboardingCompleted === 1 ||
                                  onboardingCompleted === 't' ||
                                  onboardingCompleted === 'T';
+        const isOnboardingDone = fromStorage || isOnboardingDoneFromDb;
         console.log('[Dashboard] Onboarding check:', {
           value: onboardingCompleted,
-          type: typeof onboardingCompleted,
+          fromStorage,
           isDone: isOnboardingDone
         });
         setOnboardingCompleted(isOnboardingDone);
@@ -755,7 +765,7 @@ const Dashboard: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 50,
-                  minWidth: 320,
+                  minWidth: 0,
                   width: '100%',
                   maxWidth: 340
                 }}
@@ -791,7 +801,7 @@ const Dashboard: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 50,
-                  minWidth: 320,
+                  minWidth: 0,
                   width: '100%',
                   maxWidth: 340
                 }}

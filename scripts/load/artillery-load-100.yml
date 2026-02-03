@@ -1,0 +1,33 @@
+# Artillery: нагрузка на 100 пользователей, 60 секунд
+# Запуск: artillery run artillery-load-100.yml
+config:
+  target: "http://localhost:3001"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Держим ~10 новых пользователей в секунду (до ~100 активных)"
+
+scenarios:
+  - name: "Health и основные API"
+    flow:
+      - get:
+          url: "/health"
+      - get:
+          url: "/api/benefits"
+      - get:
+          url: "/api/progress"
+          qs:
+            user_id: 1
+      - get:
+          url: "/api/user-benefits"
+          qs:
+            user_id: 1
+      - get:
+          url: "/api/activity"
+          qs:
+            user_id: 1
+      - post:
+          url: "/api/login"
+          json:
+            login: "test@example.com"
+            password: "test123"

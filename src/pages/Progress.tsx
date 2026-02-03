@@ -196,7 +196,7 @@ const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
           {achievement.description}
         </Typography>
         
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 'auto', flexWrap: 'wrap' }}>
           <Chip 
             label={rarityConfig.label} 
             size="small" 
@@ -360,8 +360,8 @@ const Progress: React.FC = () => {
   const lockedAchievements = progress.achievements.filter(a => !a.unlocked);
 
   return (
-    <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 }, overflowX: 'hidden', minWidth: 0 }}>
+      <Container maxWidth="lg" sx={{ minWidth: 0 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -706,6 +706,7 @@ const Progress: React.FC = () => {
                   border: `2px solid ${category.color}20`,
                   background: '#fff',
                   minHeight: '300px',
+                  minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
                   '&:hover': {
@@ -732,7 +733,8 @@ const Progress: React.FC = () => {
                     gap: 2.5, 
                     mb: 3,
                     pt: 1.5,
-                    px: 3
+                    px: { xs: 2, sm: 3 },
+                    minWidth: 0
                   }}>
                     <Box sx={{ 
                       color: category.color, 
@@ -742,15 +744,18 @@ const Progress: React.FC = () => {
                       p: 1.5,
                       borderRadius: '16px',
                       background: `${category.color}15`,
-                      border: `1px solid ${category.color}20`
+                      border: `1px solid ${category.color}20`,
+                      flexShrink: 0
                     }}>
                       {category.icon}
                     </Box>
                     <Typography variant="h6" sx={{ 
                       fontWeight: 800, 
                       color: '#1A1A1A',
-                      fontSize: '1.3rem',
-                      letterSpacing: '-0.5px'
+                      fontSize: { xs: '1.15rem', sm: '1.3rem' },
+                      letterSpacing: '-0.5px',
+                      minWidth: 0,
+                      wordBreak: 'break-word'
                     }}>
                       {category.category}
                     </Typography>
@@ -761,26 +766,35 @@ const Progress: React.FC = () => {
                     display: 'flex', 
                     flexDirection: 'column', 
                     gap: 2.5,
-                    px: 3,
+                    px: { xs: 2, sm: 3 },
                     pb: 3,
-                    flex: 1
+                    flex: 1,
+                    minWidth: 0
                   }}>
                     {category.actions.map((item, idx) => (
                       <Box key={idx} sx={{
                         display: 'flex',
-                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
                         alignItems: 'center',
-                        p: 3,
+                        gap: 1.5,
+                        p: { xs: 2, sm: 3 },
                         borderRadius: '18px',
                         background: '#f8f9fa',
                         border: `1px solid ${category.color}15`,
                         transition: 'background-color 0.2s ease',
+                        minWidth: 0,
                         '&:hover': {
                           background: `${category.color}08`,
                           borderColor: `${category.color}40`
                         }
                       }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: { xs: 2, sm: 3 },
+                          minWidth: 0,
+                          flex: '1 1 auto'
+                        }}>
                           <Box sx={{ 
                             color: category.color, 
                             fontSize: '1.4rem',
@@ -789,37 +803,45 @@ const Progress: React.FC = () => {
                             p: 1.2,
                             borderRadius: '12px',
                             background: `${category.color}15`,
-                            border: `1px solid ${category.color}20`
+                            border: `1px solid ${category.color}20`,
+                            flexShrink: 0
                           }}>
                             {item.icon}
                           </Box>
                           <Typography variant="body1" sx={{ 
                             fontWeight: 600,
                             color: '#2D3748',
-                            fontSize: '1rem',
-                            letterSpacing: '-0.2px'
+                            fontSize: { xs: '0.95rem', sm: '1rem' },
+                            letterSpacing: '-0.2px',
+                            minWidth: 0,
+                            wordBreak: 'break-word',
+                            lineHeight: 1.3
                           }}>
                             {item.action}
                           </Typography>
                         </Box>
-                        <Chip 
-                          label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
-                          size="medium"
-                          sx={{
-                            background: category.gradient,
-                            color: '#fff',
-                            fontWeight: 800,
-                            fontSize: '0.9rem',
-                            height: 36,
-                            borderRadius: '18px',
-                            boxShadow: `0 2px 8px ${category.color}30`,
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            minWidth: 80,
-                            '& .MuiChip-label': {
-                              px: 2
-                            }
-                          }}
-                        />
+                        <Box sx={{ display: 'flex', justifyContent: 'center', flex: '1 1 auto', minWidth: 72 }}>
+                          <Chip 
+                            label={typeof item.xp === 'number' ? `+${item.xp} XP` : item.xp}
+                            size="medium"
+                            sx={{
+                              background: category.gradient,
+                              color: '#fff',
+                              fontWeight: 800,
+                              fontSize: '0.9rem',
+                              height: 36,
+                              borderRadius: '18px',
+                              boxShadow: `0 2px 8px ${category.color}30`,
+                              border: '1px solid rgba(255,255,255,0.2)',
+                              flexShrink: 0,
+                              '& .MuiChip-label': {
+                                px: 2,
+                                overflow: 'visible',
+                                whiteSpace: 'nowrap'
+                              }
+                            }}
+                          />
+                        </Box>
                       </Box>
                     ))}
                   </Box>

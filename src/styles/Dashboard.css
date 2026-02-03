@@ -4,6 +4,9 @@
   padding: 2rem;
   min-height: 100vh;
   background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%);
+  overflow-x: hidden;
+  min-width: 0;
+  width: 100%;
 }
 
 .dashboard-header {
@@ -49,6 +52,7 @@
   gap: 1.5rem;
   margin-bottom: 2rem;
   align-items: stretch;
+  min-width: 0; /* грид не шире viewport на мобильных */
 }
 
 .dashboard-card {
@@ -56,6 +60,13 @@
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 6px 24px rgba(139, 0, 0, 0.15), 0 1.5px 6px rgba(0,0,0,0.08);
+  min-width: 0; /* чтобы контент (график и т.д.) не раздувал карточку на мобильных */
+  overflow: hidden;
+}
+
+/* Карточка аналитики: тултип графика не обрезать при наведении */
+.dashboard-card.analytics {
+  overflow: visible;
 }
 
 .dashboard-card h2 {

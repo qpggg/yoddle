@@ -34,7 +34,10 @@ const GlobalStyles = () => (
       'html, body': {
         margin: 0,
         padding: 0,
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        width: '100%',
+        maxWidth: '100%'
       },
       '*, *::before, *::after': {
         boxSizing: 'inherit'

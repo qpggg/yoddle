@@ -62,15 +62,16 @@ const QuickStartCard: React.FC<QuickStartCardProps> = ({
   // Определяем завершенность всех шагов (баланс не учитываем, так как это не шаг онбординга)
   const allCompleted = profileCompletion >= 50 && hasMoodEntries && hasPreferencesTest && hasBenefits;
 
-  // Показываем сообщение об успехе если все выполнено и онбординг еще не был завершен
+  // Показываем сообщение об успехе если все выполнено и онбординг еще не был завершен (проверяем и localStorage, чтобы не показывать снова после добавления льготы)
+  const completedInStorage = typeof localStorage !== 'undefined' && userId && localStorage.getItem(`yoddle_onboarding_completed_${userId}`) === '1';
   React.useEffect(() => {
-    if (allCompleted && userId && !showSuccess && !isOnboardingCompleted) {
+    if (allCompleted && userId && !showSuccess && !isOnboardingCompleted && !completedInStorage) {
       setShowSuccess(true);
     }
-  }, [allCompleted, userId, showSuccess, isOnboardingCompleted]);
+  }, [allCompleted, userId, showSuccess, isOnboardingCompleted, completedInStorage]);
 
-  // Если онбординг завершен, не показываем компонент
-  if (isOnboardingCompleted) {
+  // Если онбординг завершен (проп или localStorage), не показываем компонент
+  if (isOnboardingCompleted || completedInStorage) {
     return null;
   }
 
@@ -134,6 +135,13 @@ const QuickStartCard: React.FC<QuickStartCardProps> = ({
     // СРАЗУ скрываем компонент для мгновенной реакции
     setIsOnboardingCompleted(true);
     setShowSuccess(false);
+
+    // Сохраняем в localStorage — после обновления страницы модалка не покажется снова
+    if (userId && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`yoddle_onboarding_completed_${userId}`, '1');
+      } catch (_) {}
+    }
     
     // Затем обновляем БД асинхронно
     if (userId) {

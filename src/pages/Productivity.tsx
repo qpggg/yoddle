@@ -364,10 +364,11 @@ const AnimatedBrain: React.FC = () => (
 // Компонент премиального анимированного индикатора
 const AnimatedMoodIndicator: React.FC<{ value: number; label: string; color: string; icon: React.ReactNode }> = ({ value, label, color, icon }) => (
   <Box sx={{ 
-    flex: 1,
+    flex: '1 1 0',
+    minWidth: 0,
     background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
     borderRadius: '20px',
-    padding: '24px 20px',
+    padding: { xs: '16px 12px', sm: '24px 20px' },
     border: '1px solid rgba(139,0,0,0.1)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
     backdropFilter: 'blur(10px)',
@@ -815,8 +816,8 @@ const Productivity: React.FC = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f9fafb 0%, #f0f2f5 100%)', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f9fafb 0%, #f0f2f5 100%)', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 }, overflowX: 'hidden', minWidth: 0 }}>
+      <Container maxWidth="lg" sx={{ minWidth: 0 }}>
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -1898,7 +1899,8 @@ const Productivity: React.FC = () => {
               ...cardStyle,
               background: '#fff',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              minWidth: 0
             }}>
               <Box sx={{
                 position: 'absolute',
@@ -1909,7 +1911,7 @@ const Productivity: React.FC = () => {
                 background: 'linear-gradient(90deg, #8B0000 0%, #B22222 50%, #8B0000 100%)'
               }} />
               
-              <Box sx={{ position: 'relative', zIndex: 1, pt: 3 }}>
+              <Box sx={{ position: 'relative', zIndex: 1, pt: 3, px: { xs: 2, sm: 3 }, minWidth: 0 }}>
                 <Typography variant="h6" sx={{ 
                   fontWeight: 600, 
                   color: '#666', 
@@ -1922,7 +1924,7 @@ const Productivity: React.FC = () => {
                   Еженедельная аналитика
                 </Typography>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 4, minWidth: 0 }}>
                   <motion.div
                     animate={{ 
                       x: [0, 2, -2, 0],
@@ -1938,10 +1940,11 @@ const Productivity: React.FC = () => {
                       y: -3,
                       transition: { duration: 0.25 }
                     }}
+                    style={{ flexShrink: 0 }}
                   >
                     <Box sx={{
-                      width: '60px',
-                      height: '60px',
+                      width: { xs: 48, sm: '60px' },
+                      height: { xs: 48, sm: '60px' },
                       borderRadius: '16px',
                       background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                       display: 'flex',
@@ -1952,8 +1955,8 @@ const Productivity: React.FC = () => {
                       <BarChart3Icon size={28} color="#fff" />
                     </Box>
                   </motion.div>
-                  <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A1A1A', mb: 0.5, fontSize: { xs: '1.5rem', md: '1.8rem' } }}>
+                  <Box sx={{ minWidth: 0, flex: '1 1 200px' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A1A1A', mb: 0.5, fontSize: { xs: '1.5rem', md: '1.8rem' }, wordBreak: 'break-word' }}>
                       Ваше настроение за неделю
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
@@ -1963,25 +1966,38 @@ const Productivity: React.FC = () => {
                 </Box>
 
                 {/* Средние показатели */}
-                <Box sx={{ display: 'flex', gap: 6, mb: 5, justifyContent: 'center' }}>
-                  <AnimatedMoodIndicator 
-                    value={averages.mood} 
-                    label="Настроение" 
-                    color="#8B0000" 
-                    icon={<UserCheckIcon size={20} />} 
-                  />
-                  <AnimatedMoodIndicator 
-                    value={averages.energy} 
-                    label="Энергия" 
-                    color="#A0000A" 
-                    icon={<FlameIcon size={20} />} 
-                  />
-                  <AnimatedMoodIndicator 
-                    value={100 - averages.stress} 
-                    label="Спокойствие" 
-                    color="#B71C1C" 
-                    icon={<StarIcon size={20} />} 
-                  />
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap',
+                  gap: { xs: 2, md: 6 }, 
+                  mb: 5, 
+                  justifyContent: 'center',
+                  minWidth: 0
+                }}>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 0', minWidth: { xs: 0, sm: 180 } } }}>
+                    <AnimatedMoodIndicator 
+                      value={averages.mood} 
+                      label="Настроение" 
+                      color="#8B0000" 
+                      icon={<UserCheckIcon size={20} />} 
+                    />
+                  </Box>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 0', minWidth: { xs: 0, sm: 180 } } }}>
+                    <AnimatedMoodIndicator 
+                      value={averages.energy} 
+                      label="Энергия" 
+                      color="#A0000A" 
+                      icon={<FlameIcon size={20} />} 
+                    />
+                  </Box>
+                  <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 0', minWidth: { xs: 0, sm: 180 } } }}>
+                    <AnimatedMoodIndicator 
+                      value={100 - averages.stress} 
+                      label="Спокойствие" 
+                      color="#B71C1C" 
+                      icon={<StarIcon size={20} />} 
+                    />
+                  </Box>
                 </Box>
 
                 {/* График по дням */}
@@ -2121,8 +2137,15 @@ const Productivity: React.FC = () => {
                   )}
                 </Grid>
 
-                <Box sx={{ display: 'flex', gap: 4, mt: 4, justifyContent: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap',
+                  gap: { xs: 2, sm: 4 }, 
+                  mt: 4, 
+                  justifyContent: 'center',
+                  minWidth: 0
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
                     <Box sx={{ 
                       width: 16, 
                       height: 16, 
@@ -2132,7 +2155,7 @@ const Productivity: React.FC = () => {
                     }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>Настроение</Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
                     <Box sx={{ 
                       width: 16, 
                       height: 16, 
@@ -2142,7 +2165,7 @@ const Productivity: React.FC = () => {
                     }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>Энергия</Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
                     <Box sx={{ 
                       width: 16, 
                       height: 16, 
@@ -2178,10 +2201,18 @@ const Productivity: React.FC = () => {
               }} />
               
               <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap',
+                  alignItems: 'center', 
+                  gap: 2, 
+                  mb: 3,
+                  minWidth: 0
+                }}>
                   <Box sx={{
-                    width: '60px',
-                    height: '60px',
+                    width: { xs: 48, sm: 60 },
+                    height: { xs: 48, sm: 60 },
+                    flexShrink: 0,
                     borderRadius: '16px',
                     background: 'rgba(255,255,255,0.15)',
                     display: 'flex',
@@ -2191,7 +2222,13 @@ const Productivity: React.FC = () => {
                   }}>
                     <LightbulbIcon size={28} />
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    minWidth: 0,
+                    flex: '1 1 200px'
+                  }}>
                     <motion.div
                       animate={{ 
                         rotate: [0, 360],
@@ -2215,7 +2252,8 @@ const Productivity: React.FC = () => {
                       }}
                       style={{
                         position: 'relative',
-                        display: 'inline-block'
+                        display: 'inline-block',
+                        flexShrink: 0
                       }}
                     >
                       <GemIcon size={32} style={{ color: 'rgba(255,255,255,0.9)' }} />
@@ -2243,7 +2281,7 @@ const Productivity: React.FC = () => {
                         }}
                       />
                     </motion.div>
-                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800, wordBreak: 'break-word', minWidth: 0 }}>
                       Главная находка недели
                     </Typography>
                   </Box>
@@ -2913,7 +2951,7 @@ const Productivity: React.FC = () => {
                                   borderRadius: '12px',
                                   textTransform: 'none',
                                   fontWeight: 600,
-                                  minWidth: '120px'
+                                  minWidth: { xs: 0, sm: '120px' }
                                 }}
                               >
                                 <Building2Icon size={16} style={{ marginRight: '8px' }} />
@@ -2929,7 +2967,7 @@ const Productivity: React.FC = () => {
                                   borderRadius: '12px',
                                   textTransform: 'none',
                                   fontWeight: 600,
-                                  minWidth: '120px'
+                                  minWidth: { xs: 0, sm: '120px' }
                                 }}
                               >
                                 <HeartIcon size={16} style={{ marginRight: '8px' }} />
@@ -2945,7 +2983,7 @@ const Productivity: React.FC = () => {
                                   borderRadius: '12px',
                                   textTransform: 'none',
                                   fontWeight: 600,
-                                  minWidth: '120px'
+                                  minWidth: { xs: 0, sm: '120px' }
                                 }}
                               >
                                 <GraduationCapIcon size={16} style={{ marginRight: '8px' }} />
@@ -3310,8 +3348,10 @@ const Productivity: React.FC = () => {
                               setMoodEntry({...moodEntry, notes: e.target.value});
                             }
                           }}
+                          InputLabelProps={{ shrink: true }}
                           sx={{ 
                             mb: 3,
+                            minWidth: 0,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '16px',
                               backgroundColor: '#f8f9fa',
@@ -3329,7 +3369,8 @@ const Productivity: React.FC = () => {
                             },
                             '& .MuiInputLabel-root': {
                               fontWeight: 600,
-                              color: '#666'
+                              color: '#666',
+                              whiteSpace: 'normal'
                             }
                           }}
                           placeholder={formType === 'activity' 
@@ -3337,12 +3378,23 @@ const Productivity: React.FC = () => {
                             : "Расскажите подробнее о вашем настроении, что произошло сегодня, ваши мысли и планы..."}
                         />
 
-                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap',
+                          gap: 2, 
+                          justifyContent: 'center',
+                          minWidth: 0
+                        }}>
                           <Button
                             variant="outlined"
                             onClick={() => setShowQuickEntry(false)}
                             disabled={submitting}
-                            sx={{ borderRadius: '12px', textTransform: 'none' }}
+                            sx={{ 
+                              borderRadius: '12px', 
+                              textTransform: 'none',
+                              flex: { xs: '1 1 100%', sm: '0 0 auto' },
+                              minWidth: { xs: '100%', sm: 120 }
+                            }}
                           >
                             Отмена
                           </Button>
@@ -3355,7 +3407,9 @@ const Productivity: React.FC = () => {
                               background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                               borderRadius: '12px',
                               textTransform: 'none',
-                              fontWeight: 700
+                              fontWeight: 700,
+                              flex: { xs: '1 1 100%', sm: '0 0 auto' },
+                              minWidth: { xs: '100%', sm: 200 }
                             }}
                           >
                             {submitting ? 'Анализируем...' : 'Сохранить и проанализировать'}

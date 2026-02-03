@@ -139,6 +139,9 @@ const Privacy: React.FC = React.memo(() => {
       sx={{
         position: 'relative',
         overflow: 'hidden',
+        overflowX: 'hidden',
+        minWidth: 0,
+        maxWidth: '100%',
         minHeight: '100vh',
         background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
         pt: { xs: theme.spacing(10), md: theme.spacing(15) },

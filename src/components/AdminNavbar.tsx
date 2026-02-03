@@ -6,6 +6,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from '@mui/material/styles';
 import { getAdminUser, clearAdminUser } from '../pages/admin/AdminLogin';
+import { useUser } from '../hooks/useUser';
 
 // Те же пункты и пути, что в основном навбаре — только названия и /admin/*
 const adminNavItems = [
@@ -20,6 +21,7 @@ const AdminNavbar: React.FC = () => {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout: logoutMain } = useUser();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -39,6 +41,7 @@ const AdminNavbar: React.FC = () => {
   const handleClose = () => setAnchorEl(null);
   const handleLogout = () => {
     clearAdminUser();
+    logoutMain(); // сброс основной сессии — на /login навбар покажет лендинг (О платформе, Вход)
     handleClose();
     navigate('/login?redirect=/admin/dashboard');
   };

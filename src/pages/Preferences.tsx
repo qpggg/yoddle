@@ -937,7 +937,7 @@ const Preferences: React.FC = () => {
   // Начальный экран с CTA «Пройти тест» и описанием умных рекомендаций
   if (showIntro && !showResults && !hasExistingResults && answers.length === 0) {
     return (
-      <Box sx={{ minHeight: '100vh', background: '#f9fafb' }}>
+      <Box sx={{ minHeight: '100vh', background: '#f9fafb', overflowX: 'hidden', minWidth: 0 }}>
         <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <Box sx={{ textAlign: 'center', mb: 6 }}>
@@ -1125,9 +1125,9 @@ const Preferences: React.FC = () => {
                       boxShadow: '0 20px 40px rgba(139,0,0,0.15)' 
                     }}
                     style={{ 
-                      flex: '1 1 300px',
+                      flex: '1 1 280px',
                       maxWidth: '360px',
-                      minWidth: '300px',
+                      minWidth: 0,
                       borderRadius: '16px'
                     }}
                   >

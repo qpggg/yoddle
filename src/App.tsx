@@ -1,5 +1,5 @@
 import './styles/index.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
@@ -93,19 +93,16 @@ const GlobalProfileEditModal: React.FC = () => {
   );
 };
 
-const App = () => {
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin');
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <ToastProvider>
-        <Router>
-          <ScrollToTop />
-          <Box>
-            <Navbar />
-            {/* Глобальная модалка редактирования профиля, доступна на любой странице */}
-            <GlobalProfileEditModal />
-            <Routes>
-              <Route path="/" element={<HomePage />} />
+    <Box sx={{ overflowX: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0 }}>
+      {!isAdmin && <Navbar />}
+      {!isAdmin && <GlobalProfileEditModal />}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/benefits" element={<BenefitsPage />} />
               <Route path="/pricing" element={<PricingPage />} />
@@ -131,9 +128,20 @@ const App = () => {
                 <Route path="finance" element={<AdminFinance />} />
                 <Route index element={<AdminDashboard />} />
               </Route>
-            </Routes>
-            <Footer />
-          </Box>
+      </Routes>
+      {!isAdmin && <Footer />}
+    </Box>
+  );
+};
+
+const App = () => {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <ToastProvider>
+        <Router>
+          <ScrollToTop />
+          <AppContent />
         </Router>
       </ToastProvider>
     </ThemeProvider>

@@ -49,7 +49,9 @@ const modalBoxStyle = {
   flexDirection: 'column',
   alignItems: 'center',
   textAlign: 'center',
-  minWidth: 320,
+  minWidth: 0,
+  maxWidth: 420,
+  width: '100%',
   borderTop: '5px solid #8B0000'
 };
 
@@ -382,8 +384,8 @@ const MyBenefits: React.FC = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg">
+    <Box sx={{ minHeight: '100vh', background: '#f9fafb', pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 }, overflowX: 'hidden', minWidth: 0 }}>
+      <Container maxWidth="lg" sx={{ minWidth: 0 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

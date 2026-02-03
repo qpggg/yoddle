@@ -31,7 +31,9 @@ const Home: React.FC = React.memo(() => {
     <Box 
       component="main"
       sx={{
-        // 🚀 HARDWARE ACCELERATION
+        overflowX: 'hidden',
+        minWidth: 0,
+        maxWidth: '100%',
         willChange: 'transform',
         backfaceVisibility: 'hidden',
         perspective: 1000

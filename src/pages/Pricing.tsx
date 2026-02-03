@@ -377,7 +377,7 @@ const PricingPage = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 }, overflowX: 'hidden', minWidth: 0 }}>
       <motion.div
         initial="hidden"
         animate="visible"

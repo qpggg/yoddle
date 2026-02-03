@@ -37,9 +37,11 @@ export const Footer = () => {
         py: { xs: 6, md: 8 },
         backgroundColor: '#1A1A1A',
         color: 'white',
+        overflowX: 'hidden',
+        minWidth: 0,
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ minWidth: 0 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={4}>
             <Box sx={{ mb: { xs: 4, md: 0 } }}>

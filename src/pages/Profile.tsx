@@ -118,9 +118,12 @@ const Profile: React.FC = () => {
     <div style={{
       minHeight: '100vh',
       background: '#f8f9fa',
-      padding: '2rem 0'
+      padding: '2rem 0',
+      overflowX: 'hidden',
+      minWidth: 0,
+      maxWidth: '100%'
     }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem', minWidth: 0, width: '100%' }}>
         
         {/* Современный заголовок */}
         <motion.div

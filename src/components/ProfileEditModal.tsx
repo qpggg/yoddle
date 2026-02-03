@@ -148,7 +148,9 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ open, onClose, user
               background: '#fff',
               borderRadius: 16,
               padding: 32,
-              minWidth: 340,
+              minWidth: 0,
+              maxWidth: 340,
+              width: '100%',
               boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
             }}
           >

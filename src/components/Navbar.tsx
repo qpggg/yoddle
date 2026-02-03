@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 import { useUser } from '../hooks/useUser';
 import { useNotifications } from '../hooks/useNotifications';
@@ -28,7 +29,17 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileDrawerExpanded, setMobileDrawerExpanded] = useState(false);
   const { user, logout } = useUser();
+
+  // "Имя Ф." из user.name (первое слово + первая буква второго, если есть)
+  const userDisplayName = user?.name
+    ? (() => {
+        const parts = user.name.trim().split(/\s+/);
+        if (parts.length >= 2) return `${parts[0]} ${parts[1][0]}.`;
+        return parts[0];
+      })()
+    : '';
   const navigate = useNavigate();
   const { unreadCount } = useNotifications({ userId: user?.id });
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -316,6 +327,7 @@ const Navbar: React.FC = () => {
                 }
               }}
               onClick={handleMobileMenuToggle}
+              aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
             >
               {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </IconButton>
@@ -326,7 +338,7 @@ const Navbar: React.FC = () => {
       <Drawer
         anchor="right"
         open={mobileMenuOpen}
-        onClose={handleMobileMenuToggle}
+        onClose={() => { handleMobileMenuToggle(); setMobileDrawerExpanded(false); }}
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
@@ -338,61 +350,233 @@ const Navbar: React.FC = () => {
           }
         }}
       >
-        <Box sx={{ p: 3 }}>
-          <List>
-            {(user ? authNavItems : navItems).map((item) => (
-              <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
-                <Button
-                  component={Link}
-                  to={item.path}
-                  fullWidth
-                  onClick={handleMobileMenuToggle}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    py: 1.2,
-                    px: 2,
-                    color: location.pathname === item.path ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.87)',
-                    fontSize: '1rem',
-                    fontWeight: 500,
-                    borderRadius: '12px',
-                    backgroundColor: location.pathname === item.path ? 'rgba(139, 0, 0, 0.04)' : 'transparent',
-                    '&:hover': {
-                      backgroundColor: 'rgba(139, 0, 0, 0.04)',
-                      color: theme.palette.primary.main
-                    }
-                  }}
-                >
-                  {item.title}
-                </Button>
-              </ListItem>
-            ))}
-            {user ? (
-              <ListItem disablePadding sx={{ mt: 3 }}>
-                <Button
-                  variant="contained"
-                  component={Link}
-                  to="/logout"
-                  fullWidth
-                  onClick={logout}
-                  sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    color: '#fff',
-                    py: 1.2,
-                    fontSize: '1rem',
-                    fontWeight: 500,
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    boxShadow: 'none',
-                    '&:hover': {
-                      backgroundColor: theme.palette.primary.dark,
-                      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
-                    }
-                  }}
-                >
-                  Выход
-                </Button>
-              </ListItem>
-            ) : (
+        <Box sx={{ p: 2, pt: 2.5 }}>
+          {user ? (
+            <>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setMobileDrawerExpanded((v: boolean) => !v)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  p: 1.5,
+                  border: 'none',
+                  borderRadius: '12px',
+                  background: 'rgba(139, 0, 0, 0.04)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background 0.2s ease',
+                  '&:hover': { background: 'rgba(139, 0, 0, 0.08)' },
+                  '&:active': { background: 'rgba(139, 0, 0, 0.1)' }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '1.05rem', fontWeight: 600, color: 'rgba(0,0,0,0.87)' }} noWrap>
+                    {userDisplayName || user.name || 'Пользователь'}
+                  </Typography>
+                  <ExpandMoreIcon
+                    sx={{
+                      color: 'rgba(139, 0, 0, 0.7)',
+                      transition: 'transform 0.25s ease',
+                      transform: mobileDrawerExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      flexShrink: 0,
+                      ml: 0.5
+                    }}
+                  />
+                </Box>
+                {user.avatar ? (
+                  <Box component="img" src={user.avatar} alt="" sx={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #8B0000', flexShrink: 0 }} />
+                ) : (
+                  <Box sx={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(139, 0, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #8B0000', flexShrink: 0 }}>
+                    <Typography component="span" sx={{ fontSize: 20, fontWeight: 700, color: '#8B0000' }}>{user.name ? user.name[0] : 'U'}</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <Box
+                sx={{
+                  overflow: 'hidden',
+                  maxHeight: mobileDrawerExpanded ? 320 : 0,
+                  transition: 'max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                <List sx={{ pt: 1.5, pb: 0 }}>
+                  {[
+                    { key: 'dashboard', title: 'Кабинет', path: '/dashboard' },
+                    { key: 'profile', title: 'Профиль', path: '/profile' },
+                    { key: 'notifications', title: 'Уведомления', badge: unreadCount },
+                    { key: 'balance', title: `Баланс: ${walletPreview}`, path: '/balance', icon: '/coins.png' },
+                    { key: 'edit', title: 'Изменить профиль' }
+                  ].map((item, i) => (
+                    <motion.div
+                      key={item.key}
+                      initial={false}
+                      animate={{
+                        opacity: mobileDrawerExpanded ? 1 : 0,
+                        y: mobileDrawerExpanded ? 0 : -6
+                      }}
+                      transition={{ duration: 0.28, delay: mobileDrawerExpanded ? i * 0.045 : 0, ease: [0.4, 0, 0.2, 1] }}
+                    >
+                      <ListItem disablePadding sx={{ mb: 1 }}>
+                        {item.path ? (
+                          <Button
+                            component={Link}
+                            to={item.path}
+                            fullWidth
+                            onClick={handleMobileMenuToggle}
+                            sx={{
+                              justifyContent: 'flex-start',
+                              py: 1.2,
+                              px: 2,
+                              color: location.pathname === item.path ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.87)',
+                              fontSize: '1rem',
+                              fontWeight: 500,
+                              borderRadius: '12px',
+                              backgroundColor: location.pathname === item.path ? 'rgba(139, 0, 0, 0.04)' : 'transparent',
+                              '&:hover': {
+                                backgroundColor: 'rgba(139, 0, 0, 0.04)',
+                                color: theme.palette.primary.main
+                              }
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {item.title}
+                              {item.icon != null && <Box component="img" src={item.icon} alt="" sx={{ width: 16, height: 16 }} />}
+                            </Box>
+                          </Button>
+                        ) : item.key === 'notifications' ? (
+                          <Button
+                            fullWidth
+                            onClick={() => { handleMobileMenuToggle(); setShowNotificationCenter(true); }}
+                            sx={{
+                              justifyContent: 'space-between',
+                              py: 1.2,
+                              px: 2,
+                              color: 'rgba(0, 0, 0, 0.87)',
+                              fontSize: '1rem',
+                              fontWeight: 500,
+                              borderRadius: '12px',
+                              backgroundColor: 'transparent',
+                              '&:hover': { backgroundColor: 'rgba(139, 0, 0, 0.04)', color: theme.palette.primary.main }
+                            }}
+                          >
+                            {item.title}
+                            <Badge badgeContent={item.badge} sx={{ '& .MuiBadge-badge': { bgcolor: '#8B0000', color: '#fff' } }} />
+                          </Button>
+                        ) : (
+                          <Button
+                            fullWidth
+                            onClick={() => { handleMobileMenuToggle(); window.dispatchEvent(new CustomEvent('openProfileEditModal')); }}
+                            sx={{
+                              justifyContent: 'flex-start',
+                              py: 1.2,
+                              px: 2,
+                              color: 'rgba(0, 0, 0, 0.87)',
+                              fontSize: '1rem',
+                              fontWeight: 500,
+                              borderRadius: '12px',
+                              backgroundColor: 'transparent',
+                              '&:hover': { backgroundColor: 'rgba(139, 0, 0, 0.04)', color: theme.palette.primary.main }
+                            }}
+                          >
+                            {item.title}
+                          </Button>
+                        )}
+                      </ListItem>
+                    </motion.div>
+                  ))}
+                </List>
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <Divider sx={{ width: '100%', maxWidth: 240, borderColor: 'rgba(0, 0, 0, 0.12)', borderBottomWidth: 1 }} />
+              </Box>
+
+              <List sx={{ pt: 0, pb: 0 }}>
+                {authNavItems.map((item) => (
+                  <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
+                    <Button
+                      component={Link}
+                      to={item.path}
+                      fullWidth
+                      onClick={handleMobileMenuToggle}
+                      sx={{
+                        justifyContent: 'flex-start',
+                        py: 1.2,
+                        px: 2,
+                        color: location.pathname === item.path ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.87)',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        borderRadius: '12px',
+                        backgroundColor: location.pathname === item.path ? 'rgba(139, 0, 0, 0.04)' : 'transparent',
+                        '&:hover': {
+                          backgroundColor: 'rgba(139, 0, 0, 0.04)',
+                          color: theme.palette.primary.main
+                        }
+                      }}
+                    >
+                      {item.title}
+                    </Button>
+                  </ListItem>
+                ))}
+                <ListItem disablePadding sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    component={Link}
+                    to="/logout"
+                    fullWidth
+                    onClick={logout}
+                    sx={{
+                      backgroundColor: theme.palette.primary.main,
+                      color: '#fff',
+                      py: 1.2,
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        backgroundColor: theme.palette.primary.dark,
+                        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+                      }
+                    }}
+                  >
+                    Выход
+                  </Button>
+                </ListItem>
+              </List>
+            </>
+          ) : (
+            <List>
+              {navItems.map((item) => (
+                <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
+                  <Button
+                    component={Link}
+                    to={item.path}
+                    fullWidth
+                    onClick={handleMobileMenuToggle}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      py: 1.2,
+                      px: 2,
+                      color: location.pathname === item.path ? theme.palette.primary.main : 'rgba(0, 0, 0, 0.87)',
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      borderRadius: '12px',
+                      backgroundColor: location.pathname === item.path ? 'rgba(139, 0, 0, 0.04)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(139, 0, 0, 0.04)',
+                        color: theme.palette.primary.main
+                      }
+                    }}
+                  >
+                    {item.title}
+                  </Button>
+                </ListItem>
+              ))}
               <ListItem disablePadding sx={{ mt: 3 }}>
                 <Button
                   variant="contained"
@@ -418,8 +602,8 @@ const Navbar: React.FC = () => {
                   Вход
                 </Button>
               </ListItem>
-            )}
-          </List>
+            </List>
+          )}
         </Box>
       </Drawer>
 

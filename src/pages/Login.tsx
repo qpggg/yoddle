@@ -85,10 +85,12 @@ const Login: React.FC = () => {
       sx={{
         minHeight: '100vh',
         background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)',
-        pt: { xs: 8, md: 12 }
+        pt: { xs: 8, md: 12 },
+        overflowX: 'hidden',
+        minWidth: 0
       }}
     >
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ minWidth: 0 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
