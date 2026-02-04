@@ -1,16 +1,4 @@
-import { Client } from 'pg';
-
-// Функция для создания клиента БД
-function createDbClient() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is not set');
-  }
-  
-  return new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: false
-  });
-}
+import { createDbClient } from '../db.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -24,7 +12,15 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     // Получение существующих предпочтений пользователя
-    const { user_id } = req.query;
+    const { user_id, action } = req.query;
+    
+    // Игнорируем action, если он передан
+    if (action && action !== 'get') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid action' 
+      });
+    }
     
     if (!user_id) {
       return res.status(400).json({ 
@@ -36,8 +32,6 @@ export default async function handler(req, res) {
     const client = createDbClient();
     
     try {
-      await client.connect();
-      
       console.log('📥 Загружаем предпочтения для пользователя', user_id);
       
       // Получаем последние предпочтения пользователя
@@ -52,15 +46,25 @@ export default async function handler(req, res) {
       if (result.rows.length > 0) {
         console.log('✅ Найдены предпочтения:', result.rows[0].data);
         
-        res.status(200).json({
+        // Парсим JSON данные если они строки
+        let preferences = result.rows[0].data;
+        if (typeof preferences === 'string') {
+          try {
+            preferences = JSON.parse(preferences);
+          } catch (e) {
+            console.warn('⚠️ Не удалось распарсить данные предпочтений:', e);
+          }
+        }
+        
+        return res.status(200).json({
           success: true,
-          preferences: result.rows[0].data,
+          preferences: preferences,
           timestamp: result.rows[0].timestamp
         });
       } else {
         console.log('ℹ️ Предпочтения не найдены');
         
-        res.status(200).json({
+        return res.status(200).json({
           success: true,
           preferences: null
         });
@@ -68,20 +72,11 @@ export default async function handler(req, res) {
       
     } catch (error) {
       console.error('❌ Ошибка загрузки предпочтений:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Database error: ' + error.message
       });
-    } finally {
-      if (client) {
-        try {
-          await client.end();
-        } catch (e) {
-          console.error('Error closing client:', e);
-        }
-      }
     }
-    return;
   }
 
   if (req.method !== 'POST') {
@@ -104,8 +99,6 @@ export default async function handler(req, res) {
   const client = createDbClient();
   
   try {
-    await client.connect();
-    
     console.log('💾 Saving user preferences:', {
       user_id,
       free_text: free_text ? `${free_text.substring(0, 50)}...` : 'empty',
@@ -133,9 +126,7 @@ export default async function handler(req, res) {
       })
     ]);
 
-    await client.end();
-
-    console.log('✅ User preferences saved successfully');
+    console.log('✅ User preferences saved successfully, ID:', result.rows[0].id);
 
     return res.json({
       success: true,
@@ -156,16 +147,16 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Error saving user preferences:', error);
+    console.error('📋 Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack
+    });
     
-    try {
-      await client.end();
-    } catch (endError) {
-      console.error('Error closing DB connection:', endError);
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      error: 'Ошибка при сохранении предпочтений',
+      error: 'Ошибка при сохранении предпочтений: ' + (error.message || 'Неизвестная ошибка'),
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

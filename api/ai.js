@@ -779,33 +779,44 @@ router.post('/recommendations/generate', async (req, res) => {
 
     // Сортировка и ограничение Top-3
     let top = filtered.sort((a,b) => b.finalScore - a.finalScore).slice(0,3);
-    
-    // ГАРАНТИРУЕМ МИНИМУМ 3 РЕКОМЕНДАЦИИ: добавляем случайные льготы если не хватает
+    const originalCount = top.length; // Сохраняем изначальное количество до дополнения
     if (top.length < 3 && benefits.length > 0) {
-      console.warn(`⚠️ AI дал только ${top.length} рекомендаций, дополняем до 3 случайными льготами`);
+      console.warn(`⚠️ AI дал только ${top.length} рекомендаций из ${filtered.length} отфильтрованных, дополняем до 3 случайными льготами`);
       
       const usedBenefitIds = new Set(top.map(t => t.benefitId));
       const availableBenefits = benefits.filter(b => !usedBenefitIds.has(b.id));
+      
+      if (availableBenefits.length === 0) {
+        console.warn(`⚠️ Нет доступных льгот для дополнения. Все ${benefits.length} льгот уже использованы.`);
+      }
       
       while (top.length < 3 && availableBenefits.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableBenefits.length);
         const randomBenefit = availableBenefits.splice(randomIndex, 1)[0];
         
-        // Создаем fallback рекомендацию
+        // Создаем fallback рекомендацию с пометкой о недостаточности данных
         const fallbackRec = {
           benefitId: randomBenefit.id,
-          finalScore: 0.5, // Средний score для fallback
+          finalScore: 0.4, // Низкий score для fallback, чтобы показать что это дополнение
           testScore: 0,
-          aiScore: 0.5,
-          reasons: ['рекомендация системы', 'дополнительная опция'],
-          confidence: 0.6,
+          aiScore: 0.3,
+          reasons: originalCount === 0 
+            ? ['недостаточно данных для персонализации', 'общая рекомендация системы']
+            : ['дополнительная опция', 'при недостаточности данных'],
+          confidence: 0.5,
           name: randomBenefit.name,
-          category: randomBenefit.category
+          category: randomBenefit.category,
+          isFallback: true // Флаг для фронтенда
         };
         
         top.push(fallbackRec);
-        console.log(`✅ Добавлена fallback рекомендация: ${randomBenefit.name}`);
+        console.log(`✅ Добавлена fallback рекомендация: ${randomBenefit.name} (${top.length}/3)`);
       }
+    }
+    
+    // Если все еще меньше 3, логируем проблему
+    if (top.length < 3) {
+      console.error(`❌ КРИТИЧНО: Не удалось получить 3 рекомендации. Получено: ${top.length}, доступно льгот: ${benefits.length}`);
     }
 
     // Очищаем предыдущие рекомендации пользователя (только variant=hybrid_v1)
@@ -813,7 +824,7 @@ router.post('/recommendations/generate', async (req, res) => {
     await pool.query(`DELETE FROM benefit_recommendations WHERE user_id = $1`, [userId]);
 
     // Сохраняем новые рекомендации с расширенными полями
-    console.log(`💾 Сохраняем ${top.length} новых рекомендаций в БД`);
+    console.log(`💾 Сохраняем ${top.length} новых рекомендаций в БД (изначально было ${originalCount}, добавлено fallback: ${top.length - originalCount})`);
     for (let i = 0; i < top.length; i++) {
       const t = top[i];
       const insert = `
@@ -824,11 +835,11 @@ router.post('/recommendations/generate', async (req, res) => {
         userId,
         t.benefitId,
         i + 1,
-        JSON.stringify({ from: 'hybrid', tags: prefs.tags || [] }),
+        JSON.stringify({ from: 'hybrid', tags: prefs.tags || [], isFallback: t.isFallback || false }),
         JSON.stringify(t.reasons || []),
         t.confidence,
         variant,
-        JSON.stringify({ test_score: t.testScore, ai_score: t.aiScore, final: t.finalScore })
+        JSON.stringify({ test_score: t.testScore, ai_score: t.aiScore, final: t.finalScore, isFallback: t.isFallback || false })
       ]);
     }
 

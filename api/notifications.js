@@ -15,7 +15,12 @@ export default async function handler(req, res) {
     const { method, query } = req;
     const { action, user_id, notification_id, type, priority = 1 } = query;
 
-    console.log(`📢 Notifications API: ${method} ${action || 'default'}`);
+    console.log(`📢 Notifications API: ${method} ${action || 'default'}`, {
+      action,
+      user_id,
+      notification_id,
+      query: Object.keys(query)
+    });
 
     // CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,6 +56,8 @@ export default async function handler(req, res) {
 
       // Подсчет непрочитанных уведомлений
       if (action === 'count') {
+        console.log('📢 Counting unread notifications for user_id:', user_id);
+        
         const query = `
           SELECT COUNT(*) as count 
           FROM notifications 
@@ -59,10 +66,18 @@ export default async function handler(req, res) {
         `;
         
         const { rows } = await pool.query(query, [user_id]);
+        const count = parseInt(rows[0].count) || 0;
+        
+        console.log('📢 Unread notifications count:', count);
+        
+        // Добавляем заголовки для предотвращения кэширования
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         
         return res.status(200).json({
           success: true,
-          count: parseInt(rows[0].count)
+          count: count
         });
       }
 
@@ -157,7 +172,14 @@ export default async function handler(req, res) {
     // ================================================
     if (method === 'PUT') {
       // Отметить уведомление как прочитанное
-      if (action === 'read') {
+      if (action === 'read' || action === 'mark-read') {
+        if (!notification_id) {
+          return res.status(400).json({
+            success: false,
+            error: 'notification_id обязателен'
+          });
+        }
+        
         const query = `
           UPDATE notifications 
           SET is_read = true, 
@@ -173,6 +195,51 @@ export default async function handler(req, res) {
           data: rows[0]
         });
       }
+
+      // Отметить все уведомления как прочитанные
+      if (action === 'mark-all-read') {
+        console.log('📢 Mark all as read request for user_id:', user_id);
+        
+        let query;
+        let params;
+        
+        if (user_id) {
+          // Отмечаем как прочитанные уведомления пользователя и глобальные
+          query = `
+            UPDATE notifications 
+            SET is_read = true, 
+                read_at = CURRENT_TIMESTAMP 
+            WHERE (user_id = $1 OR is_global = true)
+            AND is_read = false
+          `;
+          params = [user_id];
+        } else {
+          // Если user_id не передан, отмечаем только глобальные
+          query = `
+            UPDATE notifications 
+            SET is_read = true, 
+                read_at = CURRENT_TIMESTAMP 
+            WHERE is_global = true
+            AND is_read = false
+          `;
+          params = [];
+        }
+        
+        const result = await pool.query(query, params);
+        
+        console.log('📢 Marked', result.rowCount, 'notifications as read');
+        
+        return res.status(200).json({
+          success: true,
+          updated: result.rowCount
+        });
+      }
+      
+      // Если action не распознан для PUT метода
+      return res.status(400).json({
+        success: false,
+        error: `Неизвестное действие для PUT: ${action || 'не указано'}`
+      });
     }
 
     // ================================================
@@ -195,9 +262,10 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(400).json({
+    // Если метод не поддерживается или action не найден
+    return res.status(404).json({
       success: false,
-      error: 'Неверный запрос'
+      error: `Метод ${method} с действием "${action || 'не указано'}" не найден`
     });
 
   } catch (error) {

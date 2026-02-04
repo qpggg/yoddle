@@ -1,6 +1,4 @@
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { createDbClient } from '../db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,68 +10,49 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Имя, email и сообщение обязательны' });
   }
 
+  const client = createDbClient();
+
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'noreply@yoddle.ru',
-      to: 'misapolskov9@gmail.com',
-      subject: `Новая заявка от ${name} - Yoddle`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 12px;">
-          <div style="background-color: #750000; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">🎯 Новая заявка с Yoddle</h1>
-          </div>
-          
-          <div style="background-color: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h2 style="color: #2C3E50; margin-top: 0;">📋 Детали заявки</h2>
-            
-            <div style="margin-bottom: 20px;">
-              <strong style="color: #750000;">👤 Имя:</strong>
-              <span style="color: #2C3E50; margin-left: 10px;">${name}</span>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-              <strong style="color: #750000;">📧 Email:</strong>
-              <span style="color: #2C3E50; margin-left: 10px;">${email}</span>
-            </div>
-            
-            ${company ? `
-            <div style="margin-bottom: 20px;">
-              <strong style="color: #750000;">🏢 Компания:</strong>
-              <span style="color: #2C3E50; margin-left: 10px;">${company}</span>
-            </div>
-            ` : ''}
-            
-            <div style="margin-bottom: 20px;">
-              <strong style="color: #750000;">💬 Сообщение:</strong>
-              <div style="color: #2C3E50; margin-top: 10px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #750000;">
-                ${message.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            
-            <div style="margin-top: 30px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
-              <strong style="color: #28a745;">✅ Заявка получена</strong>
-              <p style="margin: 5px 0 0 0; color: #155724;">Пожалуйста, свяжитесь с клиентом в ближайшее время.</p>
-            </div>
-            
-            <div style="margin-top: 20px; text-align: center; color: #6C757D; font-size: 14px;">
-              <p>Это письмо отправлено автоматически с сайта <a href="https://yoddle.ru" style="color: #750000;">yoddle.ru</a></p>
-              <p>Время отправки: ${new Date().toLocaleString('ru-RU')}</p>
-            </div>
-          </div>
-        </div>
-      `,
+    // Сохраняем заявку в базу данных
+    const result = await client.query(
+      `INSERT INTO clients (name, email, company, message, created_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+       RETURNING id, name, email, company, message, created_at`,
+      [name, email || null, company || null, message]
+    );
+
+    const savedClient = result.rows[0];
+
+    console.log('✅ Заявка успешно сохранена в БД:', {
+      id: savedClient.id,
+      name: savedClient.name,
+      email: savedClient.email,
+      company: savedClient.company,
+      created_at: savedClient.created_at
     });
 
-    if (error) {
-      console.error('Ошибка отправки письма:', error);
-      return res.status(500).json({ error: 'Ошибка отправки письма' });
-    }
-
-    console.log('✅ Письмо успешно отправлено:', data);
-    return res.status(200).json({ success: true, message: 'Письмо отправлено успешно' });
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Спасибо! Ваше сообщение отправлено. Мы свяжемся с вами в ближайшее время.',
+      client_id: savedClient.id
+    });
     
   } catch (error) {
-    console.error('Ошибка отправки письма:', error);
-    return res.status(500).json({ error: 'Ошибка отправки письма' });
+    console.error('❌ Ошибка сохранения заявки в БД:', error);
+    
+    // Если ошибка связана с дубликатом email
+    if (error.code === '23505') {
+      return res.status(400).json({ 
+        error: 'Заявка с таким email уже существует' 
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Ошибка сохранения заявки. Попробуйте позже.' 
+    });
+  } finally {
+    if (client && typeof client.end === 'function') {
+      await client.end();
+    }
   }
 } 

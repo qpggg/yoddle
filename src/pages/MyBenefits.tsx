@@ -234,10 +234,27 @@ const MyBenefits: React.FC = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    const fetchBenefits = fetch('/api/benefits').then(res => res.json());
-    const fetchUserBenefits = user?.id ? fetch(`/api/user-benefits?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ benefits: [] });
-    const fetchUserRecommendations = user?.id ? fetch(`/api/user-recommendations?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ recommendations: [] });
-    const fetchRefundWindows = user?.id ? fetch(`/api/wallet/refund-windows?user_id=${user.id}`).then(res => res.json()) : Promise.resolve({ success: false, windows: {} });
+    
+    // Функция с таймаутом для запросов
+    const fetchWithTimeout = (url: string, timeout = 10000) => {
+      return Promise.race([
+        fetch(url).then(res => res.json()),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), timeout)
+        )
+      ]);
+    };
+    
+    const fetchBenefits = fetch('/api/benefits').then(res => res.json()).catch(() => ({ benefits: [] }));
+    const fetchUserBenefits = user?.id 
+      ? fetchWithTimeout(`/api/user-benefits?user_id=${user.id}`, 10000).catch(() => ({ benefits: [] }))
+      : Promise.resolve({ benefits: [] });
+    const fetchUserRecommendations = user?.id 
+      ? fetchWithTimeout(`/api/user-recommendations?user_id=${user.id}`, 10000).catch(() => ({ recommendations: [] }))
+      : Promise.resolve({ recommendations: [] });
+    const fetchRefundWindows = user?.id 
+      ? fetchWithTimeout(`/api/wallet/refund-windows?user_id=${user.id}`, 10000).catch(() => ({ success: false, windows: {} }))
+      : Promise.resolve({ success: false, windows: {} });
 
     Promise.all([fetchBenefits, fetchUserBenefits, fetchUserRecommendations, fetchRefundWindows])
       .then(([allBenefitsData, userBenefitsData, userRecommendationsData, refundData]) => {
@@ -252,7 +269,13 @@ const MyBenefits: React.FC = () => {
           setRefundLeft((prev) => ({ ...prev, ...updates }));
         }
       })
-      .catch(console.error)
+      .catch((error) => {
+        console.error('Error loading benefits data:', error);
+        // Устанавливаем пустые значения при ошибке
+        setAllBenefits([]);
+        setUserBenefitIds([]);
+        setUserRecommendedBenefitIds([]);
+      })
       .finally(() => setIsLoading(false));
   }, [user]);
 

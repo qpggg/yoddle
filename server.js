@@ -13,9 +13,10 @@ import recommendationsFeedbackHandler from './api/recommendations-feedback.js';
 import productivityRouter from './api/productivity.js';
 import clientsRouter from './api/clients.js';
 import cronRouter from './api/cron.js';
+import notificationsHandler from './api/notifications.js';
 import { validateLogin, validateUser, validateProgress, validateActivityParams, validateClient, rateLimit } from './middleware/validation.js';
 import { createDbClient, getDbClient } from './db.js';
-import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler } from './api/wallet/handlers.js';
+import { purchaseHandler, refundHandler, transactionsHandler, purchasesHandler, policyHandler, refreshHandler, creditHandler } from './api/wallet/handlers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -74,6 +75,7 @@ app.use((req, res, next) => {
 // Ранний реестр Wallet API (перекрывает старые дубликаты ниже)
 app.post('/api/wallet/purchase', purchaseHandler);
 app.post('/api/wallet/refund', refundHandler);
+app.post('/api/wallet/credit', creditHandler); // Начисление баланса (только для админов)
 app.get('/api/wallet/transactions', transactionsHandler);
 app.get('/api/wallet/purchases', purchasesHandler);
 app.get('/api/wallet/policy', policyHandler);
@@ -1388,69 +1390,8 @@ app.patch('/api/profile', async (req, res) => {
   }
 });
 
-// GET /api/notifications - система уведомлений
-app.get('/api/notifications', async (req, res) => {
-  const { action, user_id, limit } = req.query;
-  
-  if (!user_id) {
-    return res.status(400).json({ error: 'user_id required' });
-  }
-  
-  const client = createDbClient();
-  
-  try {
-    await client.connect();
-    
-    if (action === 'count') {
-      const result = await client.query(
-        `SELECT COUNT(*) as count 
-         FROM notifications 
-         WHERE (user_id = $1 OR is_global = true) AND is_read = false`,
-        [user_id]
-      );
-      await client.end();
-      return res.status(200).json({
-        success: true,
-        count: parseInt(result.rows[0].count)
-      });
-    }
-    
-    if (action === 'unread') {
-      const result = await client.query(
-        `SELECT * FROM notifications 
-         WHERE (user_id = $1 OR is_global = true) AND is_read = false
-         ORDER BY created_at DESC`,
-        [user_id]
-      );
-      await client.end();
-      return res.status(200).json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length
-      });
-    }
-    
-    // recent notifications
-    const limitValue = parseInt(limit) || 10;
-    const result = await client.query(
-      `SELECT * FROM notifications
-       WHERE (user_id = $1 OR is_global = true)
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [user_id, limitValue]
-    );
-    await client.end();
-    return res.status(200).json({
-      success: true,
-      data: result.rows
-    });
-    
-  } catch (error) {
-    await client.end();
-    console.error('Notifications error:', error);
-    return res.status(500).json({ error: 'Database error' });
-  }
-});
+// Универсальный обработчик для всех методов /api/notifications
+app.all('/api/notifications', notificationsHandler);
 
 // GET/POST/DELETE /api/user-recommendations
 app.get('/api/user-recommendations', async (req, res) => {

@@ -163,16 +163,21 @@ const Preferences: React.FC = () => {
   const [hasExistingResults, setHasExistingResults] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
-  // Состояние формы свободных предпочтений
-  const [freeText, setFreeText] = useState('');
-  const [wantTags, setWantTags] = useState<string[]>([]);
-  const [avoidTags, setAvoidTags] = useState<string[]>([]);
+  // Состояние формы свободных предпочтений — один объект, простые строки
+  const [freePrefs, setFreePrefs] = useState({
+    freeText: '',
+    want: '',
+    avoid: ''
+  });
   const [formatPref, setFormatPref] = useState<'any' | 'online' | 'offline'>('any');
   const [budgetPref, setBudgetPref] = useState<'any' | 'low' | 'medium' | 'high'>('any');
   const [timePref, setTimePref] = useState<'any' | 'morning' | 'day' | 'evening'>('any');
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsSaved, setPrefsSaved] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
+  
+  // Загрузили ли предпочтения из БД один раз (больше не перезаписываем поля)
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   // Состояние фидбека
   const [feedbackSending, setFeedbackSending] = useState<{[key: number]: boolean}>({});
@@ -191,6 +196,12 @@ const Preferences: React.FC = () => {
   useEffect(() => {
     const loadAllExistingData = async () => {
       if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Если данные уже загружены, не загружаем повторно
+      if (preferencesLoaded) {
         setIsLoading(false);
         return;
       }
@@ -260,23 +271,41 @@ const Preferences: React.FC = () => {
           }
         }
 
-        // Обрабатываем свободные предпочтения
-        if (preferencesResponse.ok) {
+        // Обрабатываем свободные предпочтения (только если еще не загружены И поля пустые)
+        if (preferencesResponse.ok && !preferencesLoaded) {
           const prefsData = await preferencesResponse.json();
           
           if (prefsData.success && prefsData.preferences) {
-            console.log('🏷️ Загружены предпочтения:', prefsData.preferences);
+            // Загружаем данные только если ВСЕ поля пустые (один раз при первой загрузке)
+            const shouldLoad = !freePrefs.freeText.trim() && !freePrefs.want.trim() && !freePrefs.avoid.trim();
             
-            const prefs = prefsData.preferences;
-            if (prefs.free_text) setFreeText(prefs.free_text);
-            if (Array.isArray(prefs.tags)) setWantTags(prefs.tags);
-            if (Array.isArray(prefs.avoid)) setAvoidTags(prefs.avoid);
-            if (prefs.constraints?.format) setFormatPref(prefs.constraints.format);
-            if (prefs.constraints?.budget) setBudgetPref(prefs.constraints.budget);
-            if (prefs.constraints?.time) setTimePref(prefs.constraints.time);
-            
-            console.log('✅ Восстановлены предпочтения');
+            if (shouldLoad) {
+              console.log('🏷️ Загружены предпочтения:', prefsData.preferences);
+              
+              const prefs = prefsData.preferences;
+              setFreePrefs({
+                freeText: prefs.free_text || '',
+                want: Array.isArray(prefs.tags) && prefs.tags.length > 0 ? prefs.tags.join(', ') : '',
+                avoid: Array.isArray(prefs.avoid) && prefs.avoid.length > 0 ? prefs.avoid.join(', ') : ''
+              });
+              if (prefs.constraints?.format) setFormatPref(prefs.constraints.format);
+              if (prefs.constraints?.budget) setBudgetPref(prefs.constraints.budget);
+              if (prefs.constraints?.time) setTimePref(prefs.constraints.time);
+              
+              setPreferencesLoaded(true);
+              console.log('✅ Восстановлены предпочтения');
+            } else {
+              // Поля уже заполнены пользователем, не перезаписываем
+              setPreferencesLoaded(true);
+              console.log('ℹ️ Предпочтения найдены, но поля уже заполнены пользователем - не перезаписываем');
+            }
+          } else {
+            // Нет сохраненных предпочтений
+            setPreferencesLoaded(true);
           }
+        } else if (!preferencesResponse.ok) {
+          // Ошибка загрузки - помечаем как загруженные, чтобы не пытаться снова
+          setPreferencesLoaded(true);
         }
 
         // Загружаем AI отчет (персональные рекомендации)
@@ -306,7 +335,7 @@ const Preferences: React.FC = () => {
     };
 
     loadAllExistingData();
-  }, [user?.id]);
+  }, [user?.id]); // Убираем preferencesLoaded из зависимостей, чтобы избежать повторной загрузки
 
   const handleAnswer = (value: string) => {
     const newAnswers = [...answers, value];
@@ -391,7 +420,7 @@ const Preferences: React.FC = () => {
 
   // ЭТАП 1: Сохранение предпочтений (быстро)
   const saveUserPreferences = async () => {
-    if (!user?.id || (!freeText && wantTags.length === 0 && avoidTags.length === 0)) {
+    if (!user?.id || (!freePrefs.freeText.trim() && !freePrefs.want.trim() && !freePrefs.avoid.trim())) {
       return;
     }
 
@@ -403,9 +432,9 @@ const Preferences: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.id,
-          free_text: freeText,
-          tags: wantTags,
-          avoid: avoidTags,
+          free_text: freePrefs.freeText,
+          tags: freePrefs.want ? freePrefs.want.split(',').map(s => s.trim()).filter(Boolean) : [],
+          avoid: freePrefs.avoid ? freePrefs.avoid.split(',').map(s => s.trim()).filter(Boolean) : [],
           constraints: {
             format: formatPref,
             budget: budgetPref,
@@ -502,29 +531,44 @@ const Preferences: React.FC = () => {
         
         console.log(`📥 Попытка ${i + 1}: Найдено ${aiRecsData.recommendations?.length || 0} рекомендаций`);
         
-        if (aiRecsData.hasRecommendations && aiRecsData.recommendations?.length >= 3) {
-          console.log('✅ Достаточно рекомендаций получено!');
-          setAiProgress('AI рекомендации получены! ✅');
+        // Принимаем рекомендации если их 3 или больше, или если их меньше но это все что есть
+        const recCount = aiRecsData.recommendations?.length || 0;
+        if (aiRecsData.hasRecommendations && recCount > 0) {
+          if (recCount < 3) {
+            console.warn(`⚠️ Получено только ${recCount} рекомендаций вместо 3. Это нормально при недостаточности данных.`);
+            setAiProgress(`Получено ${recCount} рекомендаций (при недостаточности данных система показывает меньше)`);
+          } else {
+            console.log('✅ Достаточно рекомендаций получено!');
+            setAiProgress('AI рекомендации получены! ✅');
+          }
           
           // Приводим к полному виду BenefitRecommendation (title, icon, examples обязательны для рендера)
-          const enhancedRecs: BenefitRecommendation[] = aiRecsData.recommendations.map((rec: any) => ({
-            category: rec.category ?? rec.name ?? 'Льгота',
-            icon: categoryIcons[rec.category || ''] || <FaBook />,
-            title: rec.title ?? rec.name ?? 'Рекомендация',
-            description: rec.description ?? 'Подобрано на основе ваших ответов',
-            examples: benefitExamples[rec.benefit_id] ?? ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
-            explanations: Array.isArray(rec.explanations) && rec.explanations.length > 0 ? rec.explanations : ['AI анализ', 'персональный подбор'],
-            confidence: typeof rec.confidence === 'number' ? rec.confidence : 0.8,
-            score: rec.score ?? rec.score_breakdown?.final ?? 0.8,
-            algorithm_variant: rec.algorithm_variant ?? 'hybrid_v1',
-            benefit_id: rec.benefit_id
-          }));
+          const enhancedRecs: BenefitRecommendation[] = aiRecsData.recommendations.map((rec: any) => {
+            const scoreBreakdown = typeof rec.score_breakdown === 'object' ? rec.score_breakdown : (rec.score_breakdown ? JSON.parse(rec.score_breakdown) : {});
+            const isFallback = scoreBreakdown.isFallback || false;
+            
+            return {
+              category: rec.category ?? rec.name ?? 'Льгота',
+              icon: categoryIcons[rec.category || ''] || <FaBook />,
+              title: rec.title ?? rec.name ?? 'Рекомендация',
+              description: rec.description ?? 'Подобрано на основе ваших ответов',
+              examples: benefitExamples[rec.benefit_id] ?? ['Конкретные программы и услуги', 'Индивидуальный подход', 'Профессиональная поддержка'],
+              explanations: Array.isArray(rec.explanations) && rec.explanations.length > 0 
+                ? rec.explanations 
+                : (isFallback ? ['общая рекомендация системы', 'при недостаточности данных'] : ['AI анализ', 'персональный подбор']),
+              confidence: typeof rec.confidence === 'number' ? rec.confidence : 0.8,
+              score: rec.score ?? scoreBreakdown.final ?? 0.8,
+              algorithm_variant: rec.algorithm_variant ?? 'hybrid_v1',
+              benefit_id: rec.benefit_id,
+              isFallback: isFallback
+            };
+          });
           
           setSavedRecommendations(enhancedRecs);
           setHasExistingResults(true);
           setFeedbackSent({});
           setFeedbackPermanent({});
-          console.log('✅ AI рекомендации готовы, количество:', enhancedRecs.length);
+          console.log(`✅ AI рекомендации готовы, количество: ${enhancedRecs.length} (fallback: ${enhancedRecs.filter(r => r.isFallback).length})`);
           return; // Успешно получили рекомендации
         }
       } catch (error) {
@@ -594,32 +638,68 @@ const Preferences: React.FC = () => {
 
   // Сохранение свободных предпочтений
   const handleSaveFreePreferences = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('❌ User ID не найден');
+      return;
+    }
+    
     setPrefsSaving(true);
     setPrefsSaved(false);
+    
     try {
+      const finalWantTags = freePrefs.want ? freePrefs.want.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const finalAvoidTags = freePrefs.avoid ? freePrefs.avoid.split(',').map(s => s.trim()).filter(Boolean) : [];
+      
       const payload = {
         user_id: user.id,
-        free_text: freeText,
-        tags: wantTags,
-        avoid: avoidTags,
+        free_text: freePrefs.freeText,
+        tags: finalWantTags,
+        avoid: finalAvoidTags,
         constraints: {
           format: formatPref,
           budget: budgetPref,
           time: timePref
         }
       };
+      
+      console.log('💾 Сохранение предпочтений:', payload);
+      
       const res = await fetch('/api/ai-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Failed to save preferences');
-      setPrefsSaved(true);
-      setTimeout(() => setPrefsSaved(false), 3000);
-      setToastOpen(true);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setFreePrefs(prev => ({
+          ...prev,
+          want: finalWantTags.join(', '),
+          avoid: finalAvoidTags.join(', ')
+        }));
+        setPreferencesLoaded(true);
+        setPrefsSaved(true);
+        setTimeout(() => setPrefsSaved(false), 3000);
+        setToastOpen(true);
+        
+        console.log('✅ Предпочтения успешно сохранены');
+      } else {
+        throw new Error(data.error || 'Failed to save preferences');
+      }
     } catch (e) {
-      console.error('Failed to save free preferences', e);
+      console.error('❌ Failed to save free preferences:', e);
+      const errorMessage = e instanceof Error ? e.message : 'Неизвестная ошибка';
+      console.error('📋 Детали ошибки:', {
+        message: errorMessage,
+        user_id: user?.id
+      });
+      alert('Ошибка сохранения предпочтений: ' + errorMessage);
     } finally {
       setPrefsSaving(false);
     }
@@ -735,25 +815,22 @@ const Preferences: React.FC = () => {
     }
   };
 
-  // Компонент формы свободных предпочтений (нижний блок)
-  const FreePreferencesForm = () => {
-    const presetWant = ['психология', 'спорт', 'обучение', 'онлайн', 'сон'];
-    const presetAvoid = ['массаж', 'вечеринки', 'групповые занятия'];
-    const pillSx = {
+  // Разметка формы свободных предпочтений (НЕ вложенный компонент — иначе при каждом setState родитель перерисовывается, функция пересоздаётся, React размонтирует форму и ввод сбрасывается)
+  const pillSx = {
+    borderRadius: '14px',
+    '& .MuiOutlinedInput-root': {
       borderRadius: '14px',
-      '& .MuiOutlinedInput-root': {
-        borderRadius: '14px',
-        background: '#fff',
-        transition: 'border-color 180ms ease',
-        '& fieldset': { borderColor: '#E5E5E5' },
-        '&:hover fieldset': { borderColor: 'rgba(139,0,0,0.35)' },
-        '&.Mui-focused fieldset': {
-          borderColor: 'rgba(139,0,0,0.6) !important'
-        }
+      background: '#fff',
+      transition: 'border-color 180ms ease',
+      '& fieldset': { borderColor: '#E5E5E5' },
+      '&:hover fieldset': { borderColor: 'rgba(139,0,0,0.35)' },
+      '&.Mui-focused fieldset': {
+        borderColor: 'rgba(139,0,0,0.6) !important'
       }
-    } as const;
+    }
+  } as const;
 
-    return (
+  const freePreferencesFormJSX = (
       <Box sx={{ mt: 8 }}>
         <Box
           sx={{
@@ -800,8 +877,8 @@ const Preferences: React.FC = () => {
                 multiline
                 minRows={3}
                 fullWidth
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
+                value={freePrefs.freeText}
+                onChange={(e) => setFreePrefs(prev => ({ ...prev, freeText: e.target.value }))}
                 InputProps={{ startAdornment: (<InputAdornment position="start"><FaFeatherAlt style={{ color: '#8B0000' }} /></InputAdornment>) }}
                 sx={pillSx}
               />
@@ -812,19 +889,11 @@ const Preferences: React.FC = () => {
                 label="Хочу (через запятую)"
                 placeholder="психология, спорт, удалёнка"
                 fullWidth
-                value={wantTags.join(', ')}
-                onChange={(e) => setWantTags(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                value={freePrefs.want}
+                onChange={(e) => setFreePrefs(prev => ({ ...prev, want: e.target.value }))}
                 InputProps={{ startAdornment: (<InputAdornment position="start"><FaTags style={{ color: '#8B0000' }} /></InputAdornment>) }}
                 sx={pillSx}
               />
-              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {presetWant.map(tag => (
-                  <Chip key={tag} label={tag} variant="outlined" onClick={() => !wantTags.includes(tag) && setWantTags([...wantTags, tag])} />
-                ))}
-                {wantTags.map(tag => (
-                  <Chip key={tag} label={tag} color="default" onDelete={() => setWantTags(wantTags.filter(t => t !== tag))} />
-                ))}
-              </Box>
             </Grid>
 
             <Grid item xs={12} md={6}>
@@ -832,19 +901,11 @@ const Preferences: React.FC = () => {
                 label="Не хочу (через запятую)"
                 placeholder="массаж, вечеринки"
                 fullWidth
-                value={avoidTags.join(', ')}
-                onChange={(e) => setAvoidTags(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                value={freePrefs.avoid}
+                onChange={(e) => setFreePrefs(prev => ({ ...prev, avoid: e.target.value }))}
                 InputProps={{ startAdornment: (<InputAdornment position="start"><FaBan style={{ color: '#B00000' }} /></InputAdornment>) }}
                 sx={pillSx}
               />
-              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {presetAvoid.map(tag => (
-                  <Chip key={tag} label={tag} variant="outlined" onClick={() => !avoidTags.includes(tag) && setAvoidTags([...avoidTags, tag])} />
-                ))}
-                {avoidTags.map(tag => (
-                  <Chip key={tag} label={tag} color="default" onDelete={() => setAvoidTags(avoidTags.filter(t => t !== tag))} />
-                ))}
-              </Box>
             </Grid>
 
             <Grid item xs={12} md={4}>
@@ -877,11 +938,18 @@ const Preferences: React.FC = () => {
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
               <Button
-                onClick={handleSaveFreePreferences}
-                disabled={prefsSaving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔘 Кнопка сохранения нажата, user:', user?.id);
+                  handleSaveFreePreferences();
+                }}
+                disabled={prefsSaving || !user?.id}
                 sx={{
                   fontFamily: 'Inter, system-ui, sans-serif',
-                  background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                  background: prefsSaving || !user?.id
+                    ? 'linear-gradient(135deg, #ccc 0%, #999 100%)'
+                    : 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
                   color: '#fff',
                   borderRadius: '14px',
                   padding: '14px 32px',
@@ -889,10 +957,13 @@ const Preferences: React.FC = () => {
                   textTransform: 'none',
                   boxShadow: '0 16px 40px rgba(139,0,0,0.25)',
                   transition: 'transform 120ms ease, box-shadow 200ms ease',
+                  cursor: prefsSaving || !user?.id ? 'not-allowed' : 'pointer',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #A00000 0%, #D32222 100%)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 24px 50px rgba(139,0,0,0.30)'
+                    background: prefsSaving || !user?.id
+                      ? 'linear-gradient(135deg, #ccc 0%, #999 100%)'
+                      : 'linear-gradient(135deg, #A00000 0%, #D32222 100%)',
+                    transform: prefsSaving || !user?.id ? 'none' : 'translateY(-1px)',
+                    boxShadow: prefsSaving || !user?.id ? '0 16px 40px rgba(139,0,0,0.25)' : '0 24px 50px rgba(139,0,0,0.30)'
                   }
                 }}
                 startIcon={prefsSaved ? <FaCheck /> : undefined}
@@ -903,8 +974,7 @@ const Preferences: React.FC = () => {
           </Grid>
         </Box>
       </Box>
-    );
-  };
+  );
 
   // Показываем загрузку пока данные загружаются
   if (isLoading) {
@@ -986,7 +1056,7 @@ const Preferences: React.FC = () => {
 
             {/* Форма свободных предпочтений внизу начального экрана (без внешней белой карточки) */}
             <Box sx={{ maxWidth: '1000px', mx: 'auto' }}>
-              <FreePreferencesForm />
+              {freePreferencesFormJSX}
             </Box>
             {toast}
           </motion.div>
@@ -1616,7 +1686,7 @@ const Preferences: React.FC = () => {
 
             {/* Форма свободных предпочтений под результатами (без внешней белой карточки) */}
             <Box sx={{ mt: 6 }}>
-              <FreePreferencesForm />
+              {freePreferencesFormJSX}
             </Box>
             {toast}
           </motion.div>

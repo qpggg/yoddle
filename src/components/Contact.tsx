@@ -24,8 +24,14 @@ export const Contact = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, company, message }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
+        throw new Error(errorData.error || `Ошибка ${response.status}`);
+      }
+      
       const data = await response.json();
-      if (data.success) {
+      if (data.success || data.message) {
         setSuccess(true);
         setName('');
         setEmail('');
@@ -35,7 +41,8 @@ export const Contact = () => {
         setError(data.error || 'Ошибка отправки');
       }
     } catch (err) {
-      setError('Ошибка отправки');
+      console.error('Form submission error:', err);
+      setError(err instanceof Error ? err.message : 'Ошибка отправки. Попробуйте еще раз.');
     } finally {
       setLoading(false);
     }

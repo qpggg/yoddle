@@ -69,7 +69,7 @@ const Profile: React.FC = () => {
   };
 
   const handleEditProfile = () => {
-    navigate('/dashboard');
+    window.dispatchEvent(new CustomEvent('openProfileEditModal'));
   };
 
   if (!user) {

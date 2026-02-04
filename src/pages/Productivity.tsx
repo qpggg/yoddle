@@ -531,13 +531,18 @@ const Productivity: React.FC = () => {
   }, [user?.id, weeklyInsight]);
   
   // Загрузка данных графика зависимости рейтинга от активностей
-  const loadRatingChart = useCallback(async () => {
+  const loadRatingChart = useCallback(async (signal?: AbortSignal) => {
     if (!user?.id) return;
     
     setChartLoading(true);
     try {
-      const response = await fetchWithRetry(`/api/productivity/rating-chart/${user.id}?days=14`, {}, 2, 20000);
+      const response = await fetchWithRetry(`/api/productivity/rating-chart/${user.id}?days=14`, { signal }, 2, 20000);
+      
+      if (signal?.aborted) return;
+      
       const data = await response.json();
+      
+      if (signal?.aborted) return;
       
       if (data.success && data.chartData && data.chartData.length > 0) {
         setChartData(data.chartData);
@@ -546,23 +551,35 @@ const Productivity: React.FC = () => {
         setChartData([]);
         setChartStats(null);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError' || signal?.aborted) {
+        return; // Игнорируем ошибки отмены запроса
+      }
       // Graceful degradation - показываем пустой график вместо ошибки
+      console.warn('Rating chart load error:', error);
       setChartData([]);
       setChartStats(null);
     } finally {
-      setChartLoading(false);
+      if (!signal?.aborted) {
+        setChartLoading(false);
+      }
     }
   }, [user?.id]);
   
   // Загрузка данных при монтировании
   useEffect(() => {
-    if (user?.id) {
-      loadDashboard();
-      loadMoodPercentages();
-      loadRatingChart();
-      loadWeeklyInsight();
-    }
+    if (!user?.id) return;
+    
+    const abortController = new AbortController();
+    
+    loadDashboard();
+    loadMoodPercentages();
+    loadRatingChart(abortController.signal);
+    loadWeeklyInsight();
+    
+    return () => {
+      abortController.abort();
+    };
   }, [user?.id, loadDashboard, loadMoodPercentages, loadRatingChart, loadWeeklyInsight]);
 
   // Мемоизированное преобразование данных настроения
@@ -616,7 +633,7 @@ const Productivity: React.FC = () => {
         day: dayName,
         mood: 0,
         energy: 0,
-        stress: 100
+        stress: 0
       };
     });
   }, [dailyMoodData]);
@@ -1219,98 +1236,6 @@ const Productivity: React.FC = () => {
               }} />
               
               <Box sx={{ position: 'relative', zIndex: 1, pt: 3 }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  gap: 1,
-                  mb: 3
-                }}>
-                  <Typography variant="h6" sx={{ 
-                    fontWeight: 600, 
-                    color: '#666', 
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    fontSize: '0.9rem'
-                  }}>
-                    Ваш уровень продуктивности
-                  </Typography>
-                  
-                  {/* Иконка информации о тестовой функции */}
-                  <Tooltip
-                    title={
-                      <Box sx={{ p: 1 }}>
-                        <Typography variant="body2" sx={{ color: '#fff', mb: 1, fontWeight: 600 }}>
-                          Тестовая функция
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#fff', mb: 1.5, lineHeight: 1.6 }}>
-                          Система определения уровня продуктивности находится в тестовом режиме. Ваш уровень рассчитывается на основе:
-                        </Typography>
-                        <Box component="ul" sx={{ m: 0, pl: 2, color: '#fff' }}>
-                          <li style={{ marginBottom: '8px' }}>
-                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
-                              <strong>Записей настроения</strong> — эмоциональное состояние, энергия и уровень стресса
-                            </Typography>
-                          </li>
-                          <li style={{ marginBottom: '8px' }}>
-                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
-                              <strong>Активности</strong> — ваши действия и достижения в течение дня
-                            </Typography>
-                          </li>
-                          <li style={{ marginBottom: '8px' }}>
-                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
-                              <strong>AI-анализа</strong> — персональные инсайты и рекомендации на основе ваших данных
-                            </Typography>
-                          </li>
-                          <li>
-                            <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
-                              <strong>Интеграции с системой</strong> — уровень влияет на рекомендации льгот и аналитику продуктивности
-                            </Typography>
-                          </li>
-                        </Box>
-                        <Typography variant="body2" sx={{ color: '#fff', mt: 1.5, fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
-                          Чем больше данных вы предоставляете, тем точнее определяется ваш уровень продуктивности.
-                        </Typography>
-                      </Box>
-                    }
-                    arrow
-                    placement="top"
-                    componentsProps={{
-                      tooltip: {
-                        sx: {
-                          bgcolor: '#1A1A1A',
-                          maxWidth: '450px',
-                          borderRadius: '12px',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                          p: 0,
-                          '& .MuiTooltip-arrow': {
-                            color: '#1A1A1A'
-                          }
-                        }
-                      }
-                    }}
-                  >
-                    <IconButton
-                      sx={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: 'rgba(139,0,0,0.1)',
-                        border: '1px solid rgba(139,0,0,0.2)',
-                        color: '#8B0000',
-                        padding: 0,
-                        '&:hover': {
-                          background: 'rgba(139,0,0,0.15)',
-                          borderColor: 'rgba(139,0,0,0.3)'
-                        }
-                      }}
-                    >
-                      <InfoIcon size={14} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                
                 {productivityLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                     <CircularProgress sx={{ color: '#8B0000' }} size={40} />
@@ -1330,346 +1255,416 @@ const Productivity: React.FC = () => {
                       </Button>
                     </Box>
                 ) : dashboard ? (
-                  <Box sx={{ textAlign: 'center' }}>
-                    {/* Большой бейдж уровня */}
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                      whileHover={{ scale: 1.05 }}
-                      style={{ display: 'inline-block', marginBottom: '2rem' }}
-                    >
-                      <Box sx={{
-                        width: '120px',
-                        height: '120px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 20px 40px rgba(139, 0, 0, 0.4)',
-                        border: '4px solid #fff',
-                        position: 'relative',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: -8,
-                          left: -8,
-                          right: -8,
-                          bottom: -8,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, transparent 100%)',
-                          zIndex: -1
-                        }
-                      }}>
-                        <Typography variant="h2" sx={{ 
-                          color: '#fff', 
-                          fontWeight: 900,
-                          fontSize: '3rem',
-                          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                        }}>
-                          {dashboard.level_icon || '🌱'}
-                        </Typography>
-                      </Box>
-                    </motion.div>
-                    
-                    {/* Название уровня */}
-                    <Typography variant="h3" sx={{ 
-                      fontWeight: 800, 
-                      color: '#1A1A1A', 
-                      mb: 2,
-                      fontSize: { xs: '2rem', md: '2.5rem' }
-                    }}>
-                      {dashboard.productivity_level || 'Новичок'}
-                    </Typography>
-                    
-                    {/* Описание уровня */}
-                    <Typography variant="body1" sx={{ 
-                      color: '#666', 
-                      mb: 3, 
-                      maxWidth: '500px', 
-                      mx: 'auto',
-                      lineHeight: 1.6,
-                      fontSize: '1.1rem'
-                    }}>
-                      {dashboard.level_description || 'Начинающий путь к продуктивности'}
-                    </Typography>
-                    
-                    {/* Рейтинг продуктивности */}
+                  <>
+                    {/* Вся секция рейтинга - ЗАБЛЮРЕНА */}
                     <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      gap: 4,
-                      mb: 4
+                      position: 'relative',
+                      filter: 'blur(6px)',
+                      opacity: 0.4,
+                      pointerEvents: 'none',
+                      userSelect: 'none'
                     }}>
-                      <Box sx={{ textAlign: 'center', position: 'relative' }}>
-                        <Typography variant="h2" sx={{ 
-                          fontWeight: 900, 
-                          color: '#8B0000',
-                          fontSize: '3.5rem',
-                          textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
-                          fontFamily: 'Inter, system-ui, sans-serif',
-                          letterSpacing: '-0.03em',
-                          mb: 1
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: 1,
+                        mb: 3
+                      }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600, 
+                          color: '#666', 
+                          textAlign: 'center',
+                          textTransform: 'uppercase',
+                          letterSpacing: '1px',
+                          fontSize: '0.9rem'
                         }}>
-                          {dashboard?.productivity_score ? Number(dashboard.productivity_score).toFixed(1) : '0.0'}
+                          Ваш уровень продуктивности
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          <Typography variant="body2" sx={{ 
-                            color: '#666', 
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.1em',
-                            fontSize: '0.85rem'
-                          }}>
-                            Рейтинг
-                          </Typography>
-                          <Tooltip
-                            title={
-                              <Box sx={{ p: 1 }}>
-                                <Typography variant="body2" sx={{ color: '#fff', mb: 1.5, fontWeight: 600 }}>
-                                  Как рассчитывается рейтинг продуктивности?
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mb: 1 }}>
-                                  Рейтинг учитывает ваше настроение, успешность выполненных активностей и общую активность на платформе.
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mb: 1 }}>
-                                  Чем выше ваше настроение, чем больше успешных активностей вы выполняете и чем активнее вы используете платформу, тем выше ваш рейтинг продуктивности.
-                                </Typography>
-                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
-                                    💡 Это тестовая функция. Алгоритм расчета может изменяться для улучшения точности.
+                        
+                        {/* Иконка информации о тестовой функции */}
+                        <Tooltip
+                          title={
+                            <Box sx={{ p: 1 }}>
+                              <Typography variant="body2" sx={{ color: '#fff', mb: 1, fontWeight: 600 }}>
+                                Тестовая функция
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#fff', mb: 1.5, lineHeight: 1.6 }}>
+                                Система определения уровня продуктивности находится в тестовом режиме. Ваш уровень рассчитывается на основе:
+                              </Typography>
+                              <Box component="ul" sx={{ m: 0, pl: 2, color: '#fff' }}>
+                                <li style={{ marginBottom: '8px' }}>
+                                  <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                                    <strong>Записей настроения</strong> — эмоциональное состояние, энергия и уровень стресса
                                   </Typography>
-                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', lineHeight: 1.6, mt: 1, fontWeight: 600 }}>
-                                    📅 Рейтинг обнуляется каждый месяц в первый день для всех пользователей. Это дает возможность начать с чистого листа и лучше понять, как работает система.
+                                </li>
+                                <li style={{ marginBottom: '8px' }}>
+                                  <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                                    <strong>Активности</strong> — ваши действия и достижения в течение дня
                                   </Typography>
-                                </Box>
+                                </li>
+                                <li style={{ marginBottom: '8px' }}>
+                                  <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                                    <strong>AI-анализа</strong> — персональные инсайты и рекомендации на основе ваших данных
+                                  </Typography>
+                                </li>
+                                <li>
+                                  <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
+                                    <strong>Интеграции с системой</strong> — уровень влияет на рекомендации льгот и аналитику продуктивности
+                                  </Typography>
+                                </li>
                               </Box>
-                            }
-                            arrow
-                            placement="top"
-                            componentsProps={{
-                              tooltip: {
-                                sx: {
-                                  bgcolor: '#1A1A1A',
-                                  maxWidth: '500px',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                                  p: 0,
-                                  '& .MuiTooltip-arrow': {
-                                    color: '#1A1A1A'
-                                  }
+                              <Typography variant="body2" sx={{ color: '#fff', mt: 1.5, fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
+                                Чем больше данных вы предоставляете, тем точнее определяется ваш уровень продуктивности.
+                              </Typography>
+                            </Box>
+                          }
+                          arrow
+                          placement="top"
+                          componentsProps={{
+                            tooltip: {
+                              sx: {
+                                bgcolor: '#1A1A1A',
+                                maxWidth: '450px',
+                                borderRadius: '12px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                                p: 0,
+                                '& .MuiTooltip-arrow': {
+                                  color: '#1A1A1A'
                                 }
+                              }
+                            }
+                          }}
+                        >
+                          <IconButton
+                            sx={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: 'rgba(139,0,0,0.1)',
+                              border: '1px solid rgba(139,0,0,0.2)',
+                              color: '#8B0000',
+                              padding: 0,
+                              '&:hover': {
+                                background: 'rgba(139,0,0,0.15)',
+                                borderColor: 'rgba(139,0,0,0.3)'
                               }
                             }}
                           >
-                            <IconButton
-                              sx={{
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                background: 'rgba(139,0,0,0.1)',
-                                border: '1px solid rgba(139,0,0,0.2)',
-                                color: '#8B0000',
-                                padding: 0,
-                                '&:hover': {
-                                  background: 'rgba(139,0,0,0.15)',
-                                  borderColor: 'rgba(139,0,0,0.3)'
-                                }
-                              }}
-                            >
-                              <InfoIcon size={12} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
+                            <InfoIcon size={14} />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
-                      
-                      <Box sx={{ 
-                        width: '3px', 
-                        height: '60px', 
-                        background: 'linear-gradient(to bottom, transparent, #ddd, transparent)',
-                        borderRadius: '2px'
-                      }} />
                       
                       <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h2" sx={{ 
-                          fontWeight: 900, 
-                          color: '#8B0000',
-                          fontSize: '3.5rem',
-                          textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
-                          fontFamily: 'Inter, system-ui, sans-serif',
-                          letterSpacing: '-0.03em',
-                          mb: 1
-                        }}>
-                          {dashboard.xp_multiplier || 1.0}x
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          <Typography variant="body2" sx={{ 
-                            color: '#666', 
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.1em',
-                            fontSize: '0.85rem'
-                          }}>
-                            XP множитель
-                          </Typography>
-                          <Tooltip
-                            title={
-                              <Box sx={{ p: 1 }}>
-                                <Typography variant="body2" sx={{ color: '#fff', mb: 1, fontWeight: 600 }}>
-                                  Что такое XP множитель?
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6 }}>
-                                  Множитель опыта увеличивает количество очков опыта (XP), которые вы получаете за действия на платформе.
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.6, mt: 1 }}>
-                                  Чем выше ваш рейтинг продуктивности, тем выше множитель. Это позволяет быстрее повышать уровень и получать больше наград.
-                                </Typography>
-                                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6 }}>
-                                    💡 Поддерживайте высокий рейтинг продуктивности для максимального множителя.
-                                  </Typography>
-                                </Box>
-                              </Box>
+                        {/* Большой бейдж уровня */}
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          whileHover={{ scale: 1.05 }}
+                          style={{ display: 'inline-block', marginBottom: '2rem' }}
+                        >
+                          <Box sx={{
+                            width: '120px',
+                            height: '120px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 20px 40px rgba(139, 0, 0, 0.4)',
+                            border: '4px solid #fff',
+                            position: 'relative',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: -8,
+                              left: -8,
+                              right: -8,
+                              bottom: -8,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, transparent 100%)',
+                              zIndex: -1
                             }
-                            arrow
-                            placement="top"
-                            componentsProps={{
-                              tooltip: {
-                                sx: {
-                                  bgcolor: '#1A1A1A',
-                                  maxWidth: '400px',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                                  p: 0,
-                                  '& .MuiTooltip-arrow': {
-                                    color: '#1A1A1A'
-                                  }
-                                }
+                          }}>
+                            <Typography variant="h2" sx={{ 
+                              color: '#fff', 
+                              fontWeight: 900,
+                              fontSize: '3rem',
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                            }}>
+                              {dashboard.level_icon || '🌱'}
+                            </Typography>
+                          </Box>
+                        </motion.div>
+                        
+                        {/* Название уровня */}
+                        <Typography variant="h3" sx={{ 
+                          fontWeight: 800, 
+                          color: '#1A1A1A', 
+                          mb: 2,
+                          fontSize: { xs: '2rem', md: '2.5rem' }
+                        }}>
+                          {dashboard.productivity_level || 'Новичок'}
+                        </Typography>
+                        
+                        {/* Описание уровня */}
+                        <Typography variant="body1" sx={{ 
+                          color: '#666', 
+                          mb: 3, 
+                          maxWidth: '500px', 
+                          mx: 'auto',
+                          lineHeight: 1.6,
+                          fontSize: '1.1rem'
+                        }}>
+                          {dashboard.level_description || 'Начинающий путь к продуктивности'}
+                        </Typography>
+                        
+                        {/* Рейтинг продуктивности */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: 4,
+                          mb: 4
+                        }}>
+                          <Box sx={{ textAlign: 'center', position: 'relative' }}>
+                            <Typography variant="h2" sx={{ 
+                              fontWeight: 900, 
+                              color: '#8B0000',
+                              fontSize: '3.5rem',
+                              textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                              letterSpacing: '-0.03em',
+                              mb: 1
+                            }}>
+                              {dashboard?.productivity_score ? Number(dashboard.productivity_score).toFixed(1) : '0.0'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1 }}>
+                              <Typography variant="body2" sx={{ 
+                                color: '#666', 
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                fontSize: '0.85rem'
+                              }}>
+                                Рейтинг
+                              </Typography>
+                              <IconButton
+                                sx={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(139,0,0,0.1)',
+                                  border: '1px solid rgba(139,0,0,0.2)',
+                                  color: '#8B0000',
+                                  padding: 0,
+                                  pointerEvents: 'none'
+                                }}
+                              >
+                                <InfoIcon size={12} />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ 
+                            width: '3px', 
+                            height: '60px', 
+                            background: 'linear-gradient(to bottom, transparent, #ddd, transparent)',
+                            borderRadius: '2px'
+                          }} />
+                          
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h2" sx={{ 
+                              fontWeight: 900, 
+                              color: '#8B0000',
+                              fontSize: '3.5rem',
+                              textShadow: '0 4px 16px rgba(139, 0, 0, 0.4)',
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                              letterSpacing: '-0.03em',
+                              mb: 1
+                            }}>
+                              {dashboard.xp_multiplier || 1.0}x
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                              <Typography variant="body2" sx={{ 
+                                color: '#666', 
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                fontSize: '0.85rem'
+                              }}>
+                                XP множитель
+                              </Typography>
+                              <IconButton
+                                sx={{
+                                  width: '16px',
+                                  height: '16px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(139,0,0,0.1)',
+                                  border: '1px solid rgba(139,0,0,0.2)',
+                                  color: '#8B0000',
+                                  padding: 0,
+                                  pointerEvents: 'none'
+                                }}
+                              >
+                                <InfoIcon size={10} />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        </Box>
+                        
+                        {/* Статистика */}
+                        <Grid container spacing={3} sx={{ maxWidth: '600px', mx: 'auto', mb: 4 }}>
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: '#8B0000',
+                                fontSize: '1.8rem'
+                              }}>
+                                {dashboard?.weekly_productivity ? Number(dashboard.weekly_productivity).toFixed(1) : '0.0'}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                                За неделю
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: '#8B0000',
+                                fontSize: '1.8rem'
+                              }}>
+                                {dashboard?.monthly_productivity ? Number(dashboard.monthly_productivity).toFixed(1) : '0.0'}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                                За месяц
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: '#8B0000',
+                                fontSize: '1.8rem'
+                              }}>
+                                {dashboard?.days_tracked_this_week || 0}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                                Дней отслежено
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="h6" sx={{ 
+                                fontWeight: 800, 
+                                color: '#8B0000',
+                                fontSize: '1.8rem'
+                              }}>
+                                {dashboard.productivity_achievements_count || 0}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
+                                Достижения
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                        
+                        {/* Кнопка показать график активности */}
+                        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', mb: 4 }}>
+                          <Button
+                            variant="outlined"
+                            onClick={() => {
+                              setShowActivityChart(!showActivityChart);
+                              if (!showActivityChart && chartRef.current) {
+                                setTimeout(() => {
+                                  chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 100);
                               }
                             }}
+                            sx={{
+                              borderColor: '#8B0000',
+                              color: '#8B0000',
+                              fontWeight: 600,
+                              px: 4,
+                              py: 1.5,
+                              borderRadius: '50px',
+                              textTransform: 'none',
+                              fontSize: '1rem',
+                              '&:hover': {
+                                borderColor: '#A0000A',
+                                background: 'rgba(139, 0, 0, 0.05)',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 4px 12px rgba(139, 0, 0, 0.2)'
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
+                            startIcon={<BarChart3Icon size={20} />}
                           >
-                            <IconButton
-                              sx={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                background: 'rgba(139,0,0,0.1)',
-                                border: '1px solid rgba(139,0,0,0.2)',
-                                color: '#8B0000',
-                                padding: 0,
-                                '&:hover': {
-                                  background: 'rgba(139,0,0,0.15)',
-                                  borderColor: 'rgba(139,0,0,0.3)'
-                                }
-                              }}
-                            >
-                              <InfoIcon size={10} />
-                            </IconButton>
-                          </Tooltip>
+                            {showActivityChart ? 'Скрыть график активности' : 'Показать график активности'}
+                          </Button>
                         </Box>
                       </Box>
                     </Box>
                     
-                    {/* Статистика */}
-                    <Grid container spacing={3} sx={{ maxWidth: '600px', mx: 'auto' }}>
-                      <Grid item xs={6} md={3}>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" sx={{ 
-                            fontWeight: 800, 
-                            color: '#8B0000',
-                            fontSize: '1.8rem'
-                          }}>
-                            {dashboard?.weekly_productivity ? Number(dashboard.weekly_productivity).toFixed(1) : '0.0'}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
-                            За неделю
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} md={3}>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" sx={{ 
-                            fontWeight: 800, 
-                            color: '#8B0000',
-                            fontSize: '1.8rem'
-                          }}>
-                            {dashboard?.monthly_productivity ? Number(dashboard.monthly_productivity).toFixed(1) : '0.0'}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
-                            За месяц
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} md={3}>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" sx={{ 
-                            fontWeight: 800, 
-                            color: '#8B0000',
-                            fontSize: '1.8rem'
-                          }}>
-                            {dashboard?.days_tracked_this_week || 0}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
-                            Дней отслежено
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={6} md={3}>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" sx={{ 
-                            fontWeight: 800, 
-                            color: '#8B0000',
-                            fontSize: '1.8rem'
-                          }}>
-                            {dashboard.productivity_achievements_count || 0}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#666', fontSize: '0.9rem' }}>
-                            Достижения
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                    
-                    {/* Кнопка показать график активности */}
-                    <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => {
-                          setShowActivityChart(!showActivityChart);
-                          if (!showActivityChart && chartRef.current) {
-                            setTimeout(() => {
-                              chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 100);
-                          }
-                        }}
-                        sx={{
-                          borderColor: '#8B0000',
-                          color: '#8B0000',
-                          fontWeight: 600,
-                          px: 4,
-                          py: 1.5,
-                          borderRadius: '50px',
-                          textTransform: 'none',
+                    {/* Сообщение "В разработке" поверх всей секции */}
+                    <Box sx={{ 
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10,
+                      pointerEvents: 'none'
+                    }}>
+                      <Box sx={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(250,250,250,0.95))',
+                        borderRadius: '16px',
+                        padding: '40px 32px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                        border: '2px solid rgba(139,0,0,0.2)',
+                        textAlign: 'center',
+                        maxWidth: '500px',
+                        pointerEvents: 'auto'
+                      }}>
+                        <Typography variant="h5" sx={{ 
+                          color: '#8B0000', 
+                          fontWeight: 800,
+                          fontSize: '1.5rem',
+                          mb: 1.5
+                        }}>
+                          В разработке
+                        </Typography>
+                        <Typography variant="body1" sx={{ 
+                          color: '#666', 
                           fontSize: '1rem',
-                          '&:hover': {
-                            borderColor: '#A0000A',
-                            background: 'rgba(139, 0, 0, 0.05)',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(139, 0, 0, 0.2)'
-                          },
-                          transition: 'all 0.3s ease'
-                        }}
-                        startIcon={<BarChart3Icon size={20} />}
-                      >
-                        {showActivityChart ? 'Скрыть график активности' : 'Показать график активности'}
-                      </Button>
+                          lineHeight: 1.6,
+                          mb: 2
+                        }}>
+                          Система рейтинга продуктивности и статистики находится в разработке
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          color: '#999', 
+                          fontSize: '0.9rem',
+                          fontStyle: 'italic'
+                        }}>
+                          Скоро будет доступно
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
+                  </>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" sx={{ color: '#666' }}>
@@ -2023,7 +2018,9 @@ const Productivity: React.FC = () => {
                           gap: 1,
                           padding: '10px',
                           background: 'rgba(139,0,0,0.03)',
-                          borderRadius: '12px'
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          position: 'relative'
                         }}>
                           {/* Настроение */}
                           <Tooltip 
@@ -2048,12 +2045,13 @@ const Productivity: React.FC = () => {
                               style={{
                                 transformOrigin: 'bottom',
                                 width: '18px',
-                                height: `${Math.max((day.mood || 0) * 1.2, 15)}px`,
+                                height: `${Math.min(Math.max((day.mood || 0) * 1.0, 15), 100)}px`,
                                 background: 'linear-gradient(to top, #8B0000 0%, #A52A2A 100%)',
                                 borderRadius: '4px',
                                 boxShadow: '0 2px 6px rgba(139,0,0,0.3)',
                                 cursor: 'pointer',
-                                minHeight: '15px'
+                                minHeight: '15px',
+                                maxHeight: '100px'
                               }}
                             />
                           </Tooltip>
@@ -2081,11 +2079,13 @@ const Productivity: React.FC = () => {
                               style={{
                                 transformOrigin: 'bottom',
                                 width: '18px',
-                                height: `${Math.max(day.energy * 1.2, 15)}px`,
+                                height: `${Math.min(Math.max(day.energy * 1.0, 15), 100)}px`,
                                 background: 'linear-gradient(to top, #A0000A 0%, #C41E3A 100%)',
                                 borderRadius: '4px',
                                 boxShadow: '0 2px 6px rgba(178,34,34,0.3)',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                minHeight: '15px',
+                                maxHeight: '100px'
                               }}
                             />
                           </Tooltip>
@@ -2113,12 +2113,13 @@ const Productivity: React.FC = () => {
                               style={{
                                 transformOrigin: 'bottom',
                                 width: '18px',
-                                height: `${Math.max((100 - (day.stress || 100)) * 1.2, 15)}px`,
+                                height: `${Math.min(Math.max((100 - (day.stress || 100)) * 1.0, 15), 100)}px`,
                                 background: 'linear-gradient(to top, #B71C1C 0%, #DC143C 100%)',
                                 borderRadius: '4px',
                                 boxShadow: '0 2px 6px rgba(183,28,28,0.3)',
                                 cursor: 'pointer',
-                                minHeight: '15px'
+                                minHeight: '15px',
+                                maxHeight: '100px'
                               }}
                             />
                           </Tooltip>

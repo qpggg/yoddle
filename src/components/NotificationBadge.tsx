@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NotificationBadgeProps {
@@ -19,22 +19,24 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCount();
-    
-    // Обновляем счетчик каждые 30 секунд
-    const interval = setInterval(fetchCount, 30000);
-    
-    return () => clearInterval(interval);
-  }, [userId]);
-
-  const fetchCount = async () => {
-    if (loading) return;
-    
+  const fetchCount = useCallback(async () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`/api/notifications?action=count${userId ? `&user_id=${userId}` : ''}`);
+      // Добавляем timestamp для предотвращения кэширования
+      const timestamp = Date.now();
+      const url = `/api/notifications?action=count&_t=${timestamp}${userId ? `&user_id=${userId}` : ''}`;
+      
+      console.log('📢 Fetching notification count from:', url);
+      
+      const response = await fetch(url, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       // Проверяем статус ответа
       if (!response.ok) {
@@ -46,11 +48,15 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       
       const data = await response.json();
       
+      console.log('📢 Notification count response:', data);
+      
       if (data.success) {
-        const newCount = data.count || 0;
+        const newCount = parseInt(data.count) || 0;
+        console.log('📢 Setting notification count to:', newCount);
         setCount(newCount);
         onCountChange?.(newCount);
       } else {
+        console.warn('📢 API returned error:', data.error);
         setCount(0);
         onCountChange?.(0);
       }
@@ -61,12 +67,38 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, onCountChange]);
+
+  useEffect(() => {
+    fetchCount();
+    
+    // Обновляем счетчик каждые 30 секунд
+    const interval = setInterval(() => {
+      fetchCount();
+    }, 30000);
+    
+    // Обработчик события для обновления счетчика при отметке всех как прочитанных
+    const handleNotificationsReadAll = () => {
+      console.log('📢 Event received: notifications-read-all, fetching count...');
+      // Небольшая задержка, чтобы дать время БД обновиться
+      setTimeout(() => {
+        fetchCount();
+      }, 200);
+    };
+    
+    window.addEventListener('notifications-read-all', handleNotificationsReadAll);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifications-read-all', handleNotificationsReadAll);
+    };
+  }, [fetchCount]);
 
   // Функция для обновления счетчика извне
-  const updateCount = () => {
+  const updateCount = useCallback(() => {
+    console.log('📢 updateNotificationCount called, fetching count...');
     fetchCount();
-  };
+  }, [fetchCount]);
 
   // Добавляем метод в window для глобального доступа
   useEffect(() => {
@@ -75,7 +107,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     return () => {
       delete (window as any).updateNotificationCount;
     };
-  }, []);
+  }, [updateCount]);
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', ...style }} className={className}>

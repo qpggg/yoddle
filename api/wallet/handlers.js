@@ -218,10 +218,40 @@ export async function refundHandler(req, res) {
     );
 
     if (Number(purchase.amount) > 0) {
+      // Обновляем баланс, гарантируя что он не уйдет в минус
       await client.query(
-        `UPDATE user_balance SET balance = balance + $2, total_spent = GREATEST(total_spent - $2, 0), updated_at = NOW() WHERE user_id::text = $1`,
+        `UPDATE user_balance 
+         SET balance = GREATEST(balance + $2, 0), 
+             total_spent = GREATEST(total_spent - $2, 0), 
+             updated_at = NOW() 
+         WHERE user_id::text = $1`,
         [userIdStr, purchase.amount]
       );
+      
+      // Проверяем баланс после обновления и исправляем если нужно
+      const balanceCheck = await client.query(
+        `SELECT balance FROM user_balance WHERE user_id::text = $1`,
+        [userIdStr]
+      );
+      
+      if (balanceCheck.rows.length > 0 && Number(balanceCheck.rows[0].balance) < 0) {
+        // Пересчитываем баланс из транзакций
+        const agg = await client.query(
+          `SELECT 
+              COALESCE(SUM(CASE WHEN transaction_type IN ('monthly_allowance','credit','admin_add','refund') THEN amount ELSE 0 END),0) AS earned,
+              COALESCE(SUM(CASE WHEN transaction_type IN ('benefit_purchase','debit','admin_remove') THEN amount ELSE 0 END),0) AS spent
+           FROM coin_transactions WHERE user_id::text = $1`,
+          [userIdStr]
+        );
+        const earned = Number(agg.rows[0]?.earned || 0);
+        const spent = Number(agg.rows[0]?.spent || 0);
+        const correctBalance = Math.max(0, earned - spent);
+        
+        await client.query(
+          `UPDATE user_balance SET balance = $2, total_earned = $3, total_spent = $4, updated_at = NOW() WHERE user_id::text = $1`,
+          [userIdStr, correctBalance, earned, spent]
+        );
+      }
     }
 
     const secondsLeft = secondsWindow - secondsPassed;
@@ -380,5 +410,130 @@ export async function refreshHandler(req, res) {
     await client.end();
     console.error('Wallet refresh error:', error);
     return res.status(500).json({ error: 'Database error' });
+  }
+}
+
+/**
+ * Начисление баланса пользователю (только для администраторов)
+ * Используется через админ-панель или API с проверкой прав администратора
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {number} req.body.user_id - ID пользователя, которому начисляется баланс
+ * @param {number} req.body.amount - Сумма для начисления (должна быть > 0)
+ * @param {string} req.body.description - Описание начисления (опционально)
+ * @param {number} req.body.admin_id - ID администратора, который выполняет начисление (для логирования)
+ * @param {string} req.body.transaction_type - Тип транзакции: 'admin_add' (по умолчанию) или 'credit'
+ */
+export async function creditHandler(req, res) {
+  const { user_id, amount, description, admin_id, transaction_type = 'admin_add' } = req.body;
+  
+  // Валидация входных данных
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+  
+  const amountNum = Number(amount);
+  if (!amountNum || amountNum <= 0 || !isFinite(amountNum)) {
+    return res.status(400).json({ error: 'amount must be a positive number' });
+  }
+  
+  // Проверка типа транзакции
+  if (!['admin_add', 'credit'].includes(transaction_type)) {
+    return res.status(400).json({ error: 'transaction_type must be "admin_add" or "credit"' });
+  }
+  
+  const userIdStr = String(user_id);
+  const adminIdNum = admin_id ? parseInt(String(admin_id), 10) : null;
+  
+  const client = await getDbClient();
+  try {
+    await ensureWalletSchema();
+    await client.query('BEGIN');
+    
+    // Проверяем существование пользователя
+    const userCheck = await client.query(
+      `SELECT id FROM enter WHERE id = $1`,
+      [userIdStr]
+    );
+    if (userCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Блокируем баланс пользователя для атомарной операции
+    const ubRes = await client.query(
+      `SELECT user_id, balance, total_earned, total_spent FROM user_balance WHERE user_id::text = $1 FOR UPDATE`,
+      [userIdStr]
+    );
+    
+    // Создаем запись баланса если её нет
+    if (ubRes.rows.length === 0) {
+      await client.query(
+        `INSERT INTO user_balance (user_id, balance, total_earned, total_spent) VALUES ($1, 0, 0, 0) ON CONFLICT (user_id) DO NOTHING`,
+        [userIdStr]
+      );
+    }
+    
+    // Получаем текущий баланс с блокировкой
+    const ubLocked = await client.query(
+      `SELECT user_id, balance, total_earned, total_spent FROM user_balance WHERE user_id::text = $1 FOR UPDATE`,
+      [userIdStr]
+    );
+    
+    const balanceBefore = Number(ubLocked.rows[0]?.balance || 0);
+    const balanceAfter = balanceBefore + amountNum;
+    
+    // Создаем транзакцию начисления
+    const txResult = await client.query(
+      `INSERT INTO coin_transactions (
+        user_id, 
+        transaction_type, 
+        amount, 
+        balance_before, 
+        balance_after, 
+        description, 
+        reference_id, 
+        processed_by, 
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, NOW()) RETURNING id`,
+      [
+        userIdStr,
+        transaction_type,
+        amountNum,
+        balanceBefore,
+        balanceAfter,
+        description || `Начисление баланса администратором`,
+        adminIdNum
+      ]
+    );
+    
+    // Обновляем баланс пользователя
+    await client.query(
+      `UPDATE user_balance 
+       SET balance = $2, 
+           total_earned = total_earned + $3, 
+           updated_at = NOW() 
+       WHERE user_id::text = $1`,
+      [userIdStr, balanceAfter, amountNum]
+    );
+    
+    await client.query('COMMIT');
+    client.release();
+    
+    return res.status(200).json({
+      success: true,
+      transaction_id: txResult.rows[0].id,
+      balance_before: balanceBefore,
+      balance_after: balanceAfter,
+      amount: amountNum,
+      message: 'Баланс успешно начислен'
+    });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    client.release();
+    console.error('Credit balance error:', error);
+    return res.status(500).json({ error: 'Database error', details: error.message });
   }
 }

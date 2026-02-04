@@ -108,19 +108,60 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
   };
 
   const markAllAsRead = async () => {
+    if (loading) return; // Предотвращаем множественные клики
+    
     try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('📢 Marking all notifications as read for user:', userId);
+      
       const response = await fetch(
         `/api/notifications?action=mark-all-read${userId ? `&user_id=${userId}` : ''}`,
         { method: 'PUT' }
       );
       
+      console.log('📢 Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📢 Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('📢 Response data:', data);
       
       if (data.success) {
+        console.log('📢 Successfully marked all notifications as read');
+        
+        // Очищаем список уведомлений сразу для мгновенной обратной связи
         setNotifications([]);
+        
+        // Отправляем событие для обновления счетчика в других компонентах
+        window.dispatchEvent(new CustomEvent('notifications-read-all'));
+        
+        // Обновляем глобальный счетчик уведомлений с небольшой задержкой
+        setTimeout(() => {
+          if ((window as any).updateNotificationCount) {
+            (window as any).updateNotificationCount();
+          }
+        }, 200);
+        
+        // Небольшая задержка перед перезагрузкой для лучшего UX
+        setTimeout(async () => {
+          await fetchNotifications();
+        }, 500);
+      } else {
+        const errorMsg = data.error || 'Не удалось отметить уведомления как прочитанные';
+        console.error('📢 API returned error:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      console.error('📢 Error marking all notifications as read:', err);
+      setError(err instanceof Error ? err.message : 'Ошибка при отметке уведомлений как прочитанных');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -315,31 +356,54 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                 <motion.button
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onClick={markAllAsRead}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    markAllAsRead();
+                  }}
+                  disabled={loading}
                   style={{
-                    background: 'linear-gradient(135deg, #fdf7f7, #faf0f0)',
+                    background: loading 
+                      ? 'linear-gradient(135deg, #e0e0e0, #d0d0d0)' 
+                      : 'linear-gradient(135deg, #fdf7f7, #faf0f0)',
                     border: '2px solid #e8d5d5',
                     borderRadius: '12px',
                     padding: '12px 20px',
                     width: '100%',
-                    cursor: 'pointer',
+                    cursor: loading ? 'wait' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    color: '#750000',
+                    color: loading ? '#999' : '#750000',
                     fontWeight: 600,
                     fontSize: '14px',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    opacity: loading ? 0.7 : 1
                   }}
-                  whileHover={{
+                  whileHover={loading ? {} : {
                     scale: 1.02,
                     background: 'linear-gradient(135deg, #faf0f0, #f8e8e8)'
                   }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={loading ? {} : { scale: 0.98 }}
                 >
-                  <Check size={18} />
-                  Прочитать все
+                  {loading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        style={{ display: 'inline-block' }}
+                      >
+                        <Check size={18} />
+                      </motion.div>
+                      Обработка...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Прочитать все
+                    </>
+                  )}
                 </motion.button>
               )}
             </div>
