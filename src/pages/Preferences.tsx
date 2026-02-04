@@ -78,6 +78,7 @@ interface BenefitRecommendation {
   score?: number;
   algorithm_variant?: string;
   benefit_id?: number; // для отправки фидбека
+  isFallback?: boolean; // рекомендация добавлена fallback-логикой при нехватке AI-результатов
 }
 
 const questions: Question[] = [
@@ -568,7 +569,7 @@ const Preferences: React.FC = () => {
           setHasExistingResults(true);
           setFeedbackSent({});
           setFeedbackPermanent({});
-          console.log(`✅ AI рекомендации готовы, количество: ${enhancedRecs.length} (fallback: ${enhancedRecs.filter(r => r.isFallback).length})`);
+          console.log(`✅ AI рекомендации готовы, количество: ${enhancedRecs.length} (fallback: ${enhancedRecs.filter(r => r.isFallback === true).length})`);
           return; // Успешно получили рекомендации
         }
       } catch (error) {

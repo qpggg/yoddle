@@ -17,11 +17,8 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   style 
 }) => {
   const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(false);
 
   const fetchCount = useCallback(async () => {
-    setLoading(true);
-    
     try {
       // Добавляем timestamp для предотвращения кэширования
       const timestamp = Date.now();
@@ -64,8 +61,6 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       console.warn('📢 Notifications system not ready:', err instanceof Error ? err.message : 'Unknown error');
       setCount(0);
       onCountChange?.(0);
-    } finally {
-      setLoading(false);
     }
   }, [userId, onCountChange]);
 
